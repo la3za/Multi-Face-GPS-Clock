@@ -73,6 +73,8 @@ LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I
   9600; // OK for NEO-6M
 */
 
+
+
 int dispState ;  // depends on button, decides what to display
 int UTCoffset=0;   //  value found automatically by means of Timezone library
 byte wkday;
@@ -96,6 +98,8 @@ time_t prevDisplay = 0; // when the digital clock was displayed
 
 int yearGPS;
 uint8_t monthGPS, dayGPS, hourGPS, minuteGPS, secondGPS, weekdayGPS;
+
+int val; // pot values
 
 
 // Serial1 <=> pin 19 on Mega
@@ -154,9 +158,9 @@ void setup(){
   pinMode(LCD_pwm, OUTPUT);
   digitalWrite(LCD_pwm, HIGH);   // sets the backlight LED to full
 
-  code_Status();
+  code_Status();  // start screen 
   
-  lcd.print(" ... ");
+  lcd.print(" ... ");  // ... waiting for GPS
   delay(1000);
 
   Serial1.begin(GPSBaud);
@@ -175,8 +179,7 @@ void setup(){
 ////////////////////////////////////// L O O P //////////////////////////////////////////////////////////////////
 
 void loop() {
-  int val;
-  int noOfStates = 10; // one more, i.e. 9, 2.7.2018; 10 on 12.09.2018
+
   val = analogRead(potentiometer);   // read the input pin for control of backlight
 
   // analogRead values go from 0 to 1023, analogWrite values from 0 to 255
@@ -243,19 +246,19 @@ void loop() {
  /*
  * USER INTERFACE:
  */    
-        if      ((dispState % noOfStates) == 0) LocalUTC(); // local time, date; UTC, locator
-        else if ((dispState % noOfStates) == 1) UTCLocator(); // UTC, locator, # sats
-        else if ((dispState % noOfStates) == 2) LocalSunMoon(); // local time, sun, moon
-        else if ((dispState % noOfStates) == 3) LocalSun(); // local time, sun x 3
-        else if ((dispState % noOfStates) == 4) LocalMoon(); // local time, moon size and elevation
-        else if ((dispState % noOfStates) == 5) NCDXFBeacons(1); // UTC + NCDXF beacons, 14-21 MHz
-        else if ((dispState % noOfStates) == 6) NCDXFBeacons(2); // UTC + NCDXF beacons, 18-28 MHz     
-        else if ((dispState % noOfStates) == 7) UTCPosition(); // position
-        else if ((dispState % noOfStates) == 8) MoonRiseTime(); // Moon rises and sets at these times
-        else if ((dispState % noOfStates) == 9) code_Status(); // 
+        if      ((dispState % noOfStates) == menuOrder[0]) LocalUTC(); // local time, date; UTC, locator
+        else if ((dispState % noOfStates) == menuOrder[1]) UTCLocator(); // UTC, locator, # sats
+        else if ((dispState % noOfStates) == menuOrder[2]) LocalSunMoon(); // local time, sun, moon
+        else if ((dispState % noOfStates) == menuOrder[3]) LocalSun(); // local time, sun x 3
+        else if ((dispState % noOfStates) == menuOrder[4]) LocalMoon(); // local time, moon size and elevation
+        else if ((dispState % noOfStates) == menuOrder[5]) NCDXFBeacons(1); // UTC + NCDXF beacons, 14-21 MHz
+        else if ((dispState % noOfStates) == menuOrder[6]) NCDXFBeacons(2); // UTC + NCDXF beacons, 18-28 MHz     
+        else if ((dispState % noOfStates) == menuOrder[7]) UTCPosition(); // position
+        else if ((dispState % noOfStates) == menuOrder[8]) MoonRiseTime(); // Moon rises and sets at these times
+        else if ((dispState % noOfStates) == menuOrder[9]) code_Status(); // 
         
- //       else if ((dispState % noOfStates) == 6) displayInfo(); // full info (a bit crowded)
-//        else if ((dispState % noOfStates) == 6) displayTest(); // Test moon display, show auto offset info
+        else if ((dispState % noOfStates) == menuOrder[10]) displayInfo(); // full info (a bit crowded)
+        else if ((dispState % noOfStates) == menuOrder[11]) displayTest(); // Test moon display, show auto offset info
       }
     }
   }
@@ -1596,7 +1599,7 @@ void code_Status(void) {
 
 void MoonRiseTime(void) {
   
-  lcd.setCursor(0, 0); lcd.print("*** Moon ***");
+  lcd.setCursor(0, 0); lcd.print("*** Moon ***   ");
   //lcd.setCursor(0, 1); lcd.print("Moon rise time ");
   //lcd.setCursor(0, 2); lcd.print("Moon set time ");
 
@@ -1611,29 +1614,10 @@ void MoonRiseTime(void) {
   lcd.setCursor(0, 1); lcd.print(JD);
   lcd.setCursor(0, 2); lcd.print(Yyear); lcd.print(" "); lcd.print(Mmonth);lcd.print(" ");lcd.print(Dday);
    
-  //GetMoonRiseSetTimes();
-  //lcd.setCursor(0, 3); lcd.print(packedRise);
+ // GetMoonRiseSetTimes(Yyear, Mmonth, Dday, UTCoffset ,latitude, lon, *packedRise,*riseAz,*packedset,*setAz);
+  lcd.setCursor(0, 3); lcd.print(packedRise);
 }
 // ************************************************************************
-
-
-
-// calculate MoonRise and MoonSet times
-//
-// Returns Rise and Set times times returned as packed time (hour*100 + minutes)
-//
-// packedRise > 0 && packedSet = -1 =>  the moon rises and never sets
-// packedRise = -1 && packSet > 0   =>  no moon rise and the moon sets
-// packedRise = packedSet = -1      =>  the moon never sets
-// packedRise = packedSet = -2      =>  the moon never rises
-
-
-void GetMoonRiseSetTimes(void) {
-  
-  packedRise = 314;
- 
-  }
-
 
   typedef struct
 {
@@ -1657,6 +1641,105 @@ static MOONRISESET          MoonRise, MoonSet;
 #define PI                  3.1415926535897932384626433832795
 #define RAD                 (PI/180.0)
 #define SMALL_FLOAT         (1e-12)
+
+
+
+//int GetMoonRiseSetTimes
+//(
+//    int          year,
+//    int          month,
+//    int          day,
+//    double       zone,                   // Timezone offset from UTC/GMT in hours
+//    double       lat,                    // Latitude degress  N=> +, S=> -
+//    double       lon,                    // longitude degress E=> +, W=> -
+//    short        *packedRise,            // returned Moon Rise time
+//    double       *riseAz,                // return Moon Rise Azimuth
+//    short        *packedSet,             // returned Moon Set time
+//    double       *setAz                  // return Moon Set Azimuth
+//)
+//{
+//    int             k;
+//    MOONLOCATION    mp[3];
+//    double          localsidereal;
+//    double          ph;
+//    double          jd;
+//
+//    // Julian day relative to Jan 1.5, 2000
+//    jd = GetJulianDate(year, month, (double)day) - 2451545.0;
+//
+//    localsidereal = localSiderealTime(lon, jd, zone); // local sidereal time
+//
+//    jd = jd - zone / 24.0;                      // get moon position at day start
+//
+//    for (k = 0; k < 3; k ++)
+//    {
+// //       mp[k] = GetMoonLocation(jd);
+//        jd = jd + 0.5;
+//    }
+//
+//    if (mp[1].rightascension <= mp[0].rightascension)
+//        mp[1].rightascension = mp[1].rightascension + 2*PI;
+//
+//    if (mp[2].rightascension <= mp[1].rightascension)
+//        mp[2].rightascension = mp[2].rightascension + 2*PI;
+//
+//    RAn[0] = mp[0].rightascension;
+//    Dec[0] = mp[0].declination;
+//
+//    MoonRise.event = 0;                         // initialize
+//    MoonSet.event  = 0;
+//
+//    for (k = 0; k < 24; k++)                    // check each hour of this day
+//    {
+//        ph = (k + 1.0)/24.0;
+//
+//        RAn[2] = moonInterpolate(mp[0].rightascension, 
+//                                 mp[1].rightascension, 
+//                                 mp[2].rightascension, 
+//                                 ph);
+//        Dec[2] = moonInterpolate(mp[0].declination, 
+//                                 mp[1].declination, 
+//                                 mp[2].declination, 
+//                                 ph);
+//
+//        VHz[2] = moonTest(k, localsidereal, lat, mp[1].parallax);
+//
+//        RAn[0] = RAn[2];                       // advance to next hour
+//        Dec[0] = Dec[2];
+//        VHz[0] = VHz[2];
+//    }
+//
+//    *packedRise = (short)(MoonRise.hr * 100 +  MoonRise.min);
+//    if (riseAz != NULL)
+//        *riseAz = MoonRise.az;
+//
+//    *packedSet = (short)(MoonSet.hr * 100 +  MoonSet.min);
+//    if (setAz != NULL)
+//        *setAz = MoonSet.az;
+//
+//    /*check for no MoonRise and/or no MoonSet  */
+//
+//    if (! MoonRise.event && ! MoonSet.event)  // neither MoonRise nor MoonSet
+//    {
+//        if (VHz[2] < 0)
+//            *packedRise = *packedSet = -2;  // the moon never sets
+//        else
+//            *packedRise = *packedSet = -1;  // the moon never rises
+//    }
+//    else                                    //  check for MoonRise or MoonSet
+//    {
+//        if (! MoonRise.event)
+//            *packedRise = -1;               // no MoonRise and the moon sets
+//        else if (! MoonSet.event)
+//            *packedSet = -1;                // the moon rises and never sets
+//    }
+//
+//    return OK;
+//}
+  
+ 
+
+
 
 
 
@@ -1714,6 +1797,9 @@ static double GetSunPosition (double j)
     return l;
 }
 
+
+
+////////////////////////////////////////////////////////////////////
 static double GetMoonPosition (double j, double ls)
 {
 
@@ -1743,6 +1829,8 @@ static double GetMoonPosition (double j, double ls)
     l= 0.6583*sin(2*(l-ls)*RAD)+l;
     return l;
 }
+
+//////////////////////////////////////////////////////////////////////
 
 static double GetMoonPhase (int year, int month, int day, int hour)
 {
@@ -1886,7 +1974,9 @@ static double moonTest(int k, double t0, double lat, double plx)
 * moon's position using fundamental arguments 
 * (Van Flandern & Pulkkinen, 1979)
 */
+
 //static MOONLOCATION GetMoonLocation(double jd)
+
 //{
 //    double          d, f, g, h, m, n, s, u, v, w;
 //    MOONLOCATION    itshere;
@@ -1959,9 +2049,9 @@ static double moonTest(int k, double t0, double lat, double plx)
 //
 //    return(itshere);
 //}
-//
-//
-//
+
+
+
 //// Public methods:
 //#define PHASE_STR_MAX       128
 //char *lunarPhaseGet (char *increase, char *decrease, char *full)
@@ -1984,3 +2074,15 @@ static double moonTest(int k, double t0, double lat, double plx)
 //
 //    return phaseStr;
 //}
+
+// calculate MoonRise and MoonSet times
+//
+// Returns Rise and Set times times returned as packed time (hour*100 + minutes)
+//
+// packedRise > 0 && packedSet = -1 =>  the moon rises and never sets
+// packedRise = -1 && packSet > 0   =>  no moon rise and the moon sets
+// packedRise = packedSet = -1      =>  the moon never sets
+// packedRise = packedSet = -2      =>  the moon never rises
+
+
+//////////////////////////////////////////////
