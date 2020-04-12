@@ -37,19 +37,19 @@ Features:
 
 // libraries
 
-#include <TimeLib.h>      // must be included from 17.12.2016 
+#include <TimeLib.h>      // https://github.com/PaulStoffregen/Time
                           //#include <Time.h>   
 #include <TinyGPS++.h>    // http://arduiniana.org/libraries/tinygpsplus/
 #include <Wire.h>         // For I2C. Comes with Arduino IDE
 #include <LiquidCrystal_I2C.h> // Install NewliquidCrystal_1.3.4.zip
                           //#include <LiquidCrystal.h>
-#include <Sunrise.h>     // http://www.andregoncalves.info/ag_blog/?p=47
+#include <Sunrise.h>     // https://github.com/chaeplin/Sunrise, http://www.andregoncalves.info/ag_blog/?p=47
 // Now in AVR-Libc version 1.8.1, Aug. 2014 (not in Arduino official release)
 
 // K3NG https://blog.radioartisan.com/yaesu-rotator-computer-serial-interface/
 //      https://github.com/k3ng/k3ng_rotator_controller
-#include <sunpos.h>      // from K3NG rotator controller-master
-#include <moon2.h>        // from K3NG rotator controller-master
+#include <sunpos.h>      // http://www.psa.es/sdg/archive/SunPos.cpp (via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries)
+#include <moon2.h>        // via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries
 
 #include <Timezone.h>    // https://github.com/JChristensen/Timezone
 
