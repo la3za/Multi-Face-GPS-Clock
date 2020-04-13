@@ -1,8 +1,7 @@
-#define CODE_VERSION "1.00 2020-04-13"/*
+#define CODE_VERSION ".991 2020-04-13"/*
     GPS clock on 20x4 I2C LCD
-    Sverre Holm, LA3ZA Nov 2015 - July 2017 (Fix 2. July 2018)
-    Sep 2018 - (Fix 9.9.2018) + changed order of menus
-
+    Sverre Holm, LA3ZA Nov 2015 - April 2020
+   
 Features:
     Controlled by a GPS module outputting data over an RS232 serial interface, 
     and handled with the TinyGPS++ library
@@ -984,8 +983,9 @@ void LocalMoon() { // local time, moon size and elevation
 
 // Moon rise or set time:
 
-       lcd.setCursor(15,2); lcd.print("     ");
-       
+
+       lcd.setCursor(14,2);lcd.print("     ");
+
        moon_init((int)latitude, (int)lon);    
       
        
@@ -994,7 +994,7 @@ void LocalMoon() { // local time, moon size and elevation
        }
        else    
        {
-          lcd.setCursor(0,2); lcd.print("     Set  "); if (Moon.setH <10)  lcd.print(" ");  lcd.print(Moon.setH); lcd.print(":"); if (Moon.setM <10)  lcd.print("0");lcd.print(Moon.setM);
+          lcd.setCursor(0,2);  lcd.print("     Set   "); if (Moon.setH <10)  lcd.print(" ");  lcd.print(Moon.setH); lcd.print(":"); if (Moon.setM <10)  lcd.print("0");lcd.print(Moon.setM);
        }
     
   
