@@ -13,9 +13,10 @@ Timezone CE(CEST, CET);
 //#define FEATURE_SERIAL_OUTPUT
 
 // display order of menus
-//int noOfStates = 12; // one more, i.e. 9, 2.7.2018; 10 on 12.09.2018
-int noOfStates = 10;
+int noOfStates = 12; // also the two test menus
+//int noOfStates = 10;
 
+// normal order
 //int menuOrder[] = {0,1,2,3,4,5,6,7,8,9,10,11}; // as many as noOfStates
 
 // NCDXF beacons first:
@@ -23,5 +24,4 @@ int noOfStates = 10;
 
 
 // testing moon rise time
-
 int menuOrder[] = {4,8,2,3,0,5,6,7,1,9,10,11}; // as many as noOfStates

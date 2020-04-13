@@ -324,7 +324,6 @@ void LocalUTC() { // local time, UTC,  locator
     lcd.print(today); lcd.print(" ");
 #endif
     lcd.setCursor(0,1); lcd.print("                    ");
-    lcd.setCursor(10, 1);lcd.print("  "); // 2.7.2018
     
     if (Day < 10 & Month < 10) lcd.setCursor(12, 1);
     else if (Day < 10 | Month < 10) lcd.setCursor(11, 1);
@@ -334,6 +333,9 @@ void LocalUTC() { // local time, UTC,  locator
     lcd.print(static_cast<int>(Month)); lcd.print(".");
     lcd.print(static_cast<int>(Year));
   }
+
+  lcd.setCursor(0,2); lcd.print("                    ");
+  
   lcd.setCursor(0, 3); // 4. line *********
   lcd.print("                    ");
   
@@ -982,9 +984,10 @@ void LocalMoon() { // local time, moon size and elevation
 
 // Moon rise or set time:
 
-       lcd.setCursor(0,2);
+       lcd.setCursor(15,2); lcd.print("     ");
        
        moon_init((int)latitude, (int)lon);    
+      
        
        if (moon_elevation < 0){ 
            lcd.setCursor(0,2); lcd.print("     Rise  "); if (Moon.riseH <10) lcd.print("0"); lcd.print(Moon.riseH); lcd.print(":"); if (Moon.riseM <10) lcd.print("0");lcd.print(Moon.riseM);
