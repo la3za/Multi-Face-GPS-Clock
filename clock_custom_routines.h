@@ -1,6 +1,7 @@
 #define NO_DK_OE_small  5
 
-//clock_user.h - the user may wish to customize the routines in this file
+// The user may wish to customize the routines in this file according to 
+// desired language for day names in local time display
 
 /////////////////////////////////////////////////////////////////////////
 // Native language support for names of days of week when local time is displayed:
@@ -29,6 +30,12 @@
                       lcd.print(today[2]);
                     }
                     else  lcd.print(today);
+
+#ifdef FEATURE_SERIAL_MENU
+                      Serial.println("nativeDay: ");
+                      Serial.println("  today");
+                      Serial.println(today);
+                  #endif
 
                     lcd.print(" ");
                   }
@@ -140,7 +147,7 @@
                       local4 = usPacific.toLocal(utc, &tcr4);
                       Hour = hour(local4);
                       Minute = minute(local4);
-                      sprintf(textbuffer, "%02d:%02d ", Hour, Minute);
+                      sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
                       lcd.print(textbuffer);
                       lcd.print(tcr4 -> abbrev);
                            

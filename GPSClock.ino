@@ -1,19 +1,41 @@
-#define CODE_VERSION "1.0 2021-09-16"/*
-    GPS clock on 20x4 I2C LCD
-    Sverre Holm, LA3ZA Nov 2015 - September 2020
+#define CODE_VERSION "1.0 2021-09-24"
+
+/*
+LA3ZA GPS Clock
+    
+Copyright 2015 - 2021 Sverre Holm, LA3ZA
+All trademarks referred to in source code and documentation are copyright their respective owners.
+
+    
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License 
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    
+If you offer a hardware kit using this software, show your appreciation by sending the author a complimentary kit ;-)
+
+Full documentation can be found at https://github.com/la3za .  Please read it before requesting help.
+
 
 Features:
-           Controlled by a GPS module outputting data over an RS232 serial interface,
-           and handled with the TinyGPS++ library
+           GPS clock on 20x4 I2C LCD
+           Controlled by a GPS module outputting data over an RS232 serial interface, typ. QRPLabs QLG1 GPS Receiver kit, or the QLG2
+           GPS is handled with the TinyGPS++ library
            Shows raw GPS data such as UTC time and date, position, altitude, and number of satellitess
            Also with various forms of binary, BCD, digit-5, digit-10 displays
            Shows derived GPS data such as 6-digit locator
            Finds local time and handles daylight saving automatically using the Timezone library
-           Finds local sunset and sunrise, either actual value, or civil, nautical, or astronomical.
-           The library is Sunrise.
+           Finds local sunset and sunrise, either actual value, or civil, nautical, or astronomical using the Sunrise library
            The clock also gives local solar height based on the Sunpos library from the K3NG rotator controller.
-           The clock also provides the lunar phase based on ideas found here
-           as well as predict necxt rise/set time for the moon
+           The clock also provides the lunar phase as well as predict necxt rise/set time for the moon
 
 
            Input   from GPS
@@ -32,11 +54,41 @@ Features:
              PWM control of LCD backlight via potentiometer on analog input
                */
 
+/* Functions in this file:
 
-               ////// load user-defined setups //////
-#include "clock_pin_settings.h"     // hardware pins 
+            setup
+            loop
+            
+            LocalUTC
+            UTCLocator
+            
+            LocalSun
+            LocalSunMoon
+            LocalMoon
+            MoonRiseSet
+            
+            Binary
+            Bar
+            MengenLehrUhr
+            LinearUhr
+            
+            InternalTime
+            code_Status
+            
+            UTCPosition
+            
+            NCDXFBeacons
+            WSPRsequence
+ 
+*/
+
+
+///// load user-defined setups //////
+
 #include "clock_debug.h"            // debugging options via serial port
 #include "clock_options.h"        // customization of order and number of menu items
+#include "clock_pin_settings.h"     // hardware pins 
+
 //////////////////////////////////////
 
 // libraries
@@ -47,8 +99,15 @@ Features:
 #include "clock_zone.h"         // user-defined setup for local time zone and daylight saving
 
 #include <TinyGPS++.h>          // http://arduiniana.org/libraries/tinygpsplus/
-#include <Wire.h>               // For I2C. Comes with Arduino IDE
-#include <LiquidCrystal_I2C.h>  // Install NewliquidCrystal_1.3.4.zip https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads/
+
+#if defined(FEATURE_LCD_I2C)
+  #include <Wire.h>               // For I2C. Comes with Arduino IDE
+  #include <LiquidCrystal_I2C.h>  // Install NewliquidCrystal_1.3.4.zip https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads/
+#endif
+
+#if defined(FEATURE_LCD_4BIT)
+  #include <LiquidCrystal.h>
+#endif  
 
 #include <Sunrise.h>            // https://github.com/chaeplin/Sunrise, http://www.andregoncalves.info/ag_blog/?p=47
 // Now in AVR-Libc version 1.8.1, Aug. 2014 (not in Arduino official release)
@@ -56,12 +115,19 @@ Features:
                // K3NG https://blog.radioartisan.com/yaesu-rotator-computer-serial-interface/
                //      https://github.com/k3ng/k3ng_rotator_controller
 #include <sunpos.h>      // http://www.psa.es/sdg/archive/SunPos.cpp (via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries)
-#include <moon2.h>        // via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries
+#include <moon2.h>       // via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries
 
 
-// set the LCD address to 0x27 and set the pins on the I2C chip used for LCD connections:
-//                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+#if defined(FEATURE_LCD_I2C)
+//            set the LCD address to 0x27 and set the pins on the I2C chip used for LCD connections:
+//                     addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
+  LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+#endif
+
+
+#if defined(FEATURE_LCD_4BIT)
+  LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+#endif 
 
 #define RAD                 (PI/180.0)
 #define SMALL_FLOAT         (1e-12)
@@ -100,6 +166,7 @@ uint8_t monthGPS, dayGPS, hourGPS, minuteGPS, secondGPS, weekdayGPS;
 int val; // pot value which controls backlight brighness
 int menuOrder[30]; //menuOrder[noOfStates];
 
+
 /*
   Uses Serial1 for GPS input
   4800; // OK for EM-406A and ADS-GM1
@@ -112,14 +179,12 @@ TinyGPSPlus gps; // The TinyGPS++ object
 #include "clock_custom_routines.h"  // user customable functions for local language
 #include "clock_helper_routines.h"  // library of functions
 
-void LcdShortDayDateTimeLocal(int lineno=0, int moveLeft=0);
-
 ////////////////////////////////////////////////////////////////////////////////
 void setup() {
   dispState = 0;
   lcd.begin(20, 4);
 
-  // Store bit maps, designed using editor at https://maxpromer.github.io/LCD-Character-Creator/
+// Store bit maps, designed using editor at https://maxpromer.github.io/LCD-Character-Creator/
   byte upDashedArray[8] = {0x4, 0xa, 0x15, 0x0, 0x4, 0x0, 0x4, 0x0};
   byte downDashedArray[8] = {0x4, 0x0, 0x4, 0x0, 0x15, 0xa, 0x4, 0x0};
   byte upArray[8] = {0x4, 0xe, 0x15, 0x4, 0x4, 0x4, 0x4, 0x0};
@@ -130,11 +195,10 @@ void setup() {
   lcd.createChar(DashedDownArrow, downDashedArray);
   lcd.createChar(UpArrow, upArray);
   lcd.createChar(DownArrow, downArray);
-  lcd.clear(); // in order to set the LCD back to the proper memory mode
-
-  #ifdef FEATURE_LCD_NATIVE
+  #ifdef FEATURE_DAY_NAME_NATIVE
     #include "clock_native.h"  // user customable character set
   #endif
+  lcd.clear(); // in order to set the LCD back to the proper memory mode
 
   pinMode(LCD_pwm, OUTPUT);
   digitalWrite(LCD_pwm, HIGH);   // sets the backlight LED to full
@@ -194,7 +258,7 @@ void setup() {
       lcd.clear();
       oldminute = -1; // to get immediate display of some info
       lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
-      delay(200); // was 300
+      delay(300); // was 300
     }
     else if (button == 1) { // decrease menu # by one
       dispState = (dispState - 1) % noOfStates;;
@@ -202,7 +266,7 @@ void setup() {
       oldminute = -1; // to get immediate display of some info
       if (dispState < 0) dispState += noOfStates;
       lcd.setCursor(18, 3); lcd.print(dispState);
-      delay(200);
+      delay(300);
     }
 
     else {
@@ -278,7 +342,7 @@ void setup() {
 // Nice to have
           else if ((dispState) == menuOrder[6]) TimeZones();     // Other time zones           
  
-// Fancy, near unreadable displays, fun to program:
+// Fancy, sometimes near unreadable displays, fun to program, and fun to look at:
           else if ((dispState) == menuOrder[7])  Binary(2);       // Binary, horizontal, display of time
           else if ((dispState) == menuOrder[8])  Binary(1);       // BCD, horizontal, display of time
           else if ((dispState) == menuOrder[9])  Binary(0);       // BCD vertical display of time
@@ -309,7 +373,7 @@ void setup() {
 // Menu item ///////////////////////////////////////////////////////////////////////////////////////////
 void LocalUTC() { // local time, UTC,  locator
 
-    char textbuffer[9];
+    char textbuffer[11];
     // get local time
 
     local = now() + UTCoffset * 60;
@@ -317,7 +381,7 @@ void LocalUTC() { // local time, UTC,  locator
     Minute = minute(local);
     Seconds = second(local);
 
-    lcd.setCursor(0, 0); // 1. line *********
+    lcd.setCursor(0, 0); // top line *********
     sprintf(textbuffer, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
     lcd.print(textbuffer);
     lcd.print("      ");
@@ -327,9 +391,8 @@ void LocalUTC() { // local time, UTC,  locator
     Year = year(local);
     if (dayGPS != 0)
     {
-      char today[4];
-
-      #ifdef FEATURE_LCD_NATIVE
+ 
+     #ifdef FEATURE_DAY_NAME_NATIVE
         lcd.setCursor(13, 0);
         nativeDayLong(local);
       #else // English
@@ -364,7 +427,7 @@ void LocalUTC() { // local time, UTC,  locator
     }
 
     lcd.setCursor(0, 2); lcd.print("                    ");
-    LcdUTCTimeLocator(3); // / 4. line *********
+    LcdUTCTimeLocator(3); // / last line *********
     
     oldminute = minuteGPS;
   }
@@ -373,9 +436,9 @@ void LocalUTC() { // local time, UTC,  locator
 // Menu item //////////////////////////////////////////////////////////////////////////////////////////
 
 void UTCLocator() {     // UTC, locator, # satellites
-    char textbuffer[20];
+    char textbuffer[25];
 
-    lcd.setCursor(0, 0); // 1. line *********
+    lcd.setCursor(0, 0); // top line *********
     if (gps.time.isValid()) {
       sprintf(textbuffer, "%02d%c%02d%c%02d         UTC", hourGPS, HOUR_SEP, minuteGPS, MIN_SEP, secondGPS);
       lcd.print(textbuffer);
@@ -385,8 +448,7 @@ void UTCLocator() {     // UTC, locator, # satellites
 
     if (dayGPS != 0)
     {
-      lcd.setCursor(0, 1); // 2. line
-      char today[4];
+      lcd.setCursor(0, 1); // line 1
       lcd.print(dayStr(weekdayGPS)); lcd.print("   "); // two more spaces 14.04.2018
 
       lcd.setCursor(10, 1); 
@@ -411,7 +473,7 @@ void UTCLocator() {     // UTC, locator, # satellites
     }
     if (gps.location.isValid()) {
       
-      #ifndef MANUAL_POSITION 
+      #ifndef DEBUG_MANUAL_POSITION 
         latitude = gps.location.lat();
         lon = gps.location.lng();
       #else
@@ -421,8 +483,8 @@ void UTCLocator() {     // UTC, locator, # satellites
       
       char locator[7];
       Maidenhead(lon, latitude, locator);
-      lcd.setCursor(0, 3); // 4. line *********
-      lcd.print(locator);
+      lcd.setCursor(0, 3); // last line *********
+      lcd.print(locator); lcd.print("       ");
     }
     if (gps.satellites.isValid()) {
       noSats = gps.satellites.value();
@@ -431,100 +493,15 @@ void UTCLocator() {     // UTC, locator, # satellites
     }
   }
 
-// Menu item //////////////////////////////////////////////////////////////////////////////////
-void LocalSunMoon() { // local time, sun, moon
-    //
-    // shows Actual (0 deg) and Civil (-6 deg) sun rise/set
-    //
-
-//LcdShortDayDateTimeLocal;
-    LcdShortDayDateTimeLocal(0, 2);  // line 0, time offset 2 to the left
-
-    if (gps.location.isValid()) {
-      if (minuteGPS != oldminute) {
-        
-      #ifndef MANUAL_POSITION 
-        latitude = gps.location.lat();
-        lon = gps.location.lng();
-      #else
-        latitude = latitude_manual;
-        lon      = longitude_manual;
-      #endif
-
-      LcdSolarRiseSet(1,' ');  // 2. line
-      LcdSolarRiseSet(2,'C'); // 3. line
-//      LcdSolarRiseElevationSet(1); 
-//      LcdSolarRiseNoonSetCivil(2); 
-     
-// MOON 
-        
-        float Phase, PercentPhase;     
-
-        lcd.setCursor(0, 3);  // last line
-        lcd.print("M ");  
-                
-        update_moon_position();
-        lcd.setCursor(16, 3);
-        printFixedWidth(lcd, (int)float(moon_elevation), 3);
-        lcd.write(DegreeSymbol); 
-        
-        MoonPhase(Phase, PercentPhase);
-             
-        lcd.setCursor(9, 3);
-        MoonNyNe(Phase); // (, O, ) symbol
-        MoonWaxWane(Phase); //arrow up/down
-        
-        printFixedWidth(lcd, (int)round(PercentPhase), 3);
-        lcd.print("%");               
-
-      /////////// next rise / set
-      short pRise, pSet, pLocal, pTime;
-      double rAz, sAz;
-      int order;
-     
-      GetNextRiseSet(&pRise, &rAz, &pSet, &sAz, &order); 
-   
-      local = now() + UTCoffset * 60;
-      Hour = hour(local);
-      Minute = minute(local);
-
-      int packedTime = Hour*100 + Minute;
-
-      lcd.setCursor(2, 3); // 4. line
-      
-      // find next event
-      if (order == 1)
-      // Rise 
-      {
-        pTime = pRise;  lcd.write(UpArrow); 
-      }
-      else
-      {
-       pTime = pSet; lcd.write(DownArrow); 
-      }
-     
-        if (pTime > -1)
-        {
-          int pHr  = pTime / 100;
-          int pMin = pTime - 100 * pHr;           
-          printFixedWidth(lcd, pHr, 2);lcd.print(HOUR_SEP);printFixedWidth(lcd, pMin,2, '0');lcd.print(" ");    
-        }
-        else lcd.print(" - ");     
-      }
-    }
-    oldminute = minuteGPS;
-  }
-
-
 // Menu item //////////////////////////////////////////////////////////////////////////////////////////
 void LocalSun() { // local time, sun x 3
     //
     // shows Actual (0 deg), Civil (-6 deg), and Nautical (-12 deg) sun rise/set
     //
-    LcdShortDayDateTimeLocal(0, 2);  // line 1
+    LcdShortDayDateTimeLocal(0, 2);  // line 0
     if (gps.location.isValid()) {
       if (minuteGPS != oldminute) {      
-        #ifndef MANUAL_POSITION 
+        #ifndef DEBUG_MANUAL_POSITION 
         latitude = gps.location.lat();
         lon = gps.location.lng();
       #else
@@ -539,6 +516,98 @@ void LocalSun() { // local time, sun x 3
     }
     oldminute = minuteGPS;
   }
+
+
+// Menu item //////////////////////////////////////////////////////////////////////////////////
+void LocalSunMoon() { // local time, sun, moon
+    //
+    // shows Actual (0 deg) and Civil (-6 deg) sun rise/set
+    //
+
+    LcdShortDayDateTimeLocal(0, 2);  // line 0, time offset 2 to the left
+
+    if (gps.location.isValid()) {
+      if (minuteGPS != oldminute) {
+        
+      #ifndef DEBUG_MANUAL_POSITION 
+        latitude = gps.location.lat();
+        lon = gps.location.lng();
+      #else
+        latitude = latitude_manual;
+        lon      = longitude_manual;
+      #endif
+
+      LcdSolarRiseSet(1,' ');  // line 1
+      LcdSolarRiseSet(2,'C'); // line 2
+     
+// MOON 
+        
+      lcd.setCursor(0, 3);  // last line
+      lcd.print("M ");  
+      
+      // next rise / set
+      short pRise, pSet, pLocal, pTime;
+      double rAz, sAz;
+      int order;
+     
+      GetNextRiseSet(&pRise, &rAz, &pSet, &sAz, &order); 
+      #ifdef FEATURE_SERIAL_MOON
+         Serial.print(F("LocalSunMoon: order: ")); Serial.println(order);
+      #endif
+   
+      local = now() + UTCoffset * 60;
+      Hour = hour(local);
+      Minute = minute(local);
+
+      int packedTime = Hour*100 + Minute;
+
+      lcd.setCursor(2, 3); // last line
+      
+      // find next event
+      if (order == 1)  // Rise 
+      {
+        pTime = pRise;  lcd.write(UpArrow); 
+      }
+      else // Set (or order not initialized correctly)
+      {
+        pTime = pSet; lcd.write(DownArrow); 
+      }
+     
+      if (pTime > -1)
+        {
+          int pHr  = pTime / 100;
+          int pMin = pTime - 100 * pHr;           
+          printFixedWidth(lcd, pHr, 2);lcd.print(HOUR_SEP);printFixedWidth(lcd, pMin,2, '0');lcd.print(" ");    
+        }
+      else lcd.print(" - ");     
+
+      float PhaseM, PercentPhaseM;     
+      MoonPhaseAccurate(PhaseM, PercentPhaseM);  
+
+      #ifdef FEATURE_SERIAL_MOON
+        Serial.println(F("LocalSunMoon: "));
+        Serial.print(F(" PhaseM, PercentPhaseM "));
+        Serial.print(PhaseM);Serial.print(F(", "));Serial.println(PercentPhaseM);
+      #endif
+
+       lcd.setCursor(9, 3);
+       MoonSymbol(PhaseM); // (, O, ), symbol
+       MoonWaxWane(PhaseM); //arrow up/down or ' ' (space)
+
+     
+       printFixedWidth(lcd, (int)round(PercentPhaseM), 3);
+       lcd.print("%");               
+
+       update_moon_position();
+       lcd.setCursor(16, 3);
+       printFixedWidth(lcd, (int)round(moon_elevation), 3);
+       lcd.write(DegreeSymbol); 
+       }
+    }
+    oldminute = minuteGPS;
+  }
+
+
 
 
 // Menu item /////////////////////////////////////////////////////////////////////////////////////////////
@@ -557,23 +626,31 @@ void LocalMoon() { // local time, moon phase, elevation, next rise/set
        
         update_moon_position();
         
-        lcd.setCursor(0, 2); // 3. line
+       lcd.setCursor(0, 3); // line 3
+//        
+//        lcd.print("  ");
+//        textbuf = String(moon_dist, 0);
+//        lcd.print(textbuf); lcd.print(" km");
+
+        lcd.print(" ");
+        printFixedWidth(lcd, int(round(moon_dist/4067.0)), 3);
+        lcd.print("% ");
         
-        lcd.print("  ");
-        textbuf = String(moon_dist, 0);
-        lcd.print(textbuf);lcd.print(" km");
+        printFixedWidth(lcd, int(round(moon_dist/1000.0)), 3);
+        lcd.print("'km ");
+            
         
         MoonPhase(Phase, PercentPhase);
 
-        lcd.setCursor(13, 2);            
-        MoonNyNe(Phase);  // (,0,)
+        lcd.setCursor(14, 3);            
+        MoonSymbol(Phase);  // (,0,)
         MoonWaxWane(Phase); // arrow
         
-        lcd.setCursor(16, 2); 
+        lcd.setCursor(16, 3); 
         printFixedWidth(lcd, (int)(abs(round(PercentPhase))), 3);
         lcd.print("%");
         
-        #ifndef MANUAL_POSITION 
+        #ifndef DEBUG_MANUAL_POSITION 
           latitude = gps.location.lat();
           lon = gps.location.lng();
         #else
@@ -581,7 +658,7 @@ void LocalMoon() { // local time, moon phase, elevation, next rise/set
           lon      = longitude_manual;
         #endif
 
-        lcd.setCursor(0, 1); // 2. line
+        lcd.setCursor(0, 1); // line 1
      
         lcd.print("M El ");
         lcd.setCursor(4, 1);
@@ -623,31 +700,7 @@ void LocalMoon() { // local time, moon phase, elevation, next rise/set
        pTime = pSet; Symb = DownArrow; Az = sAz;  
       }
      
- 
-//      if (pRise < pSet) // Moon rises before it sets
-//      {
-//        if (packedTime < pRise) 
-//        {
-//          pTime = pRise;  Symb = UpArrow; Az = rAz;
-//        }
-//        else 
-//        {
-//          pTime = pSet; Symb = DownArrow; Az = sAz; 
-//        }
-//      }
-//      else
-//      {
-//        if (packedTime < pSet) 
-//        {
-//        pTime = pSet; Symb = DownArrow; Az = sAz; 
-//        }
-//        else 
-//        {
-//          pTime = pRise; Symb = UpArrow; Az = rAz;
-//        }
-//       }
-
-        lcd.setCursor(2, 3); // 4. line
+        lcd.setCursor(2, 2); // line 2
  
         if (pTime > -1)
         {
@@ -656,7 +709,7 @@ void LocalMoon() { // local time, moon phase, elevation, next rise/set
            
           lcd.write(Symb);lcd.print("   ");
           printFixedWidth(lcd, pHr, 2);lcd.print(HOUR_SEP);printFixedWidth(lcd, pMin,2, '0');lcd.print(" ");
-          lcd.setCursor(13, 3);
+          lcd.setCursor(13, 2);
           lcd.print("Az "); 
           printFixedWidth(lcd, (int)round(Az), 3);
           lcd.write(DegreeSymbol); 
@@ -668,176 +721,12 @@ void LocalMoon() { // local time, moon phase, elevation, next rise/set
     }
   }
 
-
-// Menu item //////////////////////////////////////////////////////////////////////////////////
-void WSPRsequence() {     // UTC, + WSPR band/frequency for coordinated WSPR
-    // https://physics.princeton.edu//pulsar/K1JT/doc/wspr/wspr-main.html#BANDHOPPING
-    // 20 min cycle over 10 bands from 160m to 10m
-
-    int ii, iii, iiii, offset, km;
-    char textbuffer[20];
-    char* band[10] = {"160", "80", "60", "40", "30", "20", "17", "15", "12", "10"};
-    char* qrg[10] = {"1838.100", "3570.100", "5366.200", "7040.100", "10140.200", "14097.100", "18106.100", "21096.100", "24926.100", "28126.100"};
-
-    LcdUTCTimeLocator(0); // 1. line *********  
-    /*
-       Each WSPR frequency is transmitted every 20 minutes in 2 min intervals.
-    */
-    lcd.setCursor(0, 2); lcd.print("WSPR band hopping:  ");
-
-    ii = (minuteGPS % 20) / 2; // ii from 0 to 9
-
-    // WSPR transmission starts 1 second into even minute and lasts for 110.6 = 60 + 50.6 seconds
-    if ((minuteGPS % 2 == 0 && secondGPS < 1) || (minuteGPS % 2 == 1 && secondGPS > 52))
-    {
-      lcd.setCursor(0, 3); lcd.print("                    ");
-    }
-    else
-    {
-      lcd.setCursor(0, 3); lcd.print(band[ii]); lcd.print(" m "); lcd.print(qrg[ii]);  lcd.print(" kHz  ");
-    }
-    lcd.setCursor(19, 3); lcd.print(" "); // blank out menu number
-  }
-
-// Menu items //////////////////////////////////////////////////////////////////////////////////
-void NCDXFBeacons(int option) {     // UTC + info about NCDXF beacons
-    // option=1: 14-21 MHz beacons on lines 1-3
-    // option=2: 21-28 MHz beacons on lines 1-3
-    // Inspired by OE3GOD: https://www.hamspirit.de/7757/eine-stationsuhr-mit-ncdxf-bakenanzeige/
-	
-    int ii, iii, iiii, offset, km;
-    char textbuffer[20];
-    double lati, longi;
-    char* callsign[18] = {
-      " 4U1UN", " VE8AT", "  W6WX", " KH6RS", "  ZL6B", "VK6RBP", "JA2IGY", "  RR9O", "  VR2B", "  4S7B", " ZS6DN",
-      "  5Z4B", " 4X6TU", "  OH2B", "  CS3B", " LU4AA", "  OA4B", "  YV5B"
-    };
-    char* location[18] = {
-      "FN30as", "EQ79ax", "CM97bd", "BL10ts", "RE78tw", "OF87av", "PM84jk", "NO14kx", "OL72bg", "MJ96wv", "KG44dc",
-      "KI88ks", "KM72jb", "KP20dh", "IM12or", "GF05tj", "FH17mw", "FJ69cc"
-    };
-    // OH2B @ KP20dh and not just KP20: https://automatic.sral.fi/?stype=beacon&language=en
-    char* qth[18] = {
-      "N York ", "Nunavut", "Califor", "Hawaii ", "N Zeala", "Austral", "Japan  ", "Siberia", "H Kong ", "Sri Lan", "S Afric",
-      "Kenya  ", "Israel ", "Finland", "Madeira", "Argenti", "Peru   ", "Venezue"
-    };
-    char* qrg[5] = {"14100", "18110", "21150", "24930", "28200"};
-
-    LcdUTCTimeLocator(0); // 1. line *********  
-    /*
-       Each beacon transmits once on each band once every three minutes, 24 hours a day.
-       At the end of each 10 second transmission, the beacon steps to the next higher band
-       and the next beacon in the sequence begins transmitting.
-    */
-    ii = (60 * (minuteGPS % 3) + secondGPS) / 10; // ii from 0 to 17
-
-    if (option <= 1) offset = 0; // 14-18 MHz
-    else             offset = 2; // 18-28 MHz
-
-    for (iiii = 1; iiii < 4; iiii += 1) { // step over lines 1,2,3
-      lcd.setCursor(0, iiii);
-      //
-      // modulo for negative numbers: https://twitter.com/parkerboundy/status/326924215833985024
-      iii = ((ii - iiii + 1 - offset % 18) + 18) % 18;
-      lcd.print(qrg[iiii - 1 + offset]); lcd.print(" "); lcd.print(callsign[iii]);
-      if (secondGPS % 10 < 5) {
-        lcd.print(" ");  // first half of cycle: location
-        lcd.print(qth[iii]);
-      }
-      else                                                            // second half of cycle: distance
-      {
-        locator_to_latlong(location[iii], lati, longi);// position of beacon
-        km = distance(lati, longi, latitude, lon);    // distance beacon - GPS
-        printFixedWidth(lcd, (int)float(km),6);
-        lcd.print("km");
-      }
-    }
-  }
-
-
-// Menu item //////////////////////////////////////////////////////////////////////////////////////////
-void UTCPosition() {     // position, altitude, locator, # satellites
-    char textbuffer[20];
-    String textbuf;
-
-    LcdUTCTimeLocator(0); // 1. line *********
-    // UTC date
-    if (gps.location.isValid()) {
-      
-      #ifndef MANUAL_POSITION 
-        latitude = gps.location.lat();
-        lon = gps.location.lng();
-        alt = gps.altitude.meters();
-      #else
-        latitude = latitude_manual;
-        lon      = longitude_manual;
-        alt = 0.0;
-      #endif
-           
-      lcd.setCursor(0, 3);
-      lcd.print(alt); lcd.print("m ");
-
-      // Only works N & E:
-      lcd.setCursor(0, 2);
-      if ((now() / 4) % 3 == 0) { // change every 4 seconds
-        textbuf = String(latitude, 4);
-        lcd.print(textbuf); lcd.print("N,   ");
-
-        textbuf = String(lon, 4);
-        lcd.print(textbuf); lcd.print("E");
-      }
-      else if ((now() / 4) % 3 == 1) { // degrees, minutes, seconds
-
-        double mins;
-        String textbuf = String(floor(latitude), 0); // rounds!
-        lcd.print(textbuf); lcd.write(DegreeSymbol); 
-        mins = 60 * (latitude - floor(latitude));
-        textbuf = String(floor(mins), 0); // round down = floor
-        lcd.print(textbuf); lcd.write("'");
-        textbuf = String(floor(0.5 + 60 * (mins - floor(mins))), 0); // round
-        lcd.print(textbuf); lcd.write(34); lcd.print(", ");
-
-        textbuf = String(floor(lon), 0);
-        lcd.print(textbuf);
-        lcd.write(DegreeSymbol); 
-        mins = 60 * (lon - floor(lon));
-        textbuf = String(floor(mins), 0);
-        lcd.print(textbuf); lcd.write("'");
-        textbuf = String(floor(0.5 + 60 * (mins - floor(mins))), 0);
-        lcd.print(textbuf); lcd.write(34); // symbol for "
-        //lcd.print(" ");
-      }
-
-      else  { // degrees, decimal minutes
-        double mins;
-        String textbuf = String(floor(latitude), 0); // rounds!
-        lcd.print(textbuf); lcd.write(DegreeSymbol); 
-        mins = 60 * (latitude - floor(latitude));
-        textbuf = String(mins, 2); // round down = floor
-        lcd.print(textbuf); lcd.write("' ");
-
-        textbuf = String(floor(lon), 0);
-        lcd.print(textbuf);
-        lcd.write(DegreeSymbol); 
-        mins = 60 * (lon - floor(lon));
-        textbuf = String(mins, 2);
-        lcd.print(textbuf); lcd.write("' ");
-      }    
-    }
-    if (gps.satellites.isValid()) {
-      noSats = gps.satellites.value();
-      if (noSats < 10) lcd.setCursor(14, 3);
-      else lcd.setCursor(13, 3); lcd.print(noSats); lcd.print(" Sats");
-    }
-  }
-
-
 // Menu item ////////////////////////////////////////////////////////
 void MoonRiseSet(void) {
 
       if (gps.location.isValid()) {
       
-      #ifndef MANUAL_POSITION 
+      #ifndef DEBUG_MANUAL_POSITION 
         latitude = gps.location.lat();
         lon = gps.location.lng();
       #else
@@ -853,7 +742,7 @@ void MoonRiseSet(void) {
         // rise/set for this UTC day:
          GetMoonRiseSetTimes(float(UTCoffset)/60.0, latitude, lon, &pRise, &rAz, &pSet, &sAz);
   
-        lcd.setCursor(0, 0); // 1. line
+        lcd.setCursor(0, 0); // top line
         lcd.print("M "); 
         
         int MoonRiseHr  = pRise / 100;
@@ -935,22 +824,19 @@ void MoonRiseSet(void) {
     oldminute = minuteGPS;
    }
 
-// Menu item ////////////////////////////////////////////
-void code_Status(void) {
-    lcd.setCursor(0, 0); lcd.print("* LA3ZA GPS clock *");
-    lcd.setCursor(0, 1); lcd.print("Ver "); lcd.print(CODE_VERSION);
-    lcd.setCursor(0, 2); lcd.print("GPS "); lcd.print(GPSBaud); //lcd.print(" bps");
-    lcd.setCursor(0, 3); lcd.print(tcr -> abbrev);lcd.print(" "); lcd.print(UTCoffset);  //timezone name and offset (min)   
-  }
+
+
+
  
 
 // Menu items ///////////////////////////////////////////////////////////////////////////////////////////
-void Binary(int mode) { // binary local time
-    // mode = 0 - vertical BCD
-    // mode = 1 - horizontal BCD
-    // mode = 2 - horisontal binary
-
-    char textbuffer[9];
+void Binary(
+  int mode      // mode = 0 - vertical BCD
+                // mode = 1 - horizontal BCD
+                // mode = 2 - horisontal binary
+  ) { // binary local time
+    
+    char textbuffer[12]; // was [9] -> memory overwrite
     int tens, ones;
 
     int BinaryTensHour[5], BinaryHour[5], BinaryTensMinute[5], BinaryMinute[5], BinaryTensSeconds[5], BinarySeconds[5];
@@ -965,7 +851,8 @@ void Binary(int mode) { // binary local time
 
     // must send a variable, not an equation, to decToBinary as it does in-place arithmetic on input variable
     ones = Hour % 10; tens = (Hour - ones) / 10;
-    decToBinary(tens, BinaryTensHour); decToBinary(ones, BinaryHour);
+    decToBinary(ones, BinaryHour);
+    decToBinary(tens, BinaryTensHour); 
 
     ones = Minute % 10; tens = (Minute - ones) / 10;
     decToBinary(tens, BinaryTensMinute); decToBinary(ones, BinaryMinute);
@@ -976,29 +863,36 @@ void Binary(int mode) { // binary local time
 
     if (mode == 0) // vertical digits:
     {
-      lcd.setCursor(10, 3); //LSB
-      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d  ", BinaryTensHour[4], BinaryHour[4], BinaryTensMinute[4], BinaryMinute[4], BinaryTensSeconds[4], BinarySeconds[4]);
-      lcd.print(textbuffer);
-
-      lcd.setCursor(10, 2);
-      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d", BinaryTensHour[3], BinaryHour[3], BinaryTensMinute[3], BinaryMinute[3], BinaryTensSeconds[3], BinarySeconds[3]);
-      lcd.print(textbuffer);
-
-      lcd.setCursor(10, 1);
-      sprintf(textbuffer, " %1d %1d%1d %1d%1d", BinaryHour[2], BinaryTensMinute[2], BinaryMinute[2], BinaryTensSeconds[2], BinarySeconds[2]);
-      lcd.print(textbuffer);
-
-      lcd.setCursor(10, 0);
+      lcd.setCursor(0, 0); lcd.print("BCD");
+      
+      lcd.setCursor(9, 0);
       sprintf(textbuffer, " %1d  %1d  %1d", BinaryHour[1], BinaryMinute[1], BinarySeconds[1]);
       lcd.print(textbuffer);
+      lcd.setCursor(19,0);lcd.print("8");
 
-      lcd.setCursor(0, 0); lcd.print("BCD");
+   //   lcd.setCursor(0,1); lcd.print("hh mm ss");
+      lcd.setCursor(9, 1);
+      sprintf(textbuffer, " %1d %1d%1d %1d%1d", BinaryHour[2], BinaryTensMinute[2], BinaryMinute[2], BinaryTensSeconds[2], BinarySeconds[2]);
+      lcd.print(textbuffer);
+      lcd.setCursor(19,1);lcd.print("4");
 
+      lcd.setCursor(9, 2);
+      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d", BinaryTensHour[3], BinaryHour[3], BinaryTensMinute[3], BinaryMinute[3], BinaryTensSeconds[3], BinarySeconds[3]);
+      lcd.print(textbuffer);
+      lcd.setCursor(19,2);lcd.print("2");
+
+      
+      lcd.setCursor(9, 3); //LSB
+      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d  ", BinaryTensHour[4], BinaryHour[4], BinaryTensMinute[4], BinaryMinute[4], BinaryTensSeconds[4], BinarySeconds[4]);
+      lcd.print(textbuffer);
+      lcd.setCursor(19,3);lcd.print("1");
     }
     else if (mode == 1)
     {
       //// horizontal BCD digits:
 
+      lcd.setCursor(0, 0); lcd.print("BCD");
+      
       lcd.setCursor(9, 1); sprintf(textbuffer, "  %1d%1d ", BinaryTensHour[3], BinaryTensHour[4] );
       lcd.print(textbuffer);
       sprintf(textbuffer, "%1d%1d%1d%1d H", BinaryHour[1], BinaryHour[2], BinaryHour[3], BinaryHour[4]);
@@ -1014,12 +908,12 @@ void Binary(int mode) { // binary local time
       sprintf(textbuffer, "%1d%1d%1d%1d S", BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4] );
       lcd.print(textbuffer);
 
-      lcd.setCursor(0, 0); lcd.print("BCD");
+   
 
 
       if (Seconds < 11)  // show help: weighting
       {
-      #ifdef CLOCK_HELP
+      #ifdef FEATURE_CLOCK_SOME_SECONDS
         lcd.setCursor(9, 0); lcd.print(" 421 8421");
       #endif
       } 
@@ -1049,7 +943,7 @@ void Binary(int mode) { // binary local time
   
       if (Seconds < 11)  // show help: weighting
       {
-      #ifdef CLOCK_HELP
+      #ifdef FEATURE_CLOCK_SOME_SECONDS
         lcd.setCursor(13, 0); lcd.print(" 8421");
       #endif
       } 
@@ -1060,7 +954,7 @@ void Binary(int mode) { // binary local time
      }
   
         // Common for all modes:
-      #ifdef CLOCK_HELP
+      #ifdef FEATURE_CLOCK_SOME_SECONDS
           if (Seconds < 11)  // show time in normal numbers
           {
           sprintf(textbuffer, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
@@ -1160,14 +1054,14 @@ void Bar(void) {
             lcd.write(219);
           }  //("#");}
           lcd.setCursor(18, 2); lcd.print("5s");
-          lcd.setCursor(18, 3); lcd.print("  ");
+ //        lcd.setCursor(18, 3); lcd.print("  ");
 
           lcd.setCursor(18, 3);
           if (Hour > 12) lcd.print("PM");
           else lcd.print("AM");
 
-          #ifdef CLOCK_HELP
-            lcd.setCursor(12, 3);
+          #ifdef FEATURE_CLOCK_SOME_SECONDS
+            lcd.setCursor(8, 3);
             if (Seconds < 11)  // show time in normal numbers
             {
           //    lcd.print("Bar");
@@ -1197,7 +1091,7 @@ void MengenLehrUhr(void) {
         Seconds = second(local);
 
         lcd.setCursor(0, 0);
-        // first line has 5 hour resolution
+        // top line has 5 hour resolution
         if (Hour > 4)
         {
           lcd.print("-"); lcd.write(255); lcd.print("-"); lcd.print(" ");// fills square
@@ -1307,8 +1201,7 @@ void LinearUhr(void) {
      
         int imax;
         int ii;
-        //  lcd.clear(); // makes it blink
-
+        
         // get local time
         local = now() + UTCoffset * 60;
         Hour = hour(local);
@@ -1316,7 +1209,7 @@ void LinearUhr(void) {
         Seconds = second(local);
 
         lcd.setCursor(0, 0);
-        // first line has 10 hour resolution
+        // top line has 10 hour resolution
         imax = Hour / 10;
         lcd.print("             ");
         lcd.setCursor(0, 0);
@@ -1361,7 +1254,7 @@ void LinearUhr(void) {
         }
         lcd.setCursor(17, 2); lcd.print("10m");
 
-        // fourth line shows remainder and has 1 minute resolution
+        // last line shows remainder and has 1 minute resolution
         lcd.setCursor(0, 3);
 
         // only overwrite old characters when needed, to avoid flicker
@@ -1386,25 +1279,26 @@ void LinearUhr(void) {
 void InternalTime() {     // UTC, Unix time, J2000, etc
       char textbuffer[20];
 
-      lcd.setCursor(0, 0); // 1. line *********
+      lcd.setCursor(0, 0); // top line *********
       if (gps.time.isValid()) {
-        sprintf(textbuffer, "%02d%c%02d%c%02d UTC ", hourGPS, HOUR_SEP, minuteGPS, MIN_SEP, secondGPS);
-        lcd.print(textbuffer);
-        
+
         float jd = now() / 86400.0; // cdn(now()); // now/86400, i.e. no of days since 1970
         float j2000 = jd - 10957.5; // 1- line
-        lcd.setCursor(9, 0);
         lcd.print("j2k ");
         lcd.print(j2000);
-
-        // utc = now(); // UNIX time, seconds ref to 1970
+        
+        lcd.setCursor(12, 0);
+        sprintf(textbuffer, "%02d%c%02d%c%02d UTC ", hourGPS, HOUR_SEP, minuteGPS, MIN_SEP, secondGPS);
+        lcd.print(textbuffer);
+                    
         lcd.setCursor(0, 1);
-        lcd.print("now   ");
-        lcd.print(now());
-       
-        lcd.setCursor(0, 2);
         lcd.print("jd1970 ");
         lcd.print(jd);
+
+        // utc = now(); // UNIX time, seconds ref to 1970
+        lcd.setCursor(0, 2);
+        lcd.print("now   ");
+        lcd.print(now());
 
         lcd.setCursor(0, 3);
         lcd.print("local ");
@@ -1413,8 +1307,185 @@ void InternalTime() {     // UTC, Unix time, J2000, etc
       }
     }
 
+// Menu item ////////////////////////////////////////////
+void code_Status(void) {
+    lcd.setCursor(0, 0); lcd.print("* LA3ZA GPS clock *");
+    lcd.setCursor(0, 1); lcd.print("Ver "); lcd.print(CODE_VERSION);
+    lcd.setCursor(0, 2); lcd.print("GPS "); lcd.print(GPSBaud); //lcd.print(" bps");
+    lcd.setCursor(0, 3); lcd.print(tcr -> abbrev);lcd.print(" "); lcd.print(UTCoffset);  //timezone name and offset (min)   
+  }
+
+// Menu item //////////////////////////////////////////////////////////////////////////////////////////
+void UTCPosition() {     // position, altitude, locator, # satellites
+    String textbuf;
+
+    LcdUTCTimeLocator(0); // top line *********
+    // UTC date
+    if (gps.location.isValid()) {
+      
+      #ifndef DEBUG_MANUAL_POSITION 
+        latitude = gps.location.lat();
+        lon = gps.location.lng();
+        alt = gps.altitude.meters();
+      #else
+        latitude = latitude_manual;
+        lon      = longitude_manual;
+        alt = 0.0;
+      #endif
+           
+      lcd.setCursor(0, 3);
+      lcd.print(alt); lcd.print("m ");
+
+      // Only works N & E:
+      lcd.setCursor(0, 2);
+      if ((now() / 4) % 3 == 0) { // change every 4 seconds
+        textbuf = String(latitude, 4);
+        lcd.print(textbuf); lcd.print("N,   ");
+
+        textbuf = String(lon, 4);
+        lcd.print(textbuf); lcd.print("E");
+      }
+      else if ((now() / 4) % 3 == 1) { // degrees, minutes, seconds
+
+        double mins;
+        String textbuf = String(floor(latitude), 0); // rounds!
+        lcd.print(textbuf); lcd.write(DegreeSymbol); 
+        mins = 60 * (latitude - floor(latitude));
+        textbuf = String(floor(mins), 0); // round down = floor
+        lcd.print(textbuf); lcd.write("'");
+        textbuf = String(floor(0.5 + 60 * (mins - floor(mins))), 0); // round
+        lcd.print(textbuf); lcd.write(34); lcd.print(", ");
+
+        textbuf = String(floor(lon), 0);
+        lcd.print(textbuf);
+        lcd.write(DegreeSymbol); 
+        mins = 60 * (lon - floor(lon));
+        textbuf = String(floor(mins), 0);
+        lcd.print(textbuf); lcd.write("'");
+        textbuf = String(floor(0.5 + 60 * (mins - floor(mins))), 0);
+        lcd.print(textbuf); lcd.write(34); // symbol for "
+        //lcd.print(" ");
+      }
+
+      else  { // degrees, decimal minutes
+        double mins;
+        String textbuf = String(floor(latitude), 0); // rounds!
+        lcd.print(textbuf); lcd.write(DegreeSymbol); 
+        mins = 60 * (latitude - floor(latitude));
+        textbuf = String(mins, 2); // round down = floor
+        lcd.print(textbuf); lcd.write("'  ");
+
+        textbuf = String(floor(lon), 0);
+        lcd.print(textbuf);
+        lcd.write(DegreeSymbol); 
+        mins = 60 * (lon - floor(lon));
+        textbuf = String(mins, 2);
+        lcd.print(textbuf); lcd.write("'");
+      }    
+    }
+    if (gps.satellites.isValid()) {
+      noSats = gps.satellites.value();
+      if (noSats < 10) lcd.setCursor(14, 3);
+      else lcd.setCursor(13, 3); lcd.print(noSats); lcd.print(" Sats");
+    }
+  }
+
+
+
+
+
+// Menu items //////////////////////////////////////////////////////////////////////////////////
+
+void NCDXFBeacons(
+  int option // option=1: 14-21 MHz beacons on lines 1-3,  option=2: 21-28 MHz beacons on lines 1-3
+  ) {     // UTC + info about NCDXF beacons
+      
+    // Inspired by OE3GOD: https://www.hamspirit.de/7757/eine-stationsuhr-mit-ncdxf-bakenanzeige/
+  
+    int ii, iii, iiii, km, bandOffset;
+    double lati, longi;
+    char* callsign[19] = {
+      " 4U1UN", " VE8AT", "  W6WX", " KH6RS", "  ZL6B", "VK6RBP", "JA2IGY", "  RR9O", "  VR2B", "  4S7B", " ZS6DN",
+      "  5Z4B", " 4X6TU", "  OH2B", "  CS3B", " LU4AA", "  OA4B", "  YV5B"
+    };
+    char* location[19] = {
+      "FN30as", "EQ79ax", "CM97bd", "BL10ts", "RE78tw", "OF87av", "PM84jk", "NO14kx", "OL72bg", "MJ96wv", "KG44dc",
+      "KI88ks", "KM72jb", "KP20dh", "IM12or", "GF05tj", "FH17mw", "FJ69cc"
+    };
+    // OH2B @ KP20dh and not just KP20: https://automatic.sral.fi/?stype=beacon&language=en
+    char* qth[19] = {
+      "N York ", "Nunavut", "Califor", "Hawaii ", "N Zeala", "Austral", "Japan  ", "Siberia", "H Kong ", "Sri Lan", "S Afric",
+      "Kenya  ", "Israel ", "Finland", "Madeira", "Argenti", "Peru   ", "Venezue"
+    };
+    char* qrg[6] = {"14100", "18110", "21150", "24930", "28200"};
+
+    LcdUTCTimeLocator(0); // top line *********  
+    /*
+       Each beacon transmits once on each band once every three minutes, 24 hours a day.
+       At the end of each 10 second transmission, the beacon steps to the next higher band
+       and the next beacon in the sequence begins transmitting.
+    */
+    ii = (60 * (minuteGPS % 3) + secondGPS) / 10; // ii from 0 to 17
+
+    if (option <= 1) bandOffset = 0; // 14-18 MHz
+    else             bandOffset = 2; // 18-28 MHz
+
+    for (iiii = 1; iiii < 4; iiii += 1) { // step over lines 1,2,3
+      lcd.setCursor(0, iiii);
+      //
+      // modulo for negative numbers: https://twitter.com/parkerboundy/status/326924215833985024
+      iii = ((ii - iiii + 1 - bandOffset % 18) + 18) % 18;
+      lcd.print(qrg[iiii - 1 + bandOffset]); lcd.print(" "); lcd.print(callsign[iii]);
+      
+      if (secondGPS % 10 < 5) {
+        lcd.print(" ");  // first half of cycle: location
+        lcd.print(qth[iii]);
+      }
+      else              // second half of cycle: distance
+      {
+        locator_to_latlong(location[iii], lati, longi);// position of beacon
+        km = distance(lati, longi, latitude, lon);    // distance beacon - GPS
+        printFixedWidth(lcd, (int)float(km),6);
+        lcd.print("km");
+      }
+    }
+  }
+
+
+// Menu item //////////////////////////////////////////////////////////////////////////////////
+void WSPRsequence() {     // UTC, + WSPR band/frequency for coordinated WSPR
+    // https://physics.princeton.edu//pulsar/K1JT/doc/wspr/wspr-main.html#BANDHOPPING
+    // 20 min cycle over 10 bands from 160m to 10m
+
+    int ii; 
+    char* band[11] = {"160", "80", "60", "40", "30", "20", "17", "15", "12", "10"};
+    char* qrg[11] = {"1838.100", "3570.100", "5366.200", "7040.100", "10140.200", "14097.100", "18106.100", "21096.100", "24926.100", "28126.100"};
+
+    LcdUTCTimeLocator(0); // top line *********  
+    /*
+       Each WSPR frequency is transmitted every 20 minutes in 2 min intervals.
+    */
+    lcd.setCursor(0, 2); 
+    lcd.print("WSPR band hopping:  ");
+
+    ii = (minuteGPS % 20) / 2; // ii from 0 to 9
+
+    // WSPR transmission starts 1 second into even minute and lasts for 110.6 = 60 + 50.6 seconds
+    if ((minuteGPS % 2 == 0 && secondGPS < 1) || (minuteGPS % 2 == 1 && secondGPS > 52))
+    {
+      lcd.setCursor(0, 3); lcd.print("                    ");
+    }
+    else
+    {
+      lcd.setCursor(0, 3); lcd.print(band[ii]); lcd.print(" m "); lcd.print(qrg[ii]);  lcd.print(" kHz  ");
+    }
+    lcd.setCursor(19, 3); lcd.print(" "); // blank out menu number
+  }
+ 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of functions for Menu system ////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 /// THE END ///

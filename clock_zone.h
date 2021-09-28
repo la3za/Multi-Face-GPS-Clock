@@ -1,7 +1,5 @@
 // automatic daylight saving time 
-
 #define AUTO_UTC_OFFSET
-
 long UTCoffset = 0; // value in minutes (< +/- 720), only used if AUTO_UTC_OFFSET is not set 
                      // usually found automatically by means of Timezone library
                        

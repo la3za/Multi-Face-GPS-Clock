@@ -1,25 +1,12 @@
 // debugging options 
-//
-// serial output for debugging of solar
-//#define FEATURE_SERIAL_SOLAR
 
+//#define FEATURE_SERIAL_SOLAR // serial output for debugging of solar
+//#define FEATURE_SERIAL_GPS // serial output for debugging of GPS
+#define FEATURE_SERIAL_MOON // serial output for test of moon functions
+//#define FEATURE_SERIAL_MENU // serial output for menu & general testing
+//#define FEATURE_SERIAL_TIME // serial output for testing of time
 
-// serial output for debugging of GPS
-//#define FEATURE_SERIAL_GPS
-
-// serial output for test of moon
-#define FEATURE_SERIAL_MOON
-
-// serial output for general testing
-//#define FEATURE_SERIAL_MENU
-
-// serial output for testing of time
-//#define FEATURE_SERIAL_TIME
-
-
-
-//////// Used for testing of location functions, when elsewhere than that of GPS /////
-// #define MANUAL_POSITION
+// #define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than that of the GPS
 
 // London:
 //float latitude_manual  = 51.5; // N-S, degrees, South is negative
