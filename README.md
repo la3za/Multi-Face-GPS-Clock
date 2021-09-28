@@ -1,6 +1,6 @@
 # Yet another Arduino GPS clock
 
-Arduino Mega with 20 x 4 LCD taking data from a GPS. ![Image](https://1.bp.blogspot.com/-q5jTOZavFj0/YVOEDw-q6PI/AAAAAAAAMHc/-ox9Ai4zouUaZMNwj6tVyzogB-QYDQu2ACLcBGAsYHQ/s2048/GPSClock-00-EU.jpg)
+Arduino Mega with 20 x 4 LCD taking data from a GPS. Here showing local and UTC time. ![Image](https://1.bp.blogspot.com/-q5jTOZavFj0/YVOEDw-q6PI/AAAAAAAAMHc/-ox9Ai4zouUaZMNwj6tVyzogB-QYDQu2ACLcBGAsYHQ/s2048/GPSClock-00-EU.jpg)
 
 
 Blog post with documentation of hardware and some 17 different screens showing solar and lunar data and more: https://la3za.blogspot.com/2021/09/gps-clock.html
