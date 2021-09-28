@@ -1,6 +1,9 @@
 # Yet another Arduino GPS clock
 
-Arduino Mega with 20 x 4 LCD taking data from a GPS. Blog post with documentation of hardware and some 17 different screens: https://la3za.blogspot.com/2021/09/gps-clock.html
+Arduino Mega with 20 x 4 LCD taking data from a GPS. ![Image](https://1.bp.blogspot.com/-q5jTOZavFj0/YVOEDw-q6PI/AAAAAAAAMHc/-ox9Ai4zouUaZMNwj6tVyzogB-QYDQu2ACLcBGAsYHQ/s2048/GPSClock-00-EU.jpg)
+
+
+Blog post with documentation of hardware and some 17 different screens: https://la3za.blogspot.com/2021/09/gps-clock.html
 
 Blog posts detailing the development:
 
