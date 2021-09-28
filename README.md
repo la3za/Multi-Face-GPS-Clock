@@ -1,8 +1,6 @@
 # Yet another Arduino GPS clock
 
-Blog post with documentation of hardware and displays:
-  
-  - coming ...
+Blog post with documentation of hardware and screen: https://la3za.blogspot.com/2021/09/gps-clock.html
 
 Blog posts detailing the development:
 
