@@ -9,4 +9,4 @@ Blog posts detailing the development:
 * GPS Clock with Binary Display, 27.04.2020, https://la3za.blogspot.com/2020/04/gps-clock-with-binary-display.html
 * Yet another Arduino GPS clock,  6.11.2016, https://la3za.blogspot.com/2016/11/yet-another-arduino-clock.html
 
-Hardware schematic: ![Image](https://1.bp.blogspot.com/-4EbD9hfqF5E/YVOFS_vCWUI/AAAAAAAAMH4/ERYk25cNMYAYd4EZAqYVmdPm_uCPec6gACLcBGAsYHQ/s920/GPSClock.png)
+Hardware schematic: ![Image](https://1.bp.blogspot.com/-2JWt_pzJ8a0/YVPMi7RLUyI/AAAAAAAAMJs/vKtz9P6DBuUw2imgGvNmzmQD2Cqa2hFmwCLcBGAsYHQ/s920/2021-09-29-GPSClock.png)
