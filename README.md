@@ -1,4 +1,4 @@
-# Yet another Arduino GPS clock
+# Arduino Mega GPS clock
 
 Arduino Mega with 20 x 4 LCD taking data from a GPS. Here showing local and UTC time. ![Image](https://1.bp.blogspot.com/-q5jTOZavFj0/YVOEDw-q6PI/AAAAAAAAMHc/-ox9Ai4zouUaZMNwj6tVyzogB-QYDQu2ACLcBGAsYHQ/s2048/GPSClock-00-EU.jpg)
 
