@@ -11,3 +11,7 @@ Blog posts detailing the development:
 * Yet another Arduino GPS clock,  6.11.2016, https://la3za.blogspot.com/2016/11/yet-another-arduino-clock.html
 
 Hardware schematic: ![Image](https://1.bp.blogspot.com/-2JWt_pzJ8a0/YVPMi7RLUyI/AAAAAAAAMJs/vKtz9P6DBuUw2imgGvNmzmQD2Cqa2hFmwCLcBGAsYHQ/s920/2021-09-29-GPSClock.png)
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. 
+    
+See source code of GPSClock.ino
