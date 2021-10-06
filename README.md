@@ -12,6 +12,13 @@ Blog posts detailing the development:
 
 Hardware schematic: ![Image](https://1.bp.blogspot.com/-54JcLxapwBY/YV4Qk6-JCDI/AAAAAAAAMLM/XcpV2mENt_QEhN9Yw1UA-HAWKpKjjZ9xgCLcBGAsYHQ/s920/2021-10-06-GPSClock.png)
 
+The code starts default with 
+* Central European Time for the local time zone
+* All day names, full and abbreviated, are in English
+* GPS baud rate is 9600
+
+The code can easily be adapted to local abbreviated day names for other languages when local time is displayed, i.e. French, Spanish, Swedish, German etc. If you do that, then please share it and make it available.
+
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. 
     
 See source code of GPSClock.ino
