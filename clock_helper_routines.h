@@ -257,10 +257,11 @@ void update_moon_position() {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Maidenhead(double lon, double latitude, char loc[7]) {
-  int lonTrunc, latTrunc;
+  int lonTrunc, latTrunc, lonFirst, latFirst, lonSec, latSec;
 
-  // Locator calculation  based on Python code of
+  // Locator calculation  
   // http://en.wikipedia.org/wiki/Maidenhead_Locator_System
+  // https://ham.stackexchange.com/questions/221/how-can-one-convert-from-lat-long-to-grid-square
 
   // Examples for debugging:
   //   BH52jn: lon = -14.9176000; latitude = -17.438000;
@@ -268,17 +269,26 @@ void Maidenhead(double lon, double latitude, char loc[7]) {
   //   JO59jw; lon = 10.750000;   latitude = 59.945556;
   //   JJ00aa: lon = 0;          latitude = 0;
 
-  lon += 180.0;
-  latitude += 90.0;
+  lon += 180.0;     // only positive: 0...360
+  latitude += 90.0; // only positive: 0...180
   lonTrunc = ((int)(lon * 20 )) / 20.0;
   latTrunc = ((int)(latitude * 10 )) / 10.0;
 
-  loc[0] = 'A' + lonTrunc / 20; // 1 field = 20 deg
-  loc[1] = 'A' + latTrunc / 10;  // 1 field = 10 deg
-  loc[2] = '0' + (lonTrunc % 20) / 2; // 1 square = 2 deg
-  loc[3] = '0' + (latTrunc % 10) / 1; // 1 square = 1 deg
-  loc[4] = 'a' + (lon - lonTrunc) * 12; // 1 subsquare = 5' = 1/12 deg
-  loc[5] = 'a' + (latitude - latTrunc) * 24; // 1 subsquare = 2.5' = 1/24 deg
+  lonFirst = lonTrunc / 20;
+  latFirst = latTrunc / 10;
+
+  lonSec = (lonTrunc % 20) / 2;
+  latSec = (latTrunc % 10) / 1;
+  
+  loc[0] = 'A' + lonFirst;                                  // 1 field = 20 deg
+  loc[1] = 'A' + latFirst;                                  // 1 field = 10 deg
+  
+  loc[2] = '0' + lonSec;                                    // 1 square = 2 deg
+  loc[3] = '0' + latSec;                                    // 1 square = 1 deg
+  
+  loc[4] = 'a' + (lon      - lonFirst*20 - lonSec*2) * 12;  // 1 subsquare = 5' = 1/12 deg
+  loc[5] = 'a' + (latitude - latFirst*10 - latSec  ) * 24;  // 1 subsquare = 2.5' = 1/24 deg
+  
   loc[6] = '\0';
 }
 
@@ -440,7 +450,7 @@ void LcdUTCTimeLocator(int lineno)
 
   if (gps.satellites.isValid()) {
 
-#ifndef MANUAL_POSITION
+#ifndef DEBUG_MANUAL_POSITION
     latitude = gps.location.lat();
     lon = gps.location.lng();
 #else

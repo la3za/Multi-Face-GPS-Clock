@@ -1,4 +1,4 @@
-#define CODE_VERSION "1.0 2021-09-24"
+#define CODE_VERSION "1.02 2021-10-06"
 
 /*
 LA3ZA GPS Clock
@@ -79,9 +79,27 @@ Features:
             
             NCDXFBeacons
             WSPRsequence
- 
-*/
 
+            HexOctalClock() [added 29.09.2021]
+*/
+/*
+Revisions:
+          
+
+          1.02  06.10.2021
+                - UTC and position screen: Changed layout. Now handles Western longitudes and Southern latitudes also. Thanks Mitch W4OA
+                - Corrected bug in Maidenhead routine, only appeared if letter 5 was beyond a certain letter in the alphabet. Thanks Ross VA1KAY
+
+          1.01  29.09.2021 
+                - Fixed  small layout bug on screen
+                - New variable in clock_options.h: SECONDS_CLOCK_HELP - no of seconds to show normal clock in binary, BCD, hex, octal etc clocks.
+                - 2 new screens: no 19 and 20: hex and octal clock
+                
+          1.0   24.09.2021
+                First public release
+                18 different screens                
+          
+*/
 
 ///// load user-defined setups //////
 
@@ -348,7 +366,7 @@ void setup() {
           else if ((dispState) == menuOrder[9])  Binary(0);       // BCD vertical display of time
           else if ((dispState) == menuOrder[10]) Bar();           // horizontal bar
           else if ((dispState) == menuOrder[11]) MengenLehrUhr(); // set theory clock
-          else if ((dispState) == menuOrder[12]) LinearUhr();     // Linear clock
+          else if ((dispState) == menuOrder[12]) LinearUhr();     // Linear clock        
 // debugging:
           else if ((dispState) == menuOrder[13]) InternalTime();  // Internal time - for debugging
           else if ((dispState) == menuOrder[14]) code_Status();   //
@@ -360,6 +378,10 @@ void setup() {
           else if ((dispState) == menuOrder[16]) NCDXFBeacons(2); // UTC + NCDXF beacons, 18-28 MHz
           else if ((dispState) == menuOrder[17]) NCDXFBeacons(1); // UTC + NCDXF beacons, 14-21 MHz
           else if ((dispState) == menuOrder[18]) WSPRsequence();  // UTC + Coordinated WSPR band/frequency (20 min cycle)
+
+          else if ((dispState) == menuOrder[19]) HexOctalClock(0);      // Hex clock
+          else if ((dispState) == menuOrder[20]) HexOctalClock(1);      // Octal clock
+          
         }
       }
     }
@@ -582,7 +604,8 @@ void LocalSunMoon() { // local time, sun, moon
       else lcd.print(" - ");     
 
       float PhaseM, PercentPhaseM;     
-      MoonPhaseAccurate(PhaseM, PercentPhaseM);  
+      //MoonPhaseAccurate(PhaseM, PercentPhaseM);  
+      MoonPhase(PhaseM, PercentPhaseM); 
 
       #ifdef FEATURE_SERIAL_MOON
         Serial.println(F("LocalSunMoon: "));
@@ -616,7 +639,7 @@ void LocalMoon() { // local time, moon phase, elevation, next rise/set
     String textbuf;
     float percentage;
 
-    LcdShortDayDateTimeLocal(0);  // line 0
+    LcdShortDayDateTimeLocal(0,1);  // line 0, moved 1 position left to line up with next lines
     
     if (gps.location.isValid()) {
       if (minuteGPS != oldminute) {  // update display every minute
@@ -911,7 +934,7 @@ void Binary(
    
 
 
-      if (Seconds < 11)  // show help: weighting
+      if (Seconds <= SECONDS_CLOCK_HELP)  // show help: weighting
       {
       #ifdef FEATURE_CLOCK_SOME_SECONDS
         lcd.setCursor(9, 0); lcd.print(" 421 8421");
@@ -941,7 +964,7 @@ void Binary(
   
       lcd.setCursor(0, 0); lcd.print("Binary");
   
-      if (Seconds < 11)  // show help: weighting
+      if (Seconds <= SECONDS_CLOCK_HELP)  // show help: weighting
       {
       #ifdef FEATURE_CLOCK_SOME_SECONDS
         lcd.setCursor(13, 0); lcd.print(" 8421");
@@ -955,7 +978,7 @@ void Binary(
   
         // Common for all modes:
       #ifdef FEATURE_CLOCK_SOME_SECONDS
-          if (Seconds < 11)  // show time in normal numbers
+          if (Seconds <= SECONDS_CLOCK_HELP)  // show time in normal numbers
           {
           sprintf(textbuffer, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
           } 
@@ -1062,7 +1085,7 @@ void Bar(void) {
 
           #ifdef FEATURE_CLOCK_SOME_SECONDS
             lcd.setCursor(8, 3);
-            if (Seconds < 11)  // show time in normal numbers
+            if (Seconds <= SECONDS_CLOCK_HELP)  // show time in normal numbers
             {
           //    lcd.print("Bar");
             sprintf(textbuffer, "%02d%c%02d%c%02d", Hour%12, HOUR_SEP, Minute, MIN_SEP, Seconds);
@@ -1331,58 +1354,84 @@ void UTCPosition() {     // position, altitude, locator, # satellites
         latitude = latitude_manual;
         lon      = longitude_manual;
         alt = 0.0;
-      #endif
-           
-      lcd.setCursor(0, 3);
-      lcd.print(alt); lcd.print("m ");
+      #endif   
 
-      // Only works N & E:
+           
+      
       lcd.setCursor(0, 2);
       if ((now() / 4) % 3 == 0) { // change every 4 seconds
-        textbuf = String(latitude, 4);
-        lcd.print(textbuf); lcd.print("N,   ");
 
-        textbuf = String(lon, 4);
-        lcd.print(textbuf); lcd.print("E");
-      }
-      else if ((now() / 4) % 3 == 1) { // degrees, minutes, seconds
-
-        double mins;
-        String textbuf = String(floor(latitude), 0); // rounds!
+        //  decimal degrees
+        lcd.setCursor(0, 2);
+        textbuf = String(abs(latitude), 4);
         lcd.print(textbuf); lcd.write(DegreeSymbol); 
-        mins = 60 * (latitude - floor(latitude));
-        textbuf = String(floor(mins), 0); // round down = floor
-        lcd.print(textbuf); lcd.write("'");
-        textbuf = String(floor(0.5 + 60 * (mins - floor(mins))), 0); // round
-        lcd.print(textbuf); lcd.write(34); lcd.print(", ");
+        if (latitude < 0) lcd.print(" S   "); 
+        else lcd.print(" N   "); 
 
-        textbuf = String(floor(lon), 0);
+        lcd.setCursor(0, 3);
+        textbuf = String(abs(lon), 4);
+        int strLength = textbuf.length();      
+        lcd.print(textbuf);lcd.write(DegreeSymbol);
+        if (lon < 0) lcd.print(" W    "); 
+        else lcd.print(" E    "); 
+      }
+      else if ((now() / 4) % 3 == 1) { 
+        
+        // degrees, minutes, seconds
+        lcd.setCursor(0, 2);
+        float mins;
+        textbuf = String((int)abs(latitude)); 
+        lcd.print(textbuf); lcd.write(DegreeSymbol); 
+        mins = abs(60 * (latitude - (int)latitude));  // minutes
+        textbuf = String((int)mins); 
+        lcd.print(textbuf); lcd.write("'");
+        textbuf = String((int)(abs(60 * (mins - (int)mins)))); // seconds
+        lcd.print(textbuf); lcd.write(34); 
+        if (latitude < 0) lcd.print(" S  "); 
+        else lcd.print(" N  "); 
+        
+        
+        lcd.setCursor(0, 3);
+        textbuf = String((int)abs(lon));
         lcd.print(textbuf);
         lcd.write(DegreeSymbol); 
-        mins = 60 * (lon - floor(lon));
-        textbuf = String(floor(mins), 0);
+        mins = abs(60 * (lon - (int)lon));
+        textbuf = String((int)mins);
         lcd.print(textbuf); lcd.write("'");
-        textbuf = String(floor(0.5 + 60 * (mins - floor(mins))), 0);
+        textbuf = String((int)(abs(60 * (mins - (int)(mins)))));
         lcd.print(textbuf); lcd.write(34); // symbol for "
-        //lcd.print(" ");
+        if (lon < 0) lcd.print(" W "); 
+        else lcd.print(" E "); 
       }
 
-      else  { // degrees, decimal minutes
-        double mins;
-        String textbuf = String(floor(latitude), 0); // rounds!
+      else  { 
+        
+        // degrees, decimal minutes
+        lcd.setCursor(0, 2);
+        float mins;
+        textbuf = String(int(abs(latitude))); 
         lcd.print(textbuf); lcd.write(DegreeSymbol); 
-        mins = 60 * (latitude - floor(latitude));
-        textbuf = String(mins, 2); // round down = floor
-        lcd.print(textbuf); lcd.write("'  ");
+        mins = abs(60 * (latitude - (int)latitude));
+        textbuf = String(abs(mins), 2); 
+        lcd.print(textbuf); 
+        if (latitude < 0) lcd.print("' S "); 
+        else lcd.print("' N "); 
 
-        textbuf = String(floor(lon), 0);
+        lcd.setCursor(0, 3);
+        textbuf = String(int(abs(lon)));
         lcd.print(textbuf);
         lcd.write(DegreeSymbol); 
-        mins = 60 * (lon - floor(lon));
-        textbuf = String(mins, 2);
-        lcd.print(textbuf); lcd.write("'");
+        mins = abs(60 * (lon - (int)lon)); 
+        textbuf = String(abs(mins), 2);  // double abs() to avoid negative number for x.00 degrees
+        lcd.print(textbuf); 
+        if (lon < 0) lcd.print("' W  "); 
+        else lcd.print("' E  "); 
       }    
     }
+     // enough space on display for 2469 m
+      lcd.setCursor(14, 2);
+      printFixedWidth(lcd, (int)round(alt), 4, ' '); lcd.print(" m");
+      
     if (gps.satellites.isValid()) {
       noSats = gps.satellites.value();
       if (noSats < 10) lcd.setCursor(14, 3);
@@ -1481,6 +1530,44 @@ void WSPRsequence() {     // UTC, + WSPR band/frequency for coordinated WSPR
     }
     lcd.setCursor(19, 3); lcd.print(" "); // blank out menu number
   }
+
+// Menu item //////////////////////////////////////////////////////////////////////////////////////////
+void HexOctalClock(
+  int val   // 0 - hex, 1- octal
+  )
+{
+      char textbuf[21];
+  //  get local time
+      local = now() + UTCoffset * 60;
+      Hour = hour(local);
+      Minute = minute(local);
+      Seconds = second(local);
+
+      lcd.setCursor(0, 0);
+      if (val == 0) lcd.print("Hex                 ");
+      else          lcd.print("Octal               ");
+
+      lcd.setCursor(7, 1);
+      if (val == 0) sprintf(textbuf, "%02X%c%02X%c%02X",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+      else          sprintf(textbuf, "%02o%c%02o%c%02o",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+      lcd.print(textbuf);
+
+      #ifdef FEATURE_CLOCK_SOME_SECONDS
+            lcd.setCursor(7, 3);
+            if (Seconds <= SECONDS_CLOCK_HELP)  // show time in normal numbers
+            {
+              sprintf(textbuf, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+              lcd.print(textbuf);
+            }
+            else
+            {
+              lcd.print("         ");
+            }
+       #endif
+       lcd.setCursor(18, 3); lcd.print("  ");
+}
+
+  
  
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

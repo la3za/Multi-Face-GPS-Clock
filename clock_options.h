@@ -1,6 +1,7 @@
-#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
-#define FEATURE_CLOCK_SOME_SECONDS   // if defined, binary etc clocks will also show normal clock first 10 seconds of every minute
+//#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
+#define FEATURE_CLOCK_SOME_SECONDS   // if defined, binary etc clocks will also show normal clock for the first SECONDS_CLOCK_HELP seconds of every minute
 
+const int SECONDS_CLOCK_HELP = 20;                 // no of seconds per minute where FEATURE_CLOCK_SOME_SECONDS leads to normal clock. 60 means always
 const float OPTION_DAYS_WITHOUT_MOON_ARROW = 2.0;  // at full and at new moon
 const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon
 
@@ -13,19 +14,22 @@ const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon
 // Perturbe the order of menus, making sure that each number only appears once
 //
 // Menu in normal order - i.e. natural order in program
-int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}; 
+//int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18, 19,20,}; 
+
+// Logical order
+int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,19,20,15,16,17,18}; 
 
 
 //int menuIn[] = {0,3,4};
 
 // Solar, moon
-//int menuIn[] = {0, 1, 2, 3, 4, 5};
+// int menuIn[] = {0, 1, 2, 3, 4, 5};
 
 // Radio amateur functions WSPR, NCDXF beacon, sun, moon 
 // int menuIn[] = {0, 1, 2, 3, 4, 5, 6, 15, 16, 17, 18};
 
 // Fancy clocks
-// int menuIn[] = {0,1,7,8,9,10,11,12};
+// int menuIn[] = {0,1,7,8,9,10,11,12,19};
 
 const int noOfStates = sizeof(menuIn)/sizeof(menuIn[0]); // no of entries in menu system
 
