@@ -19,5 +19,3 @@ The code starts default with
 * GPS baud rate is 9600
 
 The code can easily be adapted to local abbreviated day names for other languages when local time is displayed, i.e. French, Spanish, Swedish, German etc. If you do that, then please share it and make it available.
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. See source code of GPSClock.ino
