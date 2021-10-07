@@ -14,6 +14,7 @@ Hardware schematic: ![Image](https://1.bp.blogspot.com/-54JcLxapwBY/YV4Qk6-JCDI/
 
 The code starts default with 
 * Central European Time for the local time zone
+* European date format, dd.mm.yyyy
 * All day names, full and abbreviated, are in English
 * GPS baud rate is 9600
 
