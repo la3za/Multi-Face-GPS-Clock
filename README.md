@@ -19,3 +19,4 @@ The code starts default with
 * GPS baud rate is 9600
 
 The code can easily be adapted to local abbreviated day names for other languages when local time is displayed. At present it supports Norwegian day names, but French, Spanish, Swedish, German etc can be added. If you do that, then please share it and make it available.
+
