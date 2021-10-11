@@ -1,5 +1,4 @@
-#define CODE_VERSION "1.02 2021-10-06"
-
+#define CODE_VERSION "1.03 2021-10-11"
 /*
 LA3ZA GPS Clock
     
@@ -71,6 +70,8 @@ Features:
             Bar
             MengenLehrUhr
             LinearUhr
+            Hex
+            Octal
             
             InternalTime
             code_Status
@@ -84,7 +85,10 @@ Features:
 */
 /*
 Revisions:
-          
+		  1.03 11.10.2021
+                - Added missing 6. bit in minutes, seconds in binary clocks 
+				- Added screen 21 with simultaneous binary, octal, and hex clocks
+                - Removed FEATURE_CLOCK_SOME_SECONDS, replaced by SECONDS_CLOCK_HELP = (0...60) for additional "normal" clock in binary, octal, BCD, etc       
 
           1.02  06.10.2021
                 - UTC and position screen: Changed layout. Now handles Western longitudes and Southern latitudes also. Thanks Mitch W4OA
@@ -381,6 +385,7 @@ void setup() {
 
           else if ((dispState) == menuOrder[19]) HexOctalClock(0);      // Hex clock
           else if ((dispState) == menuOrder[20]) HexOctalClock(1);      // Octal clock
+          else if ((dispState) == menuOrder[21]) HexOctalClock(3);      // 3-in-1: Hex-Octal-Binary clock
           
         }
       }
@@ -604,8 +609,8 @@ void LocalSunMoon() { // local time, sun, moon
       else lcd.print(" - ");     
 
       float PhaseM, PercentPhaseM;     
-      //MoonPhaseAccurate(PhaseM, PercentPhaseM);  
-      MoonPhase(PhaseM, PercentPhaseM); 
+      MoonPhaseAccurate(PhaseM, PercentPhaseM);  
+      //MoonPhase(PhaseM, PercentPhaseM); 
 
       #ifdef FEATURE_SERIAL_MOON
         Serial.println(F("LocalSunMoon: "));
@@ -862,7 +867,7 @@ void Binary(
     char textbuffer[12]; // was [9] -> memory overwrite
     int tens, ones;
 
-    int BinaryTensHour[5], BinaryHour[5], BinaryTensMinute[5], BinaryMinute[5], BinaryTensSeconds[5], BinarySeconds[5];
+    int BinaryTensHour[6], BinaryHour[6], BinaryTensMinute[6], BinaryMinute[6], BinaryTensSeconds[6], BinarySeconds[6];
 
     // get local time
     local = now() + UTCoffset * 60;
@@ -889,24 +894,24 @@ void Binary(
       lcd.setCursor(0, 0); lcd.print("BCD");
       
       lcd.setCursor(9, 0);
-      sprintf(textbuffer, " %1d  %1d  %1d", BinaryHour[1], BinaryMinute[1], BinarySeconds[1]);
+      sprintf(textbuffer, " %1d  %1d  %1d", BinaryHour[2], BinaryMinute[2], BinarySeconds[2]);
       lcd.print(textbuffer);
       lcd.setCursor(19,0);lcd.print("8");
 
    //   lcd.setCursor(0,1); lcd.print("hh mm ss");
       lcd.setCursor(9, 1);
-      sprintf(textbuffer, " %1d %1d%1d %1d%1d", BinaryHour[2], BinaryTensMinute[2], BinaryMinute[2], BinaryTensSeconds[2], BinarySeconds[2]);
+      sprintf(textbuffer, " %1d %1d%1d %1d%1d", BinaryHour[3], BinaryTensMinute[3], BinaryMinute[3], BinaryTensSeconds[3], BinarySeconds[3]);
       lcd.print(textbuffer);
       lcd.setCursor(19,1);lcd.print("4");
 
       lcd.setCursor(9, 2);
-      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d", BinaryTensHour[3], BinaryHour[3], BinaryTensMinute[3], BinaryMinute[3], BinaryTensSeconds[3], BinarySeconds[3]);
+      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d", BinaryTensHour[4], BinaryHour[4], BinaryTensMinute[4], BinaryMinute[4], BinaryTensSeconds[4], BinarySeconds[4]);
       lcd.print(textbuffer);
       lcd.setCursor(19,2);lcd.print("2");
 
       
       lcd.setCursor(9, 3); //LSB
-      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d  ", BinaryTensHour[4], BinaryHour[4], BinaryTensMinute[4], BinaryMinute[4], BinaryTensSeconds[4], BinarySeconds[4]);
+      sprintf(textbuffer, "%1d%1d %1d%1d %1d%1d  ", BinaryTensHour[5], BinaryHour[5], BinaryTensMinute[5], BinaryMinute[5], BinaryTensSeconds[5], BinarySeconds[5]);
       lcd.print(textbuffer);
       lcd.setCursor(19,3);lcd.print("1");
     }
@@ -916,59 +921,55 @@ void Binary(
 
       lcd.setCursor(0, 0); lcd.print("BCD");
       
-      lcd.setCursor(9, 1); sprintf(textbuffer, "  %1d%1d ", BinaryTensHour[3], BinaryTensHour[4] );
+      lcd.setCursor(9, 1); sprintf(textbuffer, "  %1d%1d ", BinaryTensHour[4], BinaryTensHour[5] );
       lcd.print(textbuffer);
-      sprintf(textbuffer, "%1d%1d%1d%1d H", BinaryHour[1], BinaryHour[2], BinaryHour[3], BinaryHour[4]);
-      lcd.print(textbuffer);
-
-      lcd.setCursor(9, 2);  sprintf(textbuffer, " %1d%1d%1d ", BinaryTensMinute[2], BinaryTensMinute[3], BinaryTensMinute[4] );
-      lcd.print(textbuffer);
-      sprintf(textbuffer, "%1d%1d%1d%1d M", BinaryMinute[1], BinaryMinute[2], BinaryMinute[3], BinaryMinute[4] );
+      sprintf(textbuffer, "%1d%1d%1d%1d H", BinaryHour[2], BinaryHour[3], BinaryHour[4], BinaryHour[5]);
       lcd.print(textbuffer);
 
-      lcd.setCursor(9, 3);  sprintf(textbuffer, " %1d%1d%1d ", BinaryTensSeconds[2], BinaryTensSeconds[3], BinaryTensSeconds[4] );
+      lcd.setCursor(9, 2);  sprintf(textbuffer, " %1d%1d%1d ", BinaryTensMinute[3], BinaryTensMinute[4], BinaryTensMinute[5] );
       lcd.print(textbuffer);
-      sprintf(textbuffer, "%1d%1d%1d%1d S", BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4] );
+      sprintf(textbuffer, "%1d%1d%1d%1d M", BinaryMinute[2], BinaryMinute[3], BinaryMinute[4], BinaryMinute[5] );
+      lcd.print(textbuffer);
+
+      lcd.setCursor(9, 3);  sprintf(textbuffer, " %1d%1d%1d ", BinaryTensSeconds[3], BinaryTensSeconds[4], BinaryTensSeconds[5] );
+      lcd.print(textbuffer);
+      sprintf(textbuffer, "%1d%1d%1d%1d S", BinarySeconds[2], BinarySeconds[3], BinarySeconds[4], BinarySeconds[5] );
       lcd.print(textbuffer);
 
    
 
 
-      if (Seconds <= SECONDS_CLOCK_HELP)  // show help: weighting
+      if (Seconds < SECONDS_CLOCK_HELP)  // show help: weighting
       {
-      #ifdef FEATURE_CLOCK_SOME_SECONDS
         lcd.setCursor(9, 0); lcd.print(" 421 8421");
-      #endif
-      } 
+            } 
       else
       {
-       lcd.setCursor(9, 0); lcd.print("         ");
+        lcd.setCursor(9, 0); lcd.print("         ");
       }
       } 
       else
-        // horisontal 5-bit binary
+        // horisontal 5/6-bit binary
     {
       // convert to binary:
       decToBinary(Hour, BinaryHour);
       decToBinary(Minute, BinaryMinute);
       decToBinary(Seconds, BinarySeconds);
   
-      lcd.setCursor(13, 1); sprintf(textbuffer, "%1d%1d%1d%1d%1d H", BinaryHour[0], BinaryHour[1], BinaryHour[2], BinaryHour[3], BinaryHour[4]);
+      lcd.setCursor(13, 1); sprintf(textbuffer, "%1d%1d%1d%1d%1d H", BinaryHour[1], BinaryHour[2], BinaryHour[3], BinaryHour[4], BinaryHour[5]);
       lcd.print(textbuffer);
   
-      lcd.setCursor(13, 2); sprintf(textbuffer, "%1d%1d%1d%1d%1d M", BinaryMinute[0], BinaryMinute[1], BinaryMinute[2], BinaryMinute[3], BinaryMinute[4] );
+      lcd.setCursor(12, 2); sprintf(textbuffer, "%1d%1d%1d%1d%1d%1d M", BinaryMinute[0], BinaryMinute[1], BinaryMinute[2], BinaryMinute[3], BinaryMinute[4],BinaryMinute[5]);
       lcd.print(textbuffer);
   
-      lcd.setCursor(13, 3); sprintf(textbuffer, "%1d%1d%1d%1d%1d S", BinarySeconds[0], BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4] );
+      lcd.setCursor(12, 3); sprintf(textbuffer, "%1d%1d%1d%1d%1d%1d S", BinarySeconds[0], BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4], BinarySeconds[5] );
       lcd.print(textbuffer);
   
       lcd.setCursor(0, 0); lcd.print("Binary");
   
-      if (Seconds <= SECONDS_CLOCK_HELP)  // show help: weighting
+      if (Seconds < SECONDS_CLOCK_HELP)  // show help: weighting
       {
-      #ifdef FEATURE_CLOCK_SOME_SECONDS
         lcd.setCursor(13, 0); lcd.print(" 8421");
-      #endif
       } 
       else
       {
@@ -977,19 +978,18 @@ void Binary(
      }
   
         // Common for all modes:
-      #ifdef FEATURE_CLOCK_SOME_SECONDS
-          if (Seconds <= SECONDS_CLOCK_HELP)  // show time in normal numbers
-          {
-          sprintf(textbuffer, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
-          } 
-          else
-          {
-          sprintf(textbuffer, "        ");
-          }
-          lcd.setCursor(0, 3); // last line *********
-          lcd.print(textbuffer);
-        #endif
- }
+      
+        if (Seconds < SECONDS_CLOCK_HELP)  // show time in normal numbers
+        {
+        sprintf(textbuffer, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+        } 
+        else
+        {
+        sprintf(textbuffer, "        ");
+        }
+        lcd.setCursor(0, 3); // last line *********
+        lcd.print(textbuffer);
+   }
 
 // Menu item ////////////////////////////////////////////
 void Bar(void) {
@@ -1083,9 +1083,8 @@ void Bar(void) {
           if (Hour > 12) lcd.print("PM");
           else lcd.print("AM");
 
-          #ifdef FEATURE_CLOCK_SOME_SECONDS
-            lcd.setCursor(8, 3);
-            if (Seconds <= SECONDS_CLOCK_HELP)  // show time in normal numbers
+          lcd.setCursor(8, 3);
+            if (Seconds < SECONDS_CLOCK_HELP)  // show time in normal numbers
             {
           //    lcd.print("Bar");
             sprintf(textbuffer, "%02d%c%02d%c%02d", Hour%12, HOUR_SEP, Minute, MIN_SEP, Seconds);
@@ -1097,8 +1096,7 @@ void Bar(void) {
             {
               lcd.print("          ");
             }
-          #endif
-        }
+         }
 
 // Menu item ////////////////////////////////////////////
 void MengenLehrUhr(void) {
@@ -1532,11 +1530,12 @@ void WSPRsequence() {     // UTC, + WSPR band/frequency for coordinated WSPR
   }
 
 // Menu item //////////////////////////////////////////////////////////////////////////////////////////
-void HexOctalClock(
-  int val   // 0 - hex, 1- octal
-  )
-{
+
+void HexOctalClock(int val)   // 0 - hex, 1 - octal, 3 - hex, octal, and binary
+ {
       char textbuf[21];
+      int  BinaryHour[6],  BinaryMinute[6],  BinarySeconds[6];
+
   //  get local time
       local = now() + UTCoffset * 60;
       Hour = hour(local);
@@ -1544,28 +1543,63 @@ void HexOctalClock(
       Seconds = second(local);
 
       lcd.setCursor(0, 0);
-      if (val == 0) lcd.print("Hex                 ");
-      else          lcd.print("Octal               ");
+      if (val == 0)      lcd.print("Hex   ");
+      else if (val == 1) lcd.print("Oct   ");
 
-      lcd.setCursor(7, 1);
-      if (val == 0) sprintf(textbuf, "%02X%c%02X%c%02X",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
-      else          sprintf(textbuf, "%02o%c%02o%c%02o",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
-      lcd.print(textbuf);
+      if (val == 0) 
+        {
+          lcd.setCursor(7, 0); 
+          sprintf(textbuf, "%02X%c%02X%c%02X",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+          lcd.print(textbuf);     
+        }
+        else if (val == 1) 
+        {
+          lcd.setCursor(7, 0); 
+          sprintf(textbuf, "%02o%c%02o%c%02o",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+          lcd.print(textbuf);
+        }
+        else // Hex, oct, binary
+        {
+          //lcd.setCursor(0, 3);lcd.print("Hex");
+          lcd.setCursor(7, 3);
+          sprintf(textbuf, "%02X%c%02X%c%02X",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds); // hex
+          lcd.print(textbuf);
 
-      #ifdef FEATURE_CLOCK_SOME_SECONDS
-            lcd.setCursor(7, 3);
-            if (Seconds <= SECONDS_CLOCK_HELP)  // show time in normal numbers
-            {
-              sprintf(textbuf, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
-              lcd.print(textbuf);
-            }
-            else
-            {
-              lcd.print("         ");
-            }
-       #endif
-       lcd.setCursor(18, 3); lcd.print("  ");
-}
+          //lcd.setCursor(0, 1);lcd.print("Oct");
+          lcd.setCursor(7, 1);
+          sprintf(textbuf, "%02o%c%02o%c%02o",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds); // octal
+          lcd.print(textbuf);
+
+          // convert to binary:
+          decToBinary(Hour, BinaryHour);
+          decToBinary(Minute, BinaryMinute);
+          decToBinary(Seconds, BinarySeconds);
+      
+          lcd.setCursor(0, 0); sprintf(textbuf, "%1d%1d%1d%1d%1d", BinaryHour[1], BinaryHour[2], BinaryHour[3], BinaryHour[4], BinaryHour[5]);
+          lcd.print(textbuf);lcd.print(HOUR_SEP);
+      
+          sprintf(textbuf, "%1d%1d%1d%1d%1d%1d", BinaryMinute[0], BinaryMinute[1], BinaryMinute[2], BinaryMinute[3], BinaryMinute[4], BinaryMinute[5] );
+          lcd.print(textbuf);lcd.print(MIN_SEP);
+      
+          sprintf(textbuf, "%1d%1d%1d%1d%1d%1d", BinarySeconds[0], BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4], BinarySeconds[5] );
+          lcd.print(textbuf);
+        }
+      
+
+      //  help screen with normal clock for 0...60 seconds per minute
+          lcd.setCursor(7, 2);
+          if (Seconds < SECONDS_CLOCK_HELP)  // show time in normal numbers
+          {
+            sprintf(textbuf, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+            lcd.print(textbuf);
+          }
+          else
+          {
+            lcd.print("         ");
+          }
+     
+          lcd.setCursor(18, 3); lcd.print("  ");
+  }
 
   
  

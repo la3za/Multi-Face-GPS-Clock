@@ -1,7 +1,7 @@
-//#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
-#define FEATURE_CLOCK_SOME_SECONDS   // if defined, binary etc clocks will also show normal clock for the first SECONDS_CLOCK_HELP seconds of every minute
+#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
 
-const int SECONDS_CLOCK_HELP = 20;                 // no of seconds per minute where FEATURE_CLOCK_SOME_SECONDS leads to normal clock. 60 means always
+const int SECONDS_CLOCK_HELP = 15;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
+                                                   // 0 - always off, 60 - always on
 const float OPTION_DAYS_WITHOUT_MOON_ARROW = 2.0;  // at full and at new moon
 const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon
 
@@ -14,10 +14,10 @@ const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon
 // Perturbe the order of menus, making sure that each number only appears once
 //
 // Menu in normal order - i.e. natural order in program
-//int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18, 19,20,}; 
+//int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21}; 
 
 // Logical order
-int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,19,20,15,16,17,18}; 
+int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,19,20,21,15,16,17,18}; 
 
 
 //int menuIn[] = {0,3,4};

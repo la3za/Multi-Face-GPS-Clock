@@ -379,9 +379,9 @@ void decToBinary(int n, int binaryNum[])
   // array to store binary number
   // LSB in position 3 (was 0)
 
-  binaryNum[0] = 0;   binaryNum[1] = 0;   binaryNum[2] = 0;   binaryNum[3] = 0;  binaryNum[4] = 0;
+  binaryNum[0] = 0;   binaryNum[1] = 0;   binaryNum[2] = 0;   binaryNum[3] = 0;  binaryNum[4] = 0; binaryNum[5] = 0;
   // counter for binary array
-  int i = 4;
+  int i = 5;
 
   while (n > 0) {
 
