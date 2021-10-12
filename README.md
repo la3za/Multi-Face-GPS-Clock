@@ -10,7 +10,7 @@ Blog posts detailing the development:
 * GPS Clock with Binary Display, 27.04.2020, https://la3za.blogspot.com/2020/04/gps-clock-with-binary-display.html
 * Yet another Arduino GPS clock,  6.11.2016, https://la3za.blogspot.com/2016/11/yet-another-arduino-clock.html
 
-Hardware schematic: ![Image]((2021-10-06-GPSClock.png)
+Hardware schematic: ![Image](2021-10-06-GPSClock.png)
 
 The code starts default with 
 * Central European Time for the local time zone
