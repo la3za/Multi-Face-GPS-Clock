@@ -87,7 +87,7 @@ Features:
 Revisions:
 		  1.03 11.10.2021
                 - Added missing 6. bit in minutes, seconds in binary clocks 
-				- Added screen 21 with simultaneous binary, octal, and hex clocks
+				        - Added screen 21 with simultaneous binary, octal, and hex clocks
                 - Removed FEATURE_CLOCK_SOME_SECONDS, replaced by SECONDS_CLOCK_HELP = (0...60) for additional "normal" clock in binary, octal, BCD, etc       
 
           1.02  06.10.2021
