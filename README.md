@@ -20,3 +20,5 @@ The code starts default with
 
 The code can easily be adapted to local day names for other languages when local time is displayed. At present it supports Norwegian day names, but French, Spanish, Swedish, German etc can easily be added. If you're interested in that, then please get in touch to develop this together.
 
+See [wiki](https://github.com/la3za/GPSClock/wiki) wiki for more details.
+
