@@ -1,4 +1,4 @@
-#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
+//#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
 
 const int SECONDS_CLOCK_HELP = 15;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
                                                    // 0 - always off, 60 - always on
@@ -7,17 +7,21 @@ const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon
 
 // Choose only one of these display interface options:
 #define FEATURE_LCD_I2C               // serial interface to 20x4 LCD on 0x27 I2C address
-//#define FEATURE_LCD_4BIT              // parallel interface to 20x4 LCD (untested)
+//#define FEATURE_LCD_4BIT              // parallel interface to 20x4 LCD
 
+// Choose either Pot + Buttons - or - Rotary Encoder (may also choose Buttons + Rotary Encoder):
+#define FEATURE_POTENTIOMETER // Usually pot + buttons ...
+#define FEATURE_BUTTONS
+//#define FEATURE_ROTARY_ENCODER  // ... or rotary encoder (unfinished - not recommended)
 
 // Customize menu system: order in which menu items are presented
 // Perturbe the order of menus, making sure that each number only appears once
 //
 // Menu in normal order - i.e. natural order in program
-//int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21}; 
+//int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22}; 
 
 // Logical order
-int menuIn[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,19,20,21,15,16,17,18}; 
+int menuIn[] = {0,1,2,3,4,5,22,6,7,8,9,10,11,12,13,14,19,20,21,15,16,17,18}; 
 
 
 //int menuIn[] = {0,3,4};

@@ -1,3 +1,11 @@
+/*
+ * 
+nativeDay
+nativeDayLong
+TimeZones
+
+ */
+
 #define NO_DK_OE_small  5
 
 // The user may wish to customize the routines in this file according to 
@@ -111,11 +119,21 @@
                       sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
                       lcd.print(textbuffer);
                       lcd.print(tcr2 -> abbrev);
-                  
+
+//                     China Standard Time
+                       lcd.setCursor(10, 2);
+                       TimeChangeRule CN = {"CHN", Second, Sun, Mar, 2, 480};  // China  Time = UTC + 8 hours
+                       Timezone China(CN, CN);
+                       local3 = China.toLocal(utc, &tcr3);
+                       Hour = hour(local3);
+                       Minute = minute(local3);
+                       sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
+                       lcd.print(textbuffer);
+                       lcd.print(tcr3 -> abbrev);
                   
                        // Turkey  Time
 //                      lcd.setCursor(10, 2);
-//                      TimeChangeRule TT = {"TUR", Second, Sun, Mar, 2, 180};  // Turkey  Time = UTC - 3 hours
+//                      TimeChangeRule TT = {"TUR", Second, Sun, Mar, 2, 180};  // Turkey  Time = UTC + 3 hours
 //                      Timezone Turkey(TT, TT);
 //                      local3 = Turkey.toLocal(utc, &tcr3);
 //                      Hour = hour(local3);

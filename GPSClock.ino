@@ -1,4 +1,4 @@
-#define CODE_VERSION "1.03 2021-10-11"
+#define CODE_VERSION "1.04 2021-10-18"
 /*
 LA3ZA GPS Clock
     
@@ -85,7 +85,17 @@ Features:
 */
 /*
 Revisions:
-		  1.03 11.10.2021
+          Future (unfinished):
+                - Implemented rotary encoder for control of menu as an alternative to up/down buttons
+                  and for control of backlight strength as an alternative to pot (push button to get to this function)
+                - new defines FEATURE_POTENTIOMETER, FEATURE_BUTTONS, FEATURE_ROTARY_ENCODER
+                - Usually pot and buttons are enabled or rotary encoder
+
+          1.04  18.10.2021             
+                - Fixed small formatting bug in LcdShortDayDateTimeLocal which affected display of date on line 0 in several screens
+                - Added screen 22 with dates for Gregorian and Julian Easter Sunday three years ahead
+                           
+		      1.03  11.10.2021
                 - Added missing 6. bit in minutes, seconds in binary clocks 
 				        - Added screen 21 with simultaneous binary, octal, and hex clocks
                 - Removed FEATURE_CLOCK_SOME_SECONDS, replaced by SECONDS_CLOCK_HELP = (0...60) for additional "normal" clock in binary, octal, BCD, etc       
@@ -131,6 +141,12 @@ Revisions:
   #include <LiquidCrystal.h>
 #endif  
 
+#ifdef FEATURE_ROTARY_ENCODER
+//  #define HALF_STEP
+  #include <rotary.h>                 // rotary handler https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
+#endif                                //                http://www.buxtronix.net/2011/10/rotary-encoders-done-properly.html  
+                                      //                https://carlossilesblog.wordpress.com/2019/07/27/rotary-encoder/ 
+
 #include <Sunrise.h>            // https://github.com/chaeplin/Sunrise, http://www.andregoncalves.info/ag_blog/?p=47
 // Now in AVR-Libc version 1.8.1, Aug. 2014 (not in Arduino official release)
 
@@ -149,6 +165,12 @@ Revisions:
 
 #if defined(FEATURE_LCD_4BIT)
   LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+#endif 
+
+#ifdef FEATURE_ROTARY_ENCODER
+  // Initialize the Rotary object
+  Rotary r = Rotary(PINA, PINB, PUSHB); 
+  int toggleRotary = 1;
 #endif 
 
 #define RAD                 (PI/180.0)
@@ -177,7 +199,6 @@ int packedRise;
 double moon_azimuth = 0;
 double moon_elevation = 0;
 double moon_dist = 0;
-float ag; // age of moon in days
 
 int iiii;
 int oldminute = -1;
@@ -185,7 +206,7 @@ int oldminute = -1;
 int yearGPS;
 uint8_t monthGPS, dayGPS, hourGPS, minuteGPS, secondGPS, weekdayGPS;
 
-int val; // pot value which controls backlight brighness
+int backlightVal; // pot value which controls backlight brighness
 int menuOrder[30]; //menuOrder[noOfStates];
 
 
@@ -224,6 +245,13 @@ void setup() {
 
   pinMode(LCD_pwm, OUTPUT);
   digitalWrite(LCD_pwm, HIGH);   // sets the backlight LED to full
+
+  #ifdef FEATURE_ROTARY_ENCODER
+    digitalWrite (PINA, HIGH);     // enable pull-ups
+    digitalWrite (PINB, HIGH);
+    digitalWrite (PUSHB, HIGH);
+    backlightVal = 150; // initial backlight value
+  #endif
 
   // unroll menu system order
   for (iiii = 0; iiii < noOfStates; iiii += 1) menuOrder[menuIn[iiii]] = iiii;
@@ -269,11 +297,18 @@ void setup() {
 
   ////////////////////////////////////// L O O P //////////////////////////////////////////////////////////////////
   void loop() {
-    val = analogRead(potentiometer);   // read the input pin for control of backlight
-    // analogRead values go from 0 to 1023, analogWrite values from 0 to 255
-    // compress using sqrt to get smoother characteristics for the eyes
-    analogWrite(LCD_pwm, (int)(255 * sqrt((float)val / 1023))); //
 
+    #ifdef FEATURE_POTENTIOMETER
+      backlightVal = analogRead(potentiometer);   // read the input pin for control of backlight
+      backlightVal = max(backlightVal,1); // to ensure there is some visibility
+       // analogRead values go from 0 to 1023, analogWrite values from 0 to 255
+       
+    #endif
+   // compress using sqrt to get smoother characteristics for the eyes
+      analogWrite(LCD_pwm, (int)(255 * sqrt((float)backlightVal / 1023))); //
+    
+
+#ifdef FEATURE_BUTTONS // one of FEATURE_BUTTONS or FEATURE_ROTARY_ENCODER must be defined
     byte button = analogbuttonread(0); // using K3NG function
     if (button == 2) { // increase menu # by one
       dispState = (dispState + 1) % noOfStates;
@@ -290,6 +325,56 @@ void setup() {
       lcd.setCursor(18, 3); lcd.print(dispState);
       delay(300);
     }
+#endif // FEATURE_BUTTONS 
+
+#ifdef FEATURE_ROTARY_ENCODER // one of FEATURE_ROTARY_ENCODER or FEATURE_BUTTONS must be defined
+    volatile unsigned char result = r.process();
+
+      #ifdef FEATURE_SERIAL_MENU
+        Serial.print("toggleRotary "); Serial.println(toggleRotary);
+      #endif
+
+      if (r.buttonPressedReleased(25)) {
+        toggleRotary = (toggleRotary+1)%2;
+        #ifdef FEATURE_SERIAL_MENU
+          Serial.print("toggleRotary (inside r.buttonPressedReleased"); Serial.println(toggleRotary);
+        #endif
+    } //endif buttonPressedReleased
+
+      if (result && toggleRotary == 0) { // change backlight value
+        if (result == DIR_CCW) {
+          backlightVal = (backlightVal - 12);
+          backlightVal = max(backlightVal,1);
+        }
+        else {
+          backlightVal = (backlightVal + 12);
+          backlightVal = min(backlightVal,1023);
+        }
+      }
+        #ifdef FEATURE_SERIAL_MENU
+          Serial.print("backlightVal (backlight) "); Serial.println(backlightVal);
+        #endif
+    
+      if (result && toggleRotary == 1) { // change menu number
+        if (result == DIR_CCW) {
+          dispState = (dispState - 1)% noOfStates;
+          lcd.clear();
+          oldminute = -1; // to get immediate display of some info
+          if (dispState < 0) dispState += noOfStates;
+          lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
+          delay(50);
+        }
+        else 
+        {
+          dispState = (dispState + 1)% noOfStates;
+          lcd.clear();
+          oldminute = -1; // to get immediate display of some info
+          lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
+          delay(50);
+        }
+      }
+         
+#endif // FEATURE_ROTARY_ENCODER
 
     else {
       while (Serial1.available()) {
@@ -383,9 +468,11 @@ void setup() {
           else if ((dispState) == menuOrder[17]) NCDXFBeacons(1); // UTC + NCDXF beacons, 14-21 MHz
           else if ((dispState) == menuOrder[18]) WSPRsequence();  // UTC + Coordinated WSPR band/frequency (20 min cycle)
 
-          else if ((dispState) == menuOrder[19]) HexOctalClock(0);      // Hex clock
-          else if ((dispState) == menuOrder[20]) HexOctalClock(1);      // Octal clock
-          else if ((dispState) == menuOrder[21]) HexOctalClock(3);      // 3-in-1: Hex-Octal-Binary clock
+          else if ((dispState) == menuOrder[19]) HexOctalClock(0); // Hex clock
+          else if ((dispState) == menuOrder[20]) HexOctalClock(1); // Octal clock
+          else if ((dispState) == menuOrder[21]) HexOctalClock(3); // 3-in-1: Hex-Octal-Binary clock
+
+          else if ((dispState) == menuOrder[22]) EasterDates(yearGPS);   // Gregorian and Julian Easter Sunday    
           
         }
       }
@@ -446,6 +533,7 @@ void LocalUTC() { // local time, UTC,  locator
             printFixedWidth(lcd, Day, 2,'0'); lcd.print(DATE_SEP);
             printFixedWidth(lcd, Year, 4);
             }
+       else
           {
             printFixedWidth(lcd, Day, 2,'0'); lcd.print(DATE_SEP);
             printFixedWidth(lcd, Month, 2,'0'); lcd.print(DATE_SEP);
@@ -491,6 +579,7 @@ void UTCLocator() {     // UTC, locator, # satellites
             printFixedWidth(lcd, dayGPS,2, '0');  lcd.print(DATE_SEP);
             printFixedWidth(lcd, yearGPS, 4);  
             }
+       else
           {
             printFixedWidth(lcd, dayGPS,2, '0');  lcd.print(DATE_SEP);
             printFixedWidth(lcd, monthGPS, 2,'0'); lcd.print(DATE_SEP);
@@ -1601,6 +1690,83 @@ void HexOctalClock(int val)   // 0 - hex, 1 - octal, 3 - hex, octal, and binary
           lcd.setCursor(18, 3); lcd.print("  ");
   }
 
+/// Menu item /////////////////////////////////////////////////////////////////////
+
+void EasterDates(
+  int yr)         // input value for year
+ {
+/* Parameters K, E:
+ *  Julian calendar: 
+ *  K=-3 E=-1 
+ *  
+ *  Gregorian calendar: 
+ *  1583-1693 K= l E=-8 
+ *  1700-1799 K= 0 E=-9 
+ *  1800-1899 K=-l E=-9 
+ *  1900-2099 K=-2 E=-10 
+ *  2100-2199 K=-3 E=-10
+ */ 
+
+ int K, E;
+ int ii=1;
+ int PaschalFullMoon, EasterDate, EasterMonth;
+ 
+ lcd.setCursor(0, 0); lcd.print("Easter: Greg  Julian");
+ 
+ 
+ for (int yer = yr; yer < yr+3; yer++)
+ {
+    lcd.setCursor(2,ii);lcd.print(yer);lcd.print(": ");
+  // Gregorian (West):
+    K=-2;
+    E=-10;
+    ComputeEasterDate(yer, K, E, &PaschalFullMoon, &EasterDate, &EasterMonth);
+    lcd.setCursor(8,ii);
+    
+    if (DATEORDER=='B' | DATEORDER=='M')
+          {
+            printFixedWidth(lcd, EasterMonth, 2,'0'); lcd.print(DATE_SEP); 
+            printFixedWidth(lcd, EasterDate, 2,'0'); 
+            }
+       else
+          {
+            printFixedWidth(lcd, EasterDate, 2,'0'); lcd.print(DATE_SEP);
+            printFixedWidth(lcd, EasterMonth, 2,'0'); 
+          }
+  
+  // Julian (East)
+    K=-3;
+    E=-1;
+    ComputeEasterDate(yer, K, E, &PaschalFullMoon, &EasterDate, &EasterMonth);
+    JulianToGregorian(&EasterDate, &EasterMonth); // add 13 days
+    lcd.setCursor(14,ii);
+    
+    if (DATEORDER=='B' | DATEORDER=='M')
+          {
+            printFixedWidth(lcd, EasterMonth, 2,'0'); lcd.print(DATE_SEP); 
+            printFixedWidth(lcd, EasterDate, 2,'0'); 
+            }
+       else
+          {
+            printFixedWidth(lcd, EasterDate, 2,'0'); lcd.print(DATE_SEP);
+            printFixedWidth(lcd, EasterMonth, 2,'0'); 
+          }
+     
+    ii++;    
+    
+ }
+// if (EasterDate < 10 | EasterMonth < 10)
+// {
+//    lcd.setCursor(18,3);lcd.print("  ");  // blank out number in lower right-hand corner
+// }
+// else 
+// {
+   lcd.setCursor(19,3);lcd.print(" "); // blank out number in lower right-hand corner
+// }
+ 
+
+  
+}
   
  
 

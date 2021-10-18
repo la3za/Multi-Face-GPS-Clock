@@ -7,8 +7,10 @@ MoonPhaseAccurate
 MoonWaxWane
 MoonSymbol
 update_moon_position
-Maidenhead
+
 analogbuttonread
+
+Maidenhead
 locator_to_latlong
 distance
 decToBinary
@@ -17,6 +19,9 @@ printFixedWidth
 LcdUTCTimeLocator
 LcdShortDayDateTimeLocal
 LcdSolarRiseSet
+
+ComputeEasterDate
+JulianToGregorian
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
@@ -174,11 +179,14 @@ void MoonPhaseAccurate(float& Phase, float& PercentPhase) {
   time_t dnow;
   
   dnow = now(); // Unix time in sec
-  dif = (dnow - REF_TIME); // Seconds since reference new moon
-  dif = (dif % CYCLELENGTH) - 0.228535;
-  dif = dif + 0.00591997*sin(dnow/5023359+3.1705094);
-  dif = dif + 0.017672776*sin(dnow/378924-1.5388144);
-  dif = dif - 0.0038844429* sin(dnow/437436+2.0017235);
+  dif = (dnow - REF_TIME);                      // Seconds since reference new moon
+  dif = (dif % CYCLELENGTH) - 0.228535;         // seconds since last new moon
+
+  // These three terms can max contribute 0.006+0.018+0.004 = 0.028 seconds, i.e. they are insignificant:
+  dif = dif + 0.00591997*sin(dnow/5023359+3.1705094);   
+  dif = dif + 0.017672776*sin(dnow/378924-1.5388144);   
+  dif = dif - 0.0038844429* sin(dnow/437436+2.0017235); 
+  
   moon = dif - 0.00041488*sin(dnow/138540-1.236334); // Seconds since last new moon
  
 #ifdef FEATURE_SERIAL_MOON
@@ -254,6 +262,27 @@ void update_moon_position() {
 #endif
 }
 
+
+
+//------------------------------------------------------------------
+
+byte analogbuttonread(byte button_number) {
+  // K3NG keyer code
+  // button numbers start with 0
+
+  int analog_line_read = analogRead(analog_buttons_pin);
+  // 10 k from Vcc to A0, then n x 1k to gnd, n=0...9;
+  //if (analog_line_read < 500) { // any of 10 buttons will trigger
+
+  if (analog_line_read < 131 & analog_line_read > 50) { // button 1
+    return 1;
+  }
+  else if (analog_line_read < 51) { // button 0
+    return 2;
+  }
+  else  return 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Maidenhead(double lon, double latitude, char loc[7]) {
@@ -290,25 +319,6 @@ void Maidenhead(double lon, double latitude, char loc[7]) {
   loc[5] = 'a' + (latitude - latFirst*10 - latSec  ) * 24;  // 1 subsquare = 2.5' = 1/24 deg
   
   loc[6] = '\0';
-}
-
-//------------------------------------------------------------------
-
-byte analogbuttonread(byte button_number) {
-  // K3NG keyer code
-  // button numbers start with 0
-
-  int analog_line_read = analogRead(analog_buttons_pin);
-  // 10 k from Vcc to A0, then n x 1k to gnd, n=0...9;
-  //if (analog_line_read < 500) { // any of 10 buttons will trigger
-
-  if (analog_line_read < 131 & analog_line_read > 50) { // button 1
-    return 1;
-  }
-  else if (analog_line_read < 51) { // button 0
-    return 2;
-  }
-  else  return 0;
 }
 
 //------------------------------------------------------------------
@@ -513,8 +523,8 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
         }
       }
       lcd.print("    "); // in order to erase remnants of long string as the month changes
-      lcd.setCursor(10 - moveLeft, lineno);
-      sprintf(textbuffer, "  %02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
+      lcd.setCursor(11 - moveLeft, lineno);
+      sprintf(textbuffer, " %02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds); // corrected 18.10.2021
       lcd.print(textbuffer);
     }
 
@@ -676,5 +686,104 @@ SolarElevation:
   else
     lcd.print("  ");
 }
+
+////////////////////////////////////////////////////////////////////////////////
+void ComputeEasterDate( // find date of Easter Sunday
+  int yr,         // input value for year
+  int K, int E,   // see below
+  int *PaschalFullMoon, // date in March for Paschal Full Moon (32 <=> 1 April and so on)
+  int *EasterDate,      // date in March, April, May. Range: 22. March-25. April  
+                        // Range: 4. April-8. May for Julian calendar in Gregorian dates
+  int *EasterMonth      // 3, 4, or 5
+)
+/* Parameters K, E:
+ *  Julian calendar: 
+ *  K=-3 E=-1 
+ *  
+ *  Gregorian calendar: 
+ *  1583-1693 K= l E=-8 
+ *  1700-1799 K= 0 E=-9 
+ *  1800-1899 K=-l E=-9 
+ *  1900-2099 K=-2 E=-10 
+ *  2100-2199 K=-3 E=-10
+ */ 
+{
+  /*
+  Werner Bergmann, Easter and the Calendar: The Mathematics of Determining 
+  a Formula for the Easter Festival to Medieval Computing, 
+  Journal for General Philosophy of Science / 
+  Zeitschrift für allgemeine Wissenschaftstheorie , 1991
+  Algorithm from pages 28-29, Bergmann
+
+  Gregorian: Dates are given in Gregorian dates, i.e. 13 days before Julian dates at present
+  
+  Agrees with Julian and Gregorian dates here: https://webspace.science.uu.nl/~gent0113/easter/easter_text4c.htm
+  but not with Julian dates here: https://en.wikipedia.org/wiki/List_of_dates_for_Easter 
+  as 13 needs to be added to date in order to give Julian Easter in Gregorian dates
+  */
+  
+  int x,y,z, n, concurrent, epact, ES; 
+ 
+  // I. Concurrent
+  x = yr-8;
+  y = floor(x/4);         // leap year cycle
+  z = x%4;
+  concurrent = (x+y+K)%7;
+  
+  // II. Epact
+  y = yr%19;            // 19 year periodicity of moon
+  epact = (y*11 + E)%30;
+  
+  // III. Paschal Full Moon 
+  if (epact <= 14)  *PaschalFullMoon = 21+14-epact;
+  else              *PaschalFullMoon = 21+44-epact;
+  
+  // IV. Easter Sunday
+  // 21 + (8 - Cone.) + n * 7 > paschal full moon
+  
+  n = ceil(float(*PaschalFullMoon-21-(8-concurrent))/7 + 0.001); // added 0.001 because > is the condition, not >=. Check year 2001
+  *EasterDate = 21+(8-concurrent)+n*7;
+  if (*EasterDate <= 31)
+  {
+    *EasterMonth = 3;
+    *EasterDate = *EasterDate;
+  }
+  else if (*EasterDate <=61)
+  {
+    *EasterMonth = 4;
+    *EasterDate = *EasterDate-31;
+  }
+  else
+  {
+    *EasterMonth = 5;
+    *EasterDate = *EasterDate-61;
+  }
+
+//  Serial.print(F("concurrent, epact, PaschalFullMoon, n "));Serial.print(concurrent); Serial.print(" "); 
+//  Serial.print(epact);Serial.print(" "); Serial.print(*PaschalFullMoon);Serial.print(" "); Serial.println(n);
+  
+ }
+
+ ///////////////////////////////////////////////////////////////////////////////////////////////
+
+ void JulianToGregorian(int *Date, int *Month)
+  {
+  // Add 13 days to get the dates in Gregorian notation (valid this century++):
+  // only valid for dates in March and April
+
+    *Date = *Date + 13;
+  
+  if (*Date > 31 & *Month == 3)
+  {
+    *Date = *Date - 31;
+    *Month = *Month + 1;
+  }
+  else if (*Date > 30 & *Month == 4)
+  {
+    *Date = *Date - 30;
+    *Month = *Month + 1; 
+  }
+ } 
+
 
 /// THE END ///
