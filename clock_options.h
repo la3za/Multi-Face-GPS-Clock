@@ -13,8 +13,8 @@
 //#define FEATURE_POTENTIOMETER // for background light adjustment with external pot
 int backlightVal = 100; // (0...256) initial backlight value (fixed value if neither pot nor rotary encoder adjust backlight); 
 
-//#define FEATURE_BUTTONS         // 
-#define FEATURE_ROTARY_ENCODER  //
+//#define FEATURE_BUTTONS       // two push buttons increase/decrease screen number 
+#define FEATURE_ROTARY_ENCODER  // enable rotary encoder with push button
 
 #define FEATURE_PUSH_FAVORITE   // push: go to favorite screen, otherwise set background light
 const int menuFavorite = 3; // screen number for favorite
