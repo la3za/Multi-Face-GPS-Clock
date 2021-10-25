@@ -1,4 +1,4 @@
-#define CODE_VERSION "1.04 2021-10-18"
+#define CODE_VERSION "1.10 2021-10-25"
 /*
 LA3ZA GPS Clock
     
@@ -26,15 +26,15 @@ Full documentation can be found at https://github.com/la3za .  Please read it be
 
 Features:
            GPS clock on 20x4 I2C LCD
-           Controlled by a GPS module outputting data over an RS232 serial interface, typ. QRPLabs QLG1 GPS Receiver kit, or the QLG2
+           Controlled by a GPS module outputting data over a serial interface, typ. QRPLabs QLG1 GPS Receiver kit, or the QLG2
            GPS is handled with the TinyGPS++ library
            Shows raw GPS data such as UTC time and date, position, altitude, and number of satellitess
-           Also with various forms of binary, BCD, digit-5, digit-10 displays
+           Also with various forms of binary, BCD, hex and octal displays
            Shows derived GPS data such as 6-digit locator
            Finds local time and handles daylight saving automatically using the Timezone library
            Finds local sunset and sunrise, either actual value, or civil, nautical, or astronomical using the Sunrise library
            The clock also gives local solar height based on the Sunpos library from the K3NG rotator controller.
-           The clock also provides the lunar phase as well as predict necxt rise/set time for the moon
+           The clock also provides the lunar phase as well as predicts next rise/set time for the moon
 
 
            Input   from GPS
@@ -81,16 +81,16 @@ Features:
             NCDXFBeacons
             WSPRsequence
 
-            HexOctalClock() [added 29.09.2021]
+            HexOctalClock [added 29.09.2021]
+            EasterDates   [added 18.10.2021]
 */
 /*
 Revisions:
-          Future (unfinished):
-                - Implemented rotary encoder for control of menu as an alternative to up/down buttons
-                  and for control of backlight strength as an alternative to pot (push button to get to this function)
-                - new defines FEATURE_POTENTIOMETER, FEATURE_BUTTONS, FEATURE_ROTARY_ENCODER
-                - Usually pot and buttons are enabled or rotary encoder
-
+          1.10 25.10.2021
+                - Implemented rotary encoder for control of screen number as an alternative (or in addition to) up/down buttons
+                - FEATURE_PUSH_FAVORITE - push on rotary encoder: jump to favorite screen. If not set: adjust backlight
+                - new defines FEATURE_POTENTIOMETER, FEATURE_BUTTONS, FEATURE_ROTARY_ENCODER, FEATURE_PUSH_FAVORITE
+      
           1.04  18.10.2021             
                 - Fixed small formatting bug in LcdShortDayDateTimeLocal which affected display of date on line 0 in several screens
                 - Added screen 22 with dates for Gregorian and Julian Easter Sunday three years ahead
@@ -142,10 +142,9 @@ Revisions:
 #endif  
 
 #ifdef FEATURE_ROTARY_ENCODER
-//  #define HALF_STEP
-  #include <rotary.h>                 // rotary handler https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
-#endif                                //                http://www.buxtronix.net/2011/10/rotary-encoders-done-properly.html  
-                                      //                https://carlossilesblog.wordpress.com/2019/07/27/rotary-encoder/ 
+//  #define HALF_STEP                 // not needed
+  #include <rotary.h>                 // rotary handler https://bitbucket.org/Dershum/rotary_button/src/master/
+#endif                                
 
 #include <Sunrise.h>            // https://github.com/chaeplin/Sunrise, http://www.andregoncalves.info/ag_blog/?p=47
 // Now in AVR-Libc version 1.8.1, Aug. 2014 (not in Arduino official release)
@@ -184,7 +183,7 @@ Revisions:
 
 
 int dispState ;  // depends on button, decides what to display
-byte wkday;
+int old_dispState;
 char today[10];
 double latitude, lon, alt;
 int Year;
@@ -206,7 +205,7 @@ int oldminute = -1;
 int yearGPS;
 uint8_t monthGPS, dayGPS, hourGPS, minuteGPS, secondGPS, weekdayGPS;
 
-int backlightVal; // pot value which controls backlight brighness
+//int backlightVal; // value which controls backlight brighness
 int menuOrder[30]; //menuOrder[noOfStates];
 
 
@@ -250,7 +249,6 @@ void setup() {
     digitalWrite (PINA, HIGH);     // enable pull-ups
     digitalWrite (PINB, HIGH);
     digitalWrite (PUSHB, HIGH);
-    backlightVal = 150; // initial backlight value
   #endif
 
   // unroll menu system order
@@ -308,7 +306,7 @@ void setup() {
       analogWrite(LCD_pwm, (int)(255 * sqrt((float)backlightVal / 1023))); //
     
 
-#ifdef FEATURE_BUTTONS // one of FEATURE_BUTTONS or FEATURE_ROTARY_ENCODER must be defined
+#ifdef FEATURE_BUTTONS // at least one of FEATURE_BUTTONS or FEATURE_ROTARY_ENCODER must be defined
     byte button = analogbuttonread(0); // using K3NG function
     if (button == 2) { // increase menu # by one
       dispState = (dispState + 1) % noOfStates;
@@ -330,49 +328,69 @@ void setup() {
 #ifdef FEATURE_ROTARY_ENCODER // one of FEATURE_ROTARY_ENCODER or FEATURE_BUTTONS must be defined
     volatile unsigned char result = r.process();
 
-      #ifdef FEATURE_SERIAL_MENU
-        Serial.print("toggleRotary "); Serial.println(toggleRotary);
-      #endif
-
       if (r.buttonPressedReleased(25)) {
-        toggleRotary = (toggleRotary+1)%2;
-        #ifdef FEATURE_SERIAL_MENU
-          Serial.print("toggleRotary (inside r.buttonPressedReleased"); Serial.println(toggleRotary);
-        #endif
-    } //endif buttonPressedReleased
+            toggleRotary = (toggleRotary+1)%2; 
+            #ifdef FEATURE_SERIAL_MENU
+              Serial.print("toggleRotary "); Serial.println(toggleRotary);
+            #endif
+              
+          #ifdef FEATURE_PUSH_FAVORITE    // toggle between present dispState and favorite
+              if (toggleRotary == 0) {
+                old_dispState = dispState;
+                dispState = menuFavorite;
+              }         
+              else dispState = old_dispState;
+              
+              lcd.clear();
+              oldminute = -1; // to get immediate display of some info
+              lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
+              delay(50);          
+          #endif
+       
+        } //endif buttonPressedReleased
 
-      if (result && toggleRotary == 0) { // change backlight value
-        if (result == DIR_CCW) {
-          backlightVal = (backlightVal - 12);
-          backlightVal = max(backlightVal,1);
-        }
-        else {
-          backlightVal = (backlightVal + 12);
-          backlightVal = min(backlightVal,1023);
-        }
-      }
+        #ifndef FEATURE_PUSH_FAVORITE             // change backlight value
+          if (result && toggleRotary == 0) {      // reduce backlight value
+            if (result == DIR_CCW) {              
+              backlightVal = (backlightVal - 12);
+              backlightVal = max(backlightVal,1);
+            }
+            else {                                // increase backlight value
+              backlightVal = (backlightVal + 12);
+              backlightVal = min(backlightVal,1023);
+            }
+          }
+        #endif
+      
         #ifdef FEATURE_SERIAL_MENU
           Serial.print("backlightVal (backlight) "); Serial.println(backlightVal);
         #endif
-    
-      if (result && toggleRotary == 1) { // change menu number
-        if (result == DIR_CCW) {
-          dispState = (dispState - 1)% noOfStates;
-          lcd.clear();
-          oldminute = -1; // to get immediate display of some info
-          if (dispState < 0) dispState += noOfStates;
-          lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
-          delay(50);
-        }
-        else 
+        
+      
+      if (result) { // change menu number by rotation
+        #ifndef FEATURE_PUSH_FAVORITE 
+          if (toggleRotary == 1)
+        #endif
         {
-          dispState = (dispState + 1)% noOfStates;
-          lcd.clear();
-          oldminute = -1; // to get immediate display of some info
-          lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
-          delay(50);
+          if (result == DIR_CCW) {
+            dispState = (dispState - 1)% noOfStates;
+            lcd.clear();
+            oldminute = -1; // to get immediate display of some info
+            if (dispState < 0) dispState += noOfStates;
+            lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
+            delay(50);
+          }
+          else 
+          {
+            dispState = (dispState + 1)% noOfStates;
+            lcd.clear();
+            oldminute = -1; // to get immediate display of some info
+            lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
+            delay(50);
+          }
         }
       }
+
          
 #endif // FEATURE_ROTARY_ENCODER
 
@@ -1649,12 +1667,12 @@ void HexOctalClock(int val)   // 0 - hex, 1 - octal, 3 - hex, octal, and binary
         }
         else // Hex, oct, binary
         {
-          //lcd.setCursor(0, 3);lcd.print("Hex");
+          lcd.setCursor(18,3);lcd.print(" H");
           lcd.setCursor(7, 3);
           sprintf(textbuf, "%02X%c%02X%c%02X",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds); // hex
           lcd.print(textbuf);
 
-          //lcd.setCursor(0, 1);lcd.print("Oct");
+          lcd.setCursor(19, 1);lcd.print("O");
           lcd.setCursor(7, 1);
           sprintf(textbuf, "%02o%c%02o%c%02o",Hour, HOUR_SEP, Minute, MIN_SEP, Seconds); // octal
           lcd.print(textbuf);
@@ -1670,24 +1688,31 @@ void HexOctalClock(int val)   // 0 - hex, 1 - octal, 3 - hex, octal, and binary
           sprintf(textbuf, "%1d%1d%1d%1d%1d%1d", BinaryMinute[0], BinaryMinute[1], BinaryMinute[2], BinaryMinute[3], BinaryMinute[4], BinaryMinute[5] );
           lcd.print(textbuf);lcd.print(MIN_SEP);
       
-          sprintf(textbuf, "%1d%1d%1d%1d%1d%1d", BinarySeconds[0], BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4], BinarySeconds[5] );
+          sprintf(textbuf, "%1d%1d%1d%1d%1d%1dB", BinarySeconds[0], BinarySeconds[1], BinarySeconds[2], BinarySeconds[3], BinarySeconds[4], BinarySeconds[5] );
           lcd.print(textbuf);
         }
       
 
-      //  help screen with normal clock for 0...60 seconds per minute
-          lcd.setCursor(7, 2);
+      //  help screen with normal clock for 0...SECONDS_CLOCK_HELP seconds per minute
           if (Seconds < SECONDS_CLOCK_HELP)  // show time in normal numbers
           {
+            if (val == 3) {
+              lcd.setCursor(19, 2);lcd.print("D");
+            }
+            else
+            {
+              lcd.setCursor(18, 3); lcd.print("  "); // clear number in lower left corner
+            }
+            lcd.setCursor(7, 2);
             sprintf(textbuf, "%02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds);
             lcd.print(textbuf);
           }
           else
           {
-            lcd.print("         ");
+            lcd.setCursor(0, 2);
+            lcd.print("                    ");
           }
-     
-          lcd.setCursor(18, 3); lcd.print("  ");
+        
   }
 
 /// Menu item /////////////////////////////////////////////////////////////////////

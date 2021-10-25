@@ -23,7 +23,7 @@ static const uint32_t GPSBaud =  9600; // QRPlabs GPS
 #endif
 
 //lcd pins
-#if defined(FEATURE_LCD_4BIT) // untested
+#if defined(FEATURE_LCD_4BIT) 
   #define lcd_rs 8
   #define lcd_enable 9 
   #define lcd_d4 4

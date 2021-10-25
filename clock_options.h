@@ -1,18 +1,28 @@
-//#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
-
-const int SECONDS_CLOCK_HELP = 15;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
-                                                   // 0 - always off, 60 - always on
-const float OPTION_DAYS_WITHOUT_MOON_ARROW = 2.0;  // at full and at new moon
-const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon
-
 // Choose only one of these display interface options:
 #define FEATURE_LCD_I2C               // serial interface to 20x4 LCD on 0x27 I2C address
 //#define FEATURE_LCD_4BIT              // parallel interface to 20x4 LCD
 
-// Choose either Pot + Buttons - or - Rotary Encoder (may also choose Buttons + Rotary Encoder):
-#define FEATURE_POTENTIOMETER // Usually pot + buttons ...
-#define FEATURE_BUTTONS
-//#define FEATURE_ROTARY_ENCODER  // ... or rotary encoder (unfinished - not recommended)
+// Choose:
+/* Original version 1.0:  pot + buttons
+   Version 1.1:
+       Rotary alone:      rotate to choose screen, push according to FEATURE_PUSH_FAVORITE
+       Rotary + buttons:  As rotary alone + buttons may also be used to change screen
+       Rotary + pot:      Rotary chooses screen, push chooses favorite, pot adjusts background light
+*/
+
+//#define FEATURE_POTENTIOMETER // for background light adjustment with external pot
+int backlightVal = 100; // (0...256) initial backlight value (fixed value if neither pot nor rotary encoder adjust backlight); 
+
+//#define FEATURE_BUTTONS         // 
+#define FEATURE_ROTARY_ENCODER  //
+
+#define FEATURE_PUSH_FAVORITE   // push: go to favorite screen, otherwise set background light
+const int menuFavorite = 3; // screen number for favorite
+
+
+#ifdef FEATURE_POTENTIOMETER
+    #define FEATURE_PUSH_FAVORITE
+#endif
 
 // Customize menu system: order in which menu items are presented
 // Perturbe the order of menus, making sure that each number only appears once
@@ -60,3 +70,10 @@ char MIN_SEP  = ':'; // Alternatives: ':', '.', 'm', ...
 //char DATE_SEP = '-';
 //char HOUR_SEP = 'h'; 
 //char MIN_SEP  = '.';
+
+//#define FEATURE_DAY_NAME_NATIVE    // DAY names from nativeDay() and nativeDayLong() for local time, otherwise English
+
+const int SECONDS_CLOCK_HELP = 15;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
+                                                   // 0 - always off, 60 - always on
+const float OPTION_DAYS_WITHOUT_MOON_ARROW = 2.0;  // at full and at new moon
+const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon

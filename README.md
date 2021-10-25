@@ -10,7 +10,13 @@ Blog posts detailing the development:
 * GPS Clock with Binary Display, 27.04.2020, https://la3za.blogspot.com/2020/04/gps-clock-with-binary-display.html
 * Yet another Arduino GPS clock,  6.11.2016, https://la3za.blogspot.com/2016/11/yet-another-arduino-clock.html
 
-Hardware schematic: ![Image](2021-10-18-GPSClock.png)
+Hardware schematic, first version: ![Image](2021-10-18-GPSClock.png)
+
+The two push buttons control whether the screen number increases or decreases by one. The potentiometer controls the backlight of the LCD. These are the features supported in version 1.03 of the code.
+
+Starting with version 1.10, a rotary encoder with a push button is also supported, in addition to the separate push buttons and the pot of the original code. In order not to clutter the schematic too much, only the rotary encoder is shown in the following schematic. Here the rotary encoder selects screen number. A push on the button lets the rotary encoder control the backlight. In the schematic however, the backlight is controlled directly by a separate trim pot and not by software. In that case, a push on the rotary encoder lets one toggle back on forth to a user-selectable favorite screen. 
+
+Hardware schematic, second version: ![Image](2021-10-21-GPSClock-RotaryEncoder.png)
 
 The code starts default with 
 * Central European Time for the local time zone
@@ -19,5 +25,3 @@ The code starts default with
 * GPS baud rate is 9600
 
 See [wiki](https://github.com/la3za/GPSClock/wiki) for more details on hardware and software setup.
-
-
