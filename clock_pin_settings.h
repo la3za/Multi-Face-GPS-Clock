@@ -17,9 +17,9 @@ static const uint32_t GPSBaud =  9600; // QRPlabs GPS
 */
 
 #ifdef FEATURE_ROTARY_ENCODER
-  #define PINA 2 //
-  #define PINB 3 //A1
-  #define PUSHB 31 // A2
+  #define PINA  33 // was 2
+  #define PINB  35 // was 3 
+  #define PUSHB 31  
 #endif
 
 //lcd pins
