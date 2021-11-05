@@ -1,6 +1,6 @@
 # Multi Face GPS clock for the Arduino Mega
 
-The purpose of this clock is to make available as many clock and clock related functions as possible give the contraint of a 20x 4 LCD. the number of different screens are now more than twenty Some are useful, some are very specialized, and some are somewhat weird. All the screens have been laid out with a view to good esthetics and easy readability.
+The purpose of this clock is to make available as many clock and clock related functions as possible give the contraint of a 20 x 4 LCD. The number of different screens are now more than twenty Some are useful, some are very specialized, and some are somewhat weird. All the screens have been laid out with a view to good esthetics and easy readability.
 
 The clock is based on an Arduino Mega taking time and position data from a GPS. Below it shows local time and UTC time. ![Image](GPSClock-00-EU.jpg)
 
