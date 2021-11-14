@@ -1,4 +1,4 @@
-#define CODE_VERSION "1.10 2021-10-25"
+#define CODE_VERSION "1.1.1 2021-11-14"
 /*
 LA3ZA GPS Clock
     
@@ -86,30 +86,33 @@ Features:
 */
 /*
 Revisions:
-          1.10 25.10.2021
+          1.1.1 14.11.2021
+                - Fixed bug in selection of favorite menu item
+
+          1.1.0 25.10.2021
                 - Implemented rotary encoder for control of screen number as an alternative (or in addition to) up/down buttons
                 - FEATURE_PUSH_FAVORITE - push on rotary encoder: jump to favorite screen. If not set: adjust backlight
                 - new defines FEATURE_POTENTIOMETER, FEATURE_BUTTONS, FEATURE_ROTARY_ENCODER, FEATURE_PUSH_FAVORITE
       
-          1.04  18.10.2021             
+          1.0.4 18.10.2021             
                 - Fixed small formatting bug in LcdShortDayDateTimeLocal which affected display of date on line 0 in several screens
                 - Added screen 22 with dates for Gregorian and Julian Easter Sunday three years ahead
                            
-		      1.03  11.10.2021
+		      1.0.3 11.10.2021
                 - Added missing 6. bit in minutes, seconds in binary clocks 
 				        - Added screen 21 with simultaneous binary, octal, and hex clocks
                 - Removed FEATURE_CLOCK_SOME_SECONDS, replaced by SECONDS_CLOCK_HELP = (0...60) for additional "normal" clock in binary, octal, BCD, etc       
 
-          1.02  06.10.2021
+          1.0.2 06.10.2021
                 - UTC and position screen: Changed layout. Now handles Western longitudes and Southern latitudes also. Thanks Mitch W4OA
                 - Corrected bug in Maidenhead routine, only appeared if letter 5 was beyond a certain letter in the alphabet. Thanks Ross VA1KAY
 
-          1.01  29.09.2021 
+          1.0.1 29.09.2021 
                 - Fixed  small layout bug on screen
                 - New variable in clock_options.h: SECONDS_CLOCK_HELP - no of seconds to show normal clock in binary, BCD, hex, octal etc clocks.
                 - 2 new screens: no 19 and 20: hex and octal clock
                 
-          1.0   24.09.2021
+          1.0.0 24.09.2021
                 First public release
                 18 different screens                
           
@@ -337,7 +340,7 @@ void setup() {
           #ifdef FEATURE_PUSH_FAVORITE    // toggle between present dispState and favorite
               if (toggleRotary == 0) {
                 old_dispState = dispState;
-                dispState = menuFavorite;
+                dispState = menuOrder[menuFavorite];  // fix 14.11.2021
               }         
               else dispState = old_dispState;
               
