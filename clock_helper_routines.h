@@ -23,8 +23,16 @@ LcdSolarRiseSet
 ComputeEasterDate
 JulianToGregorian
 
+AlbertPlus
+AlbertMinus
+AlbertMultiply
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
+
+
+
+
 
 void GetNextRiseSet(
   short       *pRise,            // returned Moon Rise time
@@ -407,7 +415,7 @@ void decToBinary(int n, int binaryNum[])
 void printFixedWidth(Print &out, int number, byte width, char filler = ' ') {
   int temp = number;
   //
-  // call like this to print to lcd: printFixedWidth(lcd, val, 3);
+  // call like this to print number to lcd: printFixedWidth(lcd, val, 3);
   // or for e.g. minutes printFixedWidth(lcd, minute, 2, '0')
   //
   // Default filler = ' ', can also be set to '0' e.g. for clock
@@ -513,12 +521,19 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
     
         if ((DATEORDER == 'M') | (DATEORDER == 'B'))
         {
-          lcd.print(static_cast<int>(Month)); lcd.print(DATE_SEP);
-          lcd.print(static_cast<int>(Day));
+// modified so date takes up a fixed space
+//          lcd.print(static_cast<int>(Month)); lcd.print(DATE_SEP);
+            printFixedWidth(lcd, Month, 2,' ');
+            lcd.print(DATE_SEP);
+            lcd.print(static_cast<int>(Day));
+ 
         }
         else
         {
-          lcd.print(static_cast<int>(Day)); lcd.print(DATE_SEP);
+// modified so date takes up a fixed space:
+//        lcd.print(static_cast<int>(Day)); lcd.print(DATE_SEP);
+          printFixedWidth(lcd, Day, 2,' ');
+          lcd.print(DATE_SEP);
           lcd.print(static_cast<int>(Month));
         }
       }
@@ -531,8 +546,9 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 void LcdSolarRiseSet(
-  int lineno,                   // lcd line no 0, 1, 2, 3
-  char RiseSetDefinition = ' ' // C - Civil, N - Nautical, A- Astronomical, default Actual
+  int lineno,                       // lcd line no 0, 1, 2, 3
+  char RiseSetDefinition = ' ',     // default - Actual, C - Civil, N - Nautical, A - Astronomical,  O - nOon info, Z - aZ, el info
+  int  ScreenMode = ScreenLocalSun  // One of ScreenLocalSun, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalSunAzEl
 )
 {
   // Horizon for solar rise/set: Actual (0 deg), Civil (-6 deg), Nautical (-12 deg), Astronomical (-18 deg)
@@ -565,9 +581,11 @@ void LcdSolarRiseSet(
     h = mySunrise.Hour();
     m = mySunrise.Minute();
 
+    if (ScreenMode == ScreenLocalSunSimpler | ScreenMode == ScreenLocalSunAzEl) lcd.print(" "); // to line up rise time with date on line above
+    
     if (RiseSetDefinition == ' ')
     {
-      lcd.print("S "); lcd.write(UpArrow);
+      lcd.print("  "); lcd.write(UpArrow);
     }
     else if (RiseSetDefinition == 'C')
     {
@@ -575,18 +593,31 @@ void LcdSolarRiseSet(
     }
     else lcd.print("   ");
 
+    if (lineno==1) 
+    {
+        lcd.setCursor(0, lineno);
+        lcd.print("S ");
+    }
+
+if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
+   {
+    
+    if (ScreenMode == ScreenLocalSunSimpler | ScreenMode == ScreenLocalSunAzEl) lcd.setCursor(4, lineno);
+    else lcd.setCursor(3, lineno);
+    
     printFixedWidth(lcd, h, 2);
     lcd.print(HOUR_SEP);
     printFixedWidth(lcd, m, 2, '0');
   }
-  //lcd.print("       ");  // 4.2.2016 increased by one space. Unknown 't' before down arrow
-
+  }
+  
   // Second: print sun set time
 
   t = mySunrise.Set(monthGPS, dayGPS); // Sun set time
 
   lcd.setCursor(9, lineno);
-  if (RiseSetDefinition == ' ')         lcd.write(DownArrow);
+  if (ScreenMode == ScreenLocalSunSimpler| ScreenMode == ScreenLocalSunAzEl) lcd.print("  ");
+  if (RiseSetDefinition == ' ')       lcd.write(DownArrow);
   else if (RiseSetDefinition == 'C')  lcd.write(DashedDownArrow);
   else                                lcd.print(" ");
 
@@ -594,19 +625,15 @@ void LcdSolarRiseSet(
     h = mySunrise.Hour();
     m = mySunrise.Minute();
 
-    lcd.print(h, DEC);
-    lcd.print(HOUR_SEP);
-    if (m < 10) lcd.print("0");
-    lcd.print(m, DEC);
+    if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
+    {
+      lcd.print(h, DEC);
+      lcd.print(HOUR_SEP);
+      if (m < 10) lcd.print("0");
+      lcd.print(m, DEC);
+      if (ScreenMode == ScreenLocalSunSimpler) lcd.print("  ");
+    }
   }
-
-  // Middle text:
-  //    ' ': Solar elevation right now
-  //    'C': Time for local noon
-  //    'N': Solar elevation at local noon
-  //    'A': -
-
-  lcd.setCursor(16, lineno);
 
 SolarElevation:
 
@@ -637,6 +664,18 @@ SolarElevation:
   sun_elevation = 90. - c_sposn.dZenithAngle;
   sun_azimuth = c_sposn.dAzimuth;
 
+   if (RiseSetDefinition == 'Z') // print current aZimuth, elevation
+      {
+        lcd.setCursor(2, lineno);
+        lcd.print(" Az ");
+        printFixedWidth(lcd, (int)float(sun_azimuth), 3);
+        lcd.write(DegreeSymbol);
+        lcd.print(" El ");
+        printFixedWidth(lcd, (int)float(sun_elevation), 3);
+        lcd.write(DegreeSymbol);
+        lcd.print("  ");   
+      }
+
   ///// Solar noon
 
   Sunrise my2Sunrise(latitude, lon, float(UTCoffset) / 60.);
@@ -646,45 +685,67 @@ SolarElevation:
     mNoon = my2Sunrise.Minute();
   }
 
-  if (RiseSetDefinition == ' ')
-  {
+  // find max solar elevation, i.e. at local noon
+  
+  c_time.dHours = hNoon - UTCoffset / 60.;
+  c_time.dMinutes = mNoon;
+  c_time.dSeconds = 0.0;
 
-    printFixedWidth(lcd, (int)float(sun_elevation), 3);
-    lcd.write(DegreeSymbol);
-  }
-  else if (RiseSetDefinition == 'C')
-  {
+  sunpos(c_time, c_loc, &c_sposn);
 
-    if (t >= 0) {
-      if (hNoon < 10) lcd.setCursor(16, 2); // added 4.7.2016 to deal with summer far North
-      lcd.print(hNoon, DEC);
-      //          lcd.print(HOUR_SEP);  // save space by omitting ':' for solar noon
-      if (mNoon < 10) lcd.print("0");
-      lcd.print(mNoon, DEC);
+  // Convert Zenith angle to elevation
+  float sun_elevationNoon = 90. - c_sposn.dZenithAngle;
+  float sun_azimuthNoon = c_sposn.dAzimuth;
+
+ // Right margin text 
+  //    ' ': Solar elevation right now
+  //    'C': Time for local noon
+  //    'N': Solar elevation at local noon
+  //    'A': -
+
+  if (ScreenMode == ScreenLocalSun | ScreenMode == ScreenLocalSunMoon)
+  {
+  // position rightmargin info here:
+    lcd.setCursor(16, lineno);
+ 
+    if (RiseSetDefinition == ' ')
+    { 
+      printFixedWidth(lcd, (int)float(sun_elevation), 3);
+      lcd.write(DegreeSymbol);
     }
+    else if (RiseSetDefinition == 'C')
+    {
+      if (t >= 0) {
+        if (hNoon < 10) lcd.setCursor(16, 2); // added 4.7.2016 to deal with summer far North
+        lcd.print(hNoon, DEC);
+        //          lcd.print(HOUR_SEP);  // save space by omitting ':' for solar noon
+        if (mNoon < 10) lcd.print("0");
+        lcd.print(mNoon, DEC);
+      }
+    }
+    else if (RiseSetDefinition == 'N')
+    {
+      // Noon data:
+  
+      printFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
+      lcd.write(DegreeSymbol);
+    }  
+    
+}      // if (ScreenMode == ...)
 
-  }
 
-  else if (RiseSetDefinition == 'N')
-  {
-    // find max solar elevation, i.e. at local noon
-
-    c_time.dHours = hNoon - UTCoffset / 60.;
-    c_time.dMinutes = mNoon;
-    c_time.dSeconds = 0.0;
-
-    sunpos(c_time, c_loc, &c_sposn);
-
-    // Convert Zenith angle to elevation
-    sun_elevation = 90. - c_sposn.dZenithAngle;
-    sun_azimuth = c_sposn.dAzimuth;
-
-    printFixedWidth(lcd, (int)float(sun_elevation), 3);
-    lcd.write(DegreeSymbol);
-
-  }
-  else
-    lcd.print("  ");
+        if (RiseSetDefinition == 'O') // print sun's data at nOon
+        {
+          lcd.setCursor(4, lineno);
+          printFixedWidth(lcd, hNoon, 2);
+          lcd.print(HOUR_SEP); // save space by omitting ':' for solar noon
+          printFixedWidth(lcd, mNoon, 2,'0');
+          lcd.setCursor(10, lineno);
+          lcd.print(" El ");
+          printFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
+          lcd.write(DegreeSymbol);  
+          lcd.print("  ");       
+        }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -785,5 +846,124 @@ void ComputeEasterDate( // find date of Easter Sunday
   }
  } 
 
+ ///////////////////////////////////////////////////////////////////////////////////////////////
 
-/// THE END ///
+// void AlbertPlusMinus(int Term0,       // input number 
+//                      int *Term1,      // output factor one
+//                      int *Term2,      // output factor two 
+//                      int OptionAlbert // 0, 1, ...
+// )
+// {
+//  // random(min,max)
+//  // min: lower bound of the random value, inclusive (optional).
+//  // max: upper bound of the random value, exclusive.
+//
+//  if (OptionAlbert == 1) // +/- with equal probabilities
+//    {
+//        *Term1 = 0;  // avoid Term1 = 0
+//        while (*Term1 == 0 | *Term1 == Term0)  *Term1 = random(max(0,Term0-9), Term0+10); // limit  term to +/-1...9: 
+//    }
+//    else if (OptionAlbert == 0) // +
+//    {
+//        // hour = 0 => 0+0
+//        *Term1 = random(max(0,Term0-9), Term0+1);   // limit term1 to 0...term0 for OptionAlbert=0
+//    }
+//  
+//  *Term2 = Term0 - *Term1;
+// }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+ void AlbertPlus(int Term0,       // input number 
+                      int *Term1,      // output factor one
+                      int *Term2      // output factor two 
+ )
+ {
+  // random(min,max)
+  // min: lower bound of the random value, inclusive (optional).
+  // max: upper bound of the random value, exclusive.
+
+  // hour = 0 => 0+0: must allow zero
+  *Term1 = random(max(0,Term0-9), Term0+1);   // limit Term1 to 1...Term0
+  *Term2 = Term0 - *Term1;
+  if (*Term2 > *Term1) // sort to get smallest last
+    {
+      int tmp = *Term1; *Term1 = *Term2; *Term2 = tmp;
+    }  
+ }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+ void AlbertMinus(int Term0,       // input number 
+                      int *Term1,      // output factor one
+                      int *Term2      // output factor two 
+ )
+ {
+  // random(min,max)
+  // min: lower bound of the random value, inclusive (optional).
+  // max: upper bound of the random value, exclusive.
+
+  // avoid Term1=Term0, i.e. 0-0
+  *Term1 = random(max(1,Term0+1), Term0+10); // limit  Term1 to 1 ... Term0+9 
+  *Term2 = Term0 - *Term1;
+ }
+
+ /////////////////////////////////////////////////////////////////////////////////////
+ void AlbertMultiply( int Term0,       // input number 
+                      int *Term1,      // output factor one
+                      int *Term2      // output factor two 
+ )
+ {
+  int i, j, k;
+   // must have one more term than highest possible value of minute:
+  int possible[] = {1, 2, 3, 4, 5, 7, 8, 11, 12, 13, 15, 16, 17, 18, 19, 20, 23,24,25,26,27,28, 29,30, 31, 37, 41, 43, 47, 53, 59, 61};
+  int factors[15];
+  
+      if (Term0 !=0)
+      {
+        #ifdef FEATURE_SERIAL_ALBERT
+            Serial.print("*** AlbertMultiplyDivide: * ");Serial.println(Term0);
+        #endif
+        j = 0;
+        for (i = 0; possible[i] <= Term0; i++)
+         {
+          
+          if (Term0%possible[i] == 0)
+          {
+            factors[j] = possible[i];
+            j = j+1; 
+            #ifdef FEATURE_SERIAL_ALBERT
+              Serial.print("i, possible[i] ");
+              Serial.print(i);Serial.print("  ");
+              Serial.println(possible[i]);
+            #endif
+          }
+         }
+    // random(min,max)
+    // min: lower bound of the random value, inclusive (optional).
+    // max: upper bound of the random value, exclusive.
+  
+    #ifdef FEATURE_SERIAL_ALBERT
+      Serial.print("factors[i] ");Serial.print(factors[0]);Serial.print("  ");Serial.print(factors[1]);Serial.print("  ");
+      Serial.print(factors[2]);Serial.print("  ");Serial.println(factors[3]);
+    #endif 
+    // choose randomly among possible factors stored in factors:
+        k = random(0,j);
+        *Term1 = factors[k]; 
+      #ifdef FEATURE_SERIAL_ALBERT
+        Serial.print("k, Term1 ");Serial.print(k);Serial.print("  ");Serial.println(*Term1);
+      #endif 
+      *Term2 = Term0 / *Term1; 
+      if (*Term2 > *Term1) // sort to get smallest last
+        {
+          int tmp = *Term1; *Term1 = *Term2; *Term2 = tmp;
+        }   
+      }
+      else //Term0 == 0
+      {
+        *Term1=0;
+        *Term2=0;
+      }  
+ }
+ 
+ /// THE END ///

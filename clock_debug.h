@@ -5,6 +5,7 @@
 //#define FEATURE_SERIAL_MOON // serial output for test of moon functions
 //#define FEATURE_SERIAL_MENU // serial output for menu & general testing
 //#define FEATURE_SERIAL_TIME // serial output for testing of time
+//#define FEATURE_SERIAL_ALBERT // serial output for debugging of Albert math clock
 
 //#define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than that of the GPS
                               // Note that altitude = 0 during such a test.
