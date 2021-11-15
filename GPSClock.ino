@@ -1,4 +1,6 @@
+
 #define CODE_VERSION "1.2.0 2021-11-14"
+
 /*
   LA3ZA Multi Face GPS Clock
 
@@ -88,6 +90,7 @@
             AlbertClock   [added 05.11.2021]
 */
 /*
+
   Revisions:
 
           1.2.0 xx.yy.2021
@@ -111,7 +114,7 @@
 
 		      1.0.3  11.10.2021
                 - Added missing 6. bit in minutes, seconds in binary clocks
-				        - Added screen 21 with simultaneous binary, octal, and hex clocks
+		        - Added screen 21 with simultaneous binary, octal, and hex clocks
                 - Removed FEATURE_CLOCK_SOME_SECONDS, replaced by SECONDS_CLOCK_HELP = (0...60) for additional "normal" clock in binary, octal, BCD, etc
 
           1.0.2  06.10.2021
@@ -126,6 +129,7 @@
           1.0.0  24.09.2021
                 - First public release
                 - 18 different screens
+
 
 */
 
@@ -348,6 +352,7 @@ void loop() {
 #endif // FEATURE_BUTTONS 
 
 #ifdef FEATURE_ROTARY_ENCODER // one of FEATURE_ROTARY_ENCODER or FEATURE_BUTTONS must be defined
+
   volatile unsigned char result = r.process();
 
   if (r.buttonPressedReleased(25)) {
@@ -409,6 +414,7 @@ void loop() {
         oldminute = -1; // to get immediate display of some info
         lcd.setCursor(18, 3); lcd.print(dispState); // lower left-hand corner
         delay(50);
+
       }
     }
   }
