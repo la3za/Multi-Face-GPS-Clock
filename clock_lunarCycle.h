@@ -447,9 +447,10 @@ int GetMoonRiseSetTimes
     // should indicate beginning of the day, hence the truncation --- but why beginning of day?
     jd = trunc(now()/86400.0) - 10957.5; // i.e. no of days since 1970 converted to j2000
 
+    //jd = trunc(8001.48); // 27.11.2021
+    
     localsidereal = localSiderealTime(lon, jd, zone); // local sidereal time
     
-    //jd = float(now())/86400.0 - 10957.5; // i.e. no of days since 1970 converted to j2000
   
     #ifdef FEATURE_SERIAL_MOON
       Serial.println(F("GetMoonRiseSetTimes: "));

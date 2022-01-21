@@ -16,6 +16,7 @@ distance
 decToBinary
 
 printFixedWidth
+LcdDate
 LcdUTCTimeLocator
 LcdShortDayDateTimeLocal
 LcdSolarRiseSet
@@ -23,9 +24,12 @@ LcdSolarRiseSet
 ComputeEasterDate
 JulianToGregorian
 
-AlbertPlus
-AlbertMinus
-AlbertMultiply
+MathPlus
+MathMinus
+MathMultiply
+MathDivide
+
+LcdMorse
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
@@ -53,6 +57,9 @@ void GetNextRiseSet(
   *sAz = sAz1;
 
   local = now() + UTCoffset * 60;
+
+ // local = 1638052000; // 27.11.2021, ~23.30
+  
   pLocal = 100 * hour(local) + minute(local);
 
 #ifdef FEATURE_SERIAL_MOON
@@ -485,9 +492,44 @@ void LcdUTCTimeLocator(int lineno)
 
 //------------------------------------------------------------------
 
+void LcdDate(int Day, int Month, int Year=0) // print date, either day-month or day-month-year according to specified format
+{
+  if (DATEORDER == 'B')
+    {
+      if (Year !=0) 
+      { 
+        printFixedWidth(lcd, Year, 4); lcd.print(DATE_SEP);
+      }
+      printFixedWidth(lcd, Month, 2, '0'); lcd.print(DATE_SEP);
+      printFixedWidth(lcd, Day, 2, '0');
+    }
+    else if (DATEORDER == 'M')
+    {
+      printFixedWidth(lcd, Month, 2, '0'); lcd.print(DATE_SEP);
+      printFixedWidth(lcd, Day, 2, '0'); 
+      if (Year !=0) 
+      {
+        lcd.print(DATE_SEP);printFixedWidth(lcd, Year, 4);
+      }
+    }
+    else
+    {
+      printFixedWidth(lcd, Day, 2, '0'); lcd.print(DATE_SEP);
+      printFixedWidth(lcd, Month, 2, '0'); 
+      if (Year !=0) 
+      {
+        lcd.print(DATE_SEP);printFixedWidth(lcd, Year, 4);
+      }
+    }
+  
+}
+
+
+//------------------------------------------------------------------
+
 void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
   // function that displays the following kind of info on lcd row "lineno"
-  //  "Wed 8.9     22:30:46"
+  //  "Wed 20.10     22:30:46" - date separator in fixed location, even if date is ' 9.8'
 
   char textbuffer[12]; // was [9] - caused all kinds of memory overwrite problems
   // get local time
@@ -495,13 +537,13 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
   Hour = hour(local);
   Minute = minute(local);
   Seconds = second(local);
-
-  lcd.setCursor(0, lineno);
-
+  
   // local date
   Day = day(local);
   Month = month(local);
   Year = year(local);
+    
+  lcd.setCursor(0, lineno);
   if (dayGPS != 0)
   {
      #ifdef FEATURE_DAY_NAME_NATIVE
@@ -521,19 +563,16 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
     
         if ((DATEORDER == 'M') | (DATEORDER == 'B'))
         {
-// modified so date takes up a fixed space
+// modified so month takes up a fixed space without a leading zero:
 //          lcd.print(static_cast<int>(Month)); lcd.print(DATE_SEP);
-            printFixedWidth(lcd, Month, 2,' ');
-            lcd.print(DATE_SEP);
+            printFixedWidth(lcd, Month, 2,' '); lcd.print(DATE_SEP);
             lcd.print(static_cast<int>(Day));
- 
         }
         else
         {
-// modified so date takes up a fixed space:
+// modified so day takes up a fixed space without a leading zero:
 //        lcd.print(static_cast<int>(Day)); lcd.print(DATE_SEP);
-          printFixedWidth(lcd, Day, 2,' ');
-          lcd.print(DATE_SEP);
+          printFixedWidth(lcd, Day, 2,' '); lcd.print(DATE_SEP);
           lcd.print(static_cast<int>(Month));
         }
       }
@@ -565,13 +604,22 @@ void LcdSolarRiseSet(
   cLocation c_loc;
   cSunCoordinates c_sposn;
 
+  // https://www.timeanddate.com/astronomy/different-types-twilight.html
   if (RiseSetDefinition == 'A')     // astronomical: -18 deg
-    mySunrise.Astronomical();
+  // "During astronomical twilight, most celestial objects can be observed in the sky. However, the atmosphere still scatters and 
+  // refracts a small amount of sunlight, and that may make it difficult for astronomers to view the faintest objects."
+        mySunrise.Astronomical();
+        
   else if (RiseSetDefinition == 'N') // Nautical:     -12 deg
-    mySunrise.Nautical();
-  else if (RiseSetDefinition == 'C') // Civil:        - 6 deg
-    mySunrise.Civil();
-  else mySunrise.Actual();           // Actual          0 deg
+  // "nautical twilight, dates back to the time when sailors used the stars to navigate the seas. 
+  // During this time, most stars can be easily seen with naked eyes, and the horizon is usually also visible in clear weather conditions."
+        mySunrise.Nautical();
+        
+  else if (RiseSetDefinition == 'C') // Civil:        - 6 deg 
+  // "enough natural sunlight during this period that artificial light may not be required to carry out outdoor activities."
+        mySunrise.Civil();
+        
+  else  mySunrise.Actual();           // Actual          0 deg
 
 
   // First: print sun rise time
@@ -631,7 +679,11 @@ if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|
       lcd.print(HOUR_SEP);
       if (m < 10) lcd.print("0");
       lcd.print(m, DEC);
-      if (ScreenMode == ScreenLocalSunSimpler) lcd.print("  ");
+      if (ScreenMode == ScreenLocalSunSimpler) 
+      {
+        lcd.print("  ");
+        lcd.print(RiseSetDefinition); // show C, N, A to the very right
+      }
     }
   }
 
@@ -666,14 +718,15 @@ SolarElevation:
 
    if (RiseSetDefinition == 'Z') // print current aZimuth, elevation
       {
-        lcd.setCursor(2, lineno);
-        lcd.print(" Az ");
-        printFixedWidth(lcd, (int)float(sun_azimuth), 3);
-        lcd.write(DegreeSymbol);
-        lcd.print(" El ");
+        lcd.setCursor(3, lineno);
+        lcd.print("El ");
         printFixedWidth(lcd, (int)float(sun_elevation), 3);
         lcd.write(DegreeSymbol);
-        lcd.print("  ");   
+        lcd.setCursor(11, lineno);
+        lcd.print("Az ");
+        printFixedWidth(lcd, (int)float(sun_azimuth), 3);
+        lcd.write(DegreeSymbol);
+        lcd.print("  ");         
       }
 
   ///// Solar noon
@@ -718,7 +771,7 @@ SolarElevation:
       if (t >= 0) {
         if (hNoon < 10) lcd.setCursor(16, 2); // added 4.7.2016 to deal with summer far North
         lcd.print(hNoon, DEC);
-        //          lcd.print(HOUR_SEP);  // save space by omitting ':' for solar noon
+        //          lcd.print(HOUR_SEP);  
         if (mNoon < 10) lcd.print("0");
         lcd.print(mNoon, DEC);
       }
@@ -736,14 +789,15 @@ SolarElevation:
 
         if (RiseSetDefinition == 'O') // print sun's data at nOon
         {
-          lcd.setCursor(4, lineno);
-          printFixedWidth(lcd, hNoon, 2);
-          lcd.print(HOUR_SEP); // save space by omitting ':' for solar noon
-          printFixedWidth(lcd, mNoon, 2,'0');
-          lcd.setCursor(10, lineno);
-          lcd.print(" El ");
+          lcd.setCursor(3, lineno);
+          lcd.print("El ");
           printFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
-          lcd.write(DegreeSymbol);  
+          lcd.write(DegreeSymbol); 
+          lcd.print(" ");   //        lcd.print(" @");
+          lcd.setCursor(12, lineno);
+          printFixedWidth(lcd, hNoon, 2);
+          lcd.print(HOUR_SEP); 
+          printFixedWidth(lcd, mNoon, 2,'0');         
           lcd.print("  ");       
         }
 }
@@ -848,25 +902,25 @@ void ComputeEasterDate( // find date of Easter Sunday
 
  ///////////////////////////////////////////////////////////////////////////////////////////////
 
-// void AlbertPlusMinus(int Term0,       // input number 
+// void MathPlusMinus(int Term0,       // input number 
 //                      int *Term1,      // output factor one
 //                      int *Term2,      // output factor two 
-//                      int OptionAlbert // 0, 1, ...
+//                      int OptionMath // 0, 1, ...
 // )
 // {
 //  // random(min,max)
 //  // min: lower bound of the random value, inclusive (optional).
 //  // max: upper bound of the random value, exclusive.
 //
-//  if (OptionAlbert == 1) // +/- with equal probabilities
+//  if (OptionMath == 1) // +/- with equal probabilities
 //    {
 //        *Term1 = 0;  // avoid Term1 = 0
 //        while (*Term1 == 0 | *Term1 == Term0)  *Term1 = random(max(0,Term0-9), Term0+10); // limit  term to +/-1...9: 
 //    }
-//    else if (OptionAlbert == 0) // +
+//    else if (OptionMath == 0) // +
 //    {
 //        // hour = 0 => 0+0
-//        *Term1 = random(max(0,Term0-9), Term0+1);   // limit term1 to 0...term0 for OptionAlbert=0
+//        *Term1 = random(max(0,Term0-9), Term0+1);   // limit term1 to 0...term0 for OptionMath=0
 //    }
 //  
 //  *Term2 = Term0 - *Term1;
@@ -874,11 +928,14 @@ void ComputeEasterDate( // find date of Easter Sunday
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
- void AlbertPlus(int Term0,       // input number 
+ void MathPlus(int Term0,       // input number 
                       int *Term1,      // output factor one
                       int *Term2      // output factor two 
  )
  {
+  #ifdef FEATURE_SERIAL_MATH
+      Serial.print("*** MathPlus:                 + ");Serial.println(Term0);
+  #endif
   // random(min,max)
   // min: lower bound of the random value, inclusive (optional).
   // max: upper bound of the random value, exclusive.
@@ -894,11 +951,14 @@ void ComputeEasterDate( // find date of Easter Sunday
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 
- void AlbertMinus(int Term0,       // input number 
+ void MathMinus(int Term0,       // input number 
                       int *Term1,      // output factor one
                       int *Term2      // output factor two 
  )
  {
+  #ifdef FEATURE_SERIAL_MATH
+      Serial.print("*** MathMinus:                - ");Serial.println(Term0);
+  #endif
   // random(min,max)
   // min: lower bound of the random value, inclusive (optional).
   // max: upper bound of the random value, exclusive.
@@ -906,10 +966,13 @@ void ComputeEasterDate( // find date of Easter Sunday
   // avoid Term1=Term0, i.e. 0-0
   *Term1 = random(max(1,Term0+1), Term0+10); // limit  Term1 to 1 ... Term0+9 
   *Term2 = Term0 - *Term1;
+        #ifdef FEATURE_SERIAL_MATH
+          Serial.print("Term2, Term1 ");Serial.print(*Term1);Serial.print("  ");Serial.println(*Term2);
+        #endif 
  }
 
  /////////////////////////////////////////////////////////////////////////////////////
- void AlbertMultiply( int Term0,       // input number 
+ void MathMultiply( int Term0,       // input number 
                       int *Term1,      // output factor one
                       int *Term2      // output factor two 
  )
@@ -918,12 +981,14 @@ void ComputeEasterDate( // find date of Easter Sunday
    // must have one more term than highest possible value of minute:
   int possible[] = {1, 2, 3, 4, 5, 7, 8, 11, 12, 13, 15, 16, 17, 18, 19, 20, 23,24,25,26,27,28, 29,30, 31, 37, 41, 43, 47, 53, 59, 61};
   int factors[15];
+
+      #ifdef FEATURE_SERIAL_MATH
+            Serial.print("*** MathMultiply:             * ");Serial.println(Term0);
+      #endif
   
       if (Term0 !=0)
       {
-        #ifdef FEATURE_SERIAL_ALBERT
-            Serial.print("*** AlbertMultiplyDivide: * ");Serial.println(Term0);
-        #endif
+        
         j = 0;
         for (i = 0; possible[i] <= Term0; i++)
          {
@@ -932,7 +997,7 @@ void ComputeEasterDate( // find date of Easter Sunday
           {
             factors[j] = possible[i];
             j = j+1; 
-            #ifdef FEATURE_SERIAL_ALBERT
+            #ifdef FEATURE_SERIAL_MATH
               Serial.print("i, possible[i] ");
               Serial.print(i);Serial.print("  ");
               Serial.println(possible[i]);
@@ -943,14 +1008,14 @@ void ComputeEasterDate( // find date of Easter Sunday
     // min: lower bound of the random value, inclusive (optional).
     // max: upper bound of the random value, exclusive.
   
-    #ifdef FEATURE_SERIAL_ALBERT
+    #ifdef FEATURE_SERIAL_MATH
       Serial.print("factors[i] ");Serial.print(factors[0]);Serial.print("  ");Serial.print(factors[1]);Serial.print("  ");
       Serial.print(factors[2]);Serial.print("  ");Serial.println(factors[3]);
     #endif 
     // choose randomly among possible factors stored in factors:
         k = random(0,j);
         *Term1 = factors[k]; 
-      #ifdef FEATURE_SERIAL_ALBERT
+      #ifdef FEATURE_SERIAL_MATH
         Serial.print("k, Term1 ");Serial.print(k);Serial.print("  ");Serial.println(*Term1);
       #endif 
       *Term2 = Term0 / *Term1; 
@@ -965,5 +1030,105 @@ void ComputeEasterDate( // find date of Easter Sunday
         *Term2=0;
       }  
  }
- 
+
+void MathDivide(int Term0,      // input number 
+                int *Term1,     // output factor one: Term0 = Term1/Term2
+                int *Term2      // output factor two 
+)
+{
+  int factors[15];
+  int y, n, j, k;
+
+  #ifdef FEATURE_SERIAL_MATH
+      Serial.print("*** MathDivide:               : ");Serial.println(Term0);
+  #endif
+
+
+  if (Term0 !=0)
+      {
+        j = 0;
+        // find divisor > 0, < sqrt() and with only two digits in first factor:
+        for (n = 1; (n <= sqrt(Term0) & Term0*n < 100); n++)
+        {
+          if (Term0%n == 0)
+                {
+                  factors[j] = n;
+                  #ifdef FEATURE_SERIAL_MATH
+                    Serial.print("j, factors[j] ");
+                    Serial.print(j);  Serial.print("  ");
+                    Serial.println(factors[j]);
+                  #endif
+                  j = j+1; 
+                }
+        }
+        // choose randomly among possible factors stored in factors:
+              k = random(0,j);
+              *Term2 = factors[k]; 
+              #ifdef FEATURE_SERIAL_MATH
+                Serial.print("k, Term2 ");Serial.print(k);Serial.print("  ");Serial.println(*Term2);
+              #endif 
+            *Term1 = Term0 * *Term2; 
+      }   
+     else // Term0 = 0
+        {
+           *Term1 = 0;
+           *Term2 = random(1,10);
+        }
+}
+
+////////////////////////////////////////////////////////////////////////////
+// https://forum.arduino.cc/t/printing-a-double-variable/44327
+
+void printDouble( double val, unsigned int precision){
+
+// prints val with number of decimal places determine by precision
+// NOTE: precision is 1 followed by the number of zeros for the desired number of decimial places
+// example: printDouble( 3.1415, 100); // prints 3.14 (two decimal places)
+
+    Serial.print (int(val));  //prints the int part
+    Serial.print("."); // print the decimal point
+    unsigned int frac;
+    if(val >= 0)
+        frac = (val - int(val)) * precision;
+    else
+        frac = (int(val)- val ) * precision;
+    Serial.println(frac,DEC) ;
+} 
+
+
+void LcdMorse(int num)
+{
+  switch (num) {
+    case 1:
+      lcd.print((char)165);lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");
+      break;
+    case 2:
+      lcd.print((char)165);lcd.print((char)165);lcd.print("-");lcd.print("-");lcd.print("-");
+      break;
+    case 3:
+      lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print("-");lcd.print("-");
+      break; 
+    case 4:
+      lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print("-");
+      break;  
+    case 5:
+      lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);
+      break;
+    case 6:
+      lcd.print("-");lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);
+      break; 
+    case 7:
+      lcd.print("-");lcd.print("-");lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);
+      break; 
+    case 8:
+      lcd.print("-");lcd.print("-");lcd.print("-");lcd.print((char)165);lcd.print((char)165);
+      break; 
+    case 9:
+       lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");lcd.print((char)165);
+       break; 
+    default:
+      lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");
+      break;                
+  }
+}
  /// THE END ///

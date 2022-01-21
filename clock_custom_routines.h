@@ -3,10 +3,14 @@
 nativeDay
 nativeDayLong
 TimeZones
+WordClockNorwegian
 
  */
 
-#define NO_DK_OE_small  5
+// user defined characters 1-4 used in main code:
+#define NO_DK_OE_small   5
+#define SCAND_AA_small   6
+#define SCAND_AA_capital 7
 
 // The user may wish to customize the routines in this file according to 
 // desired language for day names in local time display
@@ -16,7 +20,7 @@ TimeZones
 // additional characters for Norwegian defined in clock_Norwegian.h
 // native weekday names are defined in functions nativeDay(), nativeDayLong()
 //
-// if LCD_NATIVE is set, day names from antiveDay() and nativeDayLong() are used
+// if FEATURE_NATIVE_LANGUAGE is set, day names from antiveDay() and nativeDayLong() are used
 
 /*
  From here on follows routines that the user may want to configure
@@ -171,6 +175,90 @@ TimeZones
                            
                       oldminute = minuteGPS;
                     }
+
+///////////////////////////////////////////////
+
+void WordClockNorwegian()
+{
+  char WordOnes[10][5] = {{"null"}, {"en  "}, {"to  "}, {"tre "}, {"fire"}, {"fem "}, {"seks"}, {"sju "}, {"Xtte"}, {"ni  "}}; // left justified
+  char CapiOnes[10][5] = {{"Null"}, {"Ett "}, {"To  "}, {"Tre "}, {"Fire"}, {"Fem "}, {"Seks"}, {"Sju "}, {"Xtte"}, {"Ni  "}}; // left justified
+  char WordTens[6][7]  = {{"  Null"}, {"    Ti"}, {"  Tjue"}, {"Tretti"}, {" FXrti"}, {" Femti"}}; 
+  char Teens[10][8]    = {{"       "},{"Elleve "},{"Tolv   "},{"Tretten"}, {"Fjorten"}, {"Femten "}, {"Seksten"}, {"Sytten "}, {"Atten  "}, {"Nitten "}};
+  int ones, tens;
+  char textbuf[21];
+
+// replace some characters - the X's - with native Norwegian ones:
+  WordTens[4][2] = (char)NO_DK_OE_small;
+  WordOnes[8][0] = (char)SCAND_AA_small;
+  CapiOnes[8][0] = (char)SCAND_AA_capital;
+
+  /* The longest symbol
+   *  Hours:            xx: ?? 
+   *  Minutes, seconds: 37: Thirty-seven
+   *  Longest symbol is 5+1+7+1+7 = 21 letters long, so it doesn't fit a single line on a 20 line LCD
+   */
+ 
+  //  get local time
+  local = now() + UTCoffset * 60;
+  Hour = hour(local);
+  Minute = minute(local);
+  Seconds = second(local);
+
+  lcd.setCursor(0, 0); 
+  if (Hour < 10) 
+  {
+    lcd.print(CapiOnes[int(Hour)]); lcd.print("      ");
+  }
+  else if (Hour > 10 & Hour < 20) lcd.print(Teens[int(Hour)-10]);
+  else
+  {
+    ones = Hour % 10; tens = (Hour - ones) / 10;
+    lcd.print(WordTens[tens]); 
+  if (tens == 0) 
+    {
+      lcd.print(" ");
+      lcd.print(WordOnes[ones]);
+    }
+    else if (ones == 0) lcd.print("      ");
+    else lcd.print(WordOnes[ones]);
+  }
+  
+  lcd.setCursor(4,1); 
+  if (Minute > 10 & Minute < 20) lcd.print(Teens[int(Minute)-10]);
+  else
+  {
+    ones = Minute % 10; tens = (Minute - ones) / 10;
+    lcd.print(WordTens[tens]); 
+   if (tens == 0) 
+    {
+      lcd.print(" ");
+      lcd.print(WordOnes[ones]);
+    }
+    else if (ones == 0) lcd.print("      ");
+    else lcd.print(WordOnes[ones]);
+  }
+  
+  
+  lcd.setCursor(8, 2); 
+  if (Seconds > 10 & Seconds < 20) lcd.print(Teens[int(Seconds)-10]);
+  else
+  {
+    ones = Seconds % 10; tens = (Seconds - ones) / 10;
+    lcd.print(WordTens[tens]);
+    if (tens == 0) 
+    {
+      lcd.print(" ");
+      lcd.print(WordOnes[ones]);
+    }
+    else if (ones == 0) lcd.print("      ");
+    else lcd.print(WordOnes[ones]);
+  }
+  
+   lcd.setCursor(0, 3);lcd.print("        ");
+   lcd.setCursor(18, 3); lcd.print("  "); // blank out number in lower right-hand corner 
+}
+
+
 
 
 // THE END /////

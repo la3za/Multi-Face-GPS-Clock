@@ -1,4 +1,5 @@
 // Define variables for Screen system - used in clock_options.h
+// numbers here must correspond to those of menuSystem()
 // Don't touch these!
 
 // Clock faces of v1.0.0:
@@ -31,9 +32,12 @@
 #define ScreenEasterDates   22
 
 // New in v1.2.0:
-#define ScreenRoman               23 
-#define ScreenAlbertClockAdd      24
-#define ScreenAlbertClockSubtract 25
-#define ScreenAlbertClockMultiply 26
-#define ScreenLocalSunSimpler     27
-#define ScreenLocalSunAzEl        28
+#define ScreenLocalSunSimpler   23
+#define ScreenLocalSunAzEl      24
+
+#define ScreenMathClockAdd      25
+#define ScreenMathClockSubtract 26
+#define ScreenMathClockMultiply 27
+#define ScreenMathClockDivide   28
+
+#define ScreenLunarEclipse      29
