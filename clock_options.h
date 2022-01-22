@@ -53,7 +53,7 @@ int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenLocalSun, ScreenLocalSun
 // Solar, moon:
 /*
 int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
-                ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse,};
+                ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse};
 */
 
 // Radio amateur functions WSPR, NCDXF beacons, sun, moon:
@@ -97,7 +97,7 @@ char MIN_SEP  = ':'; // Alternatives: ':', '.', 'm', ...
 //char HOUR_SEP = 'h'; 
 //char MIN_SEP  = '.';
 
-#define FEATURE_NATIVE_LANGUAGE    // DAY names from nativeDay(), nativeDayLong() for local time; Number clock in native language, otherwise English
+//#define FEATURE_NATIVE_LANGUAGE    // DAY names from nativeDay(), nativeDayLong() for local time; Number clock in native language, otherwise English
 
 const int SECONDS_CLOCK_HELP = 0;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
                                                   // 0 - always off, 60 - always on
