@@ -95,7 +95,11 @@ Still in development:
 
 
 Revisions:
-  
+
+          1.2.1 07.03.2022
+                - Removed unused code WordClock
+                - Fixed display of short day names in Native Language 
+                
           1.2.0 21.01.2022
                 - MathClock - 4 ways to present an arithmetic computation to find hour and minute at regular intervals
                 - LunarEclipse - predict lunar eclipses 2-3 years into the future
@@ -2414,14 +2418,14 @@ void DemoClock(int inDemo // 0 or 1
 
 ///////////////////////////////////////////////////////////////
 
-void WordClock()
-{
-  #ifndef FEATURE_NATIVE_LANGUAGE
-    WordClockEnglish();
-  #else
-    WordClockNorwegian();
-  #endif
-}
+//void WordClock()
+//{
+//  #ifndef FEATURE_NATIVE_LANGUAGE
+//    WordClockEnglish();
+//  #else
+//    WordClockNorwegian();
+//  #endif
+//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // End of functions for Menu system ////////////////////////////////////////////////////////////////
