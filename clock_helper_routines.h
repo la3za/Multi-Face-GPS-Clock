@@ -546,7 +546,7 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
   lcd.setCursor(0, lineno);
   if (dayGPS != 0)
   {
-     #ifdef FEATURE_DAY_NAME_NATIVE
+     #ifdef FEATURE_NATIVE_LANGUAGE // replaced FEATURE_DAY_NAME_NATIVE 7.3.2022 LA3ZA
           nativeDay(local);
      #else
           sprintf(textbuffer, "%3s", dayShortStr(weekday(local)));
