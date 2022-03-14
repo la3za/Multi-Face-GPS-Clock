@@ -1,4 +1,4 @@
-#define CODE_VERSION "1.2.0 2022-01-21"
+#define CODE_VERSION "1.2.1 2022-03-07"
 
 /*
   LA3ZA Multi Face GPS Clock
