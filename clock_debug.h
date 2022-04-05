@@ -1,17 +1,19 @@
 // debugging options 
 
+
 //#define FEATURE_SERIAL_SOLAR // serial output for debugging of solar
 //#define FEATURE_SERIAL_GPS // serial output for debugging of GPS
 //#define FEATURE_SERIAL_MOON // serial output for test of moon functions
-#define FEATURE_SERIAL_MENU // serial output for menu & general testing
+//#define FEATURE_SERIAL_MENU // serial output for menu & general testing
 //#define FEATURE_SERIAL_TIME // serial output for testing of time
 //#define FEATURE_SERIAL_MATH // serial output for debugging of math clock
 //#define FEATURE_SERIAL_LUNARECLIPSE // serial output for debugging of moon eclipse
 //#define FEATURE_SERIAL_EQUATIO // serial output for debugging of Equation of Time (solar time)
 
-//#define DEBUG_GPS
+// #define DEBUG_GPS    // for running GPSInfo       
 
-//#define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than that of the GPS
+// #define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than that of the GPS
+                                 // using position defined below
                               // Note that altitude = 0 during such a test.
 // London:
 //float latitude_manual  = 51.5; // N-S, degrees, South is negative
@@ -33,3 +35,13 @@ float longitude_manual = -85.395540;
 // New Dehli:
 //float latitude_manual  = 28.6; 
 //float longitude_manual = 77.2; 
+
+
+
+//#define FEATURE_PC_SERIAL_GPS_IN  // for faking GPS from a GPS simulator (https://github.com/panaaj/nmeasimulator)
+// Demo 12.03.2022: problems with Time Zones & sidereal time, where clock does not advance when this mode is enabled
+
+// Must only be used alone. Don't use if you do not exactly understand this switch:
+// Switches GPS input from Serial1 to Serial to fake missing GPS coverage for demo purposes:
+// Ex: enter this in proper COMx window of Arduino GUI at 9600 baud:
+// $GPRMC,192447.781,A,5950.292010,N,01025.680006,E,0.0,17.4,010222,,,*12

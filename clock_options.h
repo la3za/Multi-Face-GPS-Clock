@@ -28,39 +28,38 @@ const int menuFavorite = ScreenLocalSunMoon; // screen number for favorite
 // Perturbe the order of screens, making sure that each number *only appears once*
 //
 
-
-// Logical order, includes everything, (5 per line):
+// Logical order, includes everything, 5 per line:
 
 int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenLocalSun, ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
-                ScreenLocalSunMoon, ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse, ScreenEasterDates, 
+                ScreenLocalSunMoon, ScreenLocalMoon,              ScreenLunarEclipse, ScreenEasterDates, 
                 ScreenTimeZones, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, 
                 ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, Screencode_Status, ScreenHex, 
                 ScreenOctal, ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, 
-                ScreenMathClockDivide,   ScreenNCDXFBeacons2, 
-                ScreenNCDXFBeacons1, ScreenWSPRsequence, ScreenUTCPosition};
-
-
-// My preferred subset, as above, but without binary clocks and without diagnostic displays.
-/*int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator,                 ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
-                ScreenLocalSunMoon, ScreenLocalMoon,ScreenMoonRiseSet, ScreenLunarEclipse, ScreenEasterDates, 
-                ScreenTimeZones,                                                                   ScreenBar, 
+                ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, ScreenSidereal, ScreenUTCPosition, 
+                ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence,                ScreenDemoClock};
+/*
+// For demo
+int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator,                  ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
+                ScreenLocalSunMoon, ScreenLocalMoon,               ScreenLunarEclipse, ScreenEasterDates, 
+                ScreenTimeZones, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, 
                 ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, Screencode_Status,
-                             ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, 
-                ScreenMathClockDivide,  ScreenNCDXFBeacons2, 
-                ScreenNCDXFBeacons1, ScreenWSPRsequence,  ScreenUTCPosition};
+                               ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, 
+                ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, ScreenSidereal, ScreenUTCPosition, 
+                ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenGPSInfo, ScreenMoonRiseSet,ScreenDemoClock};
+
 */
 
 // Solar, moon:
 /*
 int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
-                ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse};
+                ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse,};
 */
 
 // Radio amateur functions WSPR, NCDXF beacons, sun, moon:
 /*
 int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
-                ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse, ScreenTimeZones, ScreenUTCPosition, 
-                ScreenNCDXFBeacons2, ScreenNCDXFBeacons1, ScreenWSPRsequence};
+                ScreenLocalMoon, ScreenMoonRiseSet, ScreenLunarEclipse, ScreenTimeZones, ScreenSidereal, 
+                ScreenUTCPosition, ScreenNCDXFBeacons2, ScreenNCDXFBeacons1, ScreenWSPRsequence};
 */
 
 // Fancy clocks:
@@ -71,7 +70,8 @@ int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenBinary, ScreenBinaryHorB
                 ScreenMathClockDivide};
 */
 
-const int noOfStates = sizeof(menuIn)/sizeof(menuIn[0]); // no of entries in Menu system
+// don't touch this line:
+const int noOfStates = sizeof(menuIn)/sizeof(menuIn[0]); // compute number of entries in Menu system
 // *************************************************************************
 
 // Day and clock separators & order of day/month in date: 
@@ -102,7 +102,7 @@ char MIN_SEP  = ':'; // Alternatives: ':', '.', 'm', ...
 const int SECONDS_CLOCK_HELP = 0;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
                                                   // 0 - always off, 60 - always on
 
-int  MATH_PER_MINUTE = 8; //15; // Number of math quizzes per minute, 1...6 in AlbertClock app
+int  MATH_PER_MINUTE = 8; //15; // Number of math quizzes per minute, [1...6 in AlbertClock app]
 char MATH_CLOCK_MULTIPLY = 'x'; // '*', 'x', (char)165 = centered dot
 char MATH_CLOCK_DIVIDE   = ':'; // '/', ':'
 

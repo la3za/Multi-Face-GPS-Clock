@@ -39,5 +39,16 @@
 #define ScreenMathClockSubtract 26
 #define ScreenMathClockMultiply 27
 #define ScreenMathClockDivide   28
-
 #define ScreenLunarEclipse      29
+
+// New in v1.3.0:
+#define ScreenRoman             30 
+#define ScreenMorse             31
+#define ScreenWordClock         32
+#define ScreenSidereal          33
+
+// Unfinished
+#define ScreenGPSInfo           34
+
+// New in v1.3.0:
+#define ScreenDemoClock         35  // the last one

@@ -259,6 +259,4 @@ void WordClockNorwegian()
 }
 
 
-
-
 // THE END /////
