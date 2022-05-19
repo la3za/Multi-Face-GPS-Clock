@@ -8,9 +8,9 @@ The LA3ZA blog has posts with documentation of hardware and the different screen
 
 Here are more examples:
 
-<img src="(SunUpDown.jpg" width="40%">
+<img src="SunUpDown.jpg" width="40%">
 
-<img src="(Word.jpg" width="40%">
+<img src="Word.jpg" width="40%">
 
 <img src="LunarEclipses.jpg" width="40%">
 
