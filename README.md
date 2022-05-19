@@ -9,12 +9,9 @@ The LA3ZA blog has posts with documentation of hardware and the different screen
 Here are more examples:
 ![Image](SunUpDown.jpg)
 
-
-![Image](LunarEclipses.jpg)
-
-
 ![Image](Word.jpg )
 
+![Image](LunarEclipses.jpg)
 
 ![Image](MathSub.jpg )
 
