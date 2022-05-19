@@ -10,6 +10,12 @@ Here are more examples:
 
 <img src="SunUpDown.jpg" width="40%">
 
+<img src="UTCPosition.jpg" width="40%">
+
+<img src="04-LocalMoon.jpg" width="40%">
+
+<img src="21-BinOctDecHex" width="40%">
+
 <img src="Word.jpg" width="40%">
 
 <img src="LunarEclipses.jpg" width="40%">
