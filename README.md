@@ -9,11 +9,15 @@ The LA3ZA blog has posts with documentation of hardware and the different screen
 Here are more examples:
 ![Image](SunUpDown.jpg)
 
+
 ![Image](LunarEclipses.jpg)
+
 
 ![Image](Word.jpg)
 
+
 ![Image](MathSub.jpg)
+
 
 Hardware schematic, first version (supported from v1.0.0): ![Image](2021-10-18-GPSClock.png)
 
