@@ -15,7 +15,7 @@ Here are more examples:
 
 ![Image](MathSub.jpg)
 
-<img src="MathSub.jpg" width="300">
+<img src="MathSub.jpg" width="50%">
 
 
 Hardware schematic, first version (supported from v1.0.0): ![Image](2021-10-18-GPSClock.png)
