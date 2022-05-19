@@ -7,7 +7,7 @@ The clock is based on an Arduino Mega taking time and position data from a GPS. 
 The LA3ZA blog has posts with documentation of hardware and the different screens showing solar and lunar position, their rise and set times, moon phase, date for Easter Sunday in Gregorian and Julian calendars and much more. See keyword "Arduino clock", https://la3za.blogspot.com/search/label/Arduino%20clock, starting with early development in 2016 up to the present. 
 
 Here are more examples:
-<img src="SunUpDown.jpg" width="300")
+![Image]<img src="SunUpDown.jpg" width="300")
 
 
 ![Image](LunarEclipses.jpg | width=300px)
