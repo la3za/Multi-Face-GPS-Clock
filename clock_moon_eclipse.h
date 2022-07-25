@@ -10,7 +10,7 @@
     Visit subsystems.us for more fun Arduino and science projets.
 */
 
-void moonEclipse( int tYear, // input year
+void MoonEclipse( int tYear, // input year
                   int pDate[], // output packed time: 100*month + day
                   int EclipseYear[] // this routine gives a date in 2028 when tYear = 2027, 2029
                   ) 

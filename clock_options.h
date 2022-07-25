@@ -1,3 +1,5 @@
+// ************ 1. Hardware options:
+
 // Choose only one of these display interface options:
 #define FEATURE_LCD_I2C               // serial interface to 20x4 LCD on 0x27 I2C address
 //#define FEATURE_LCD_4BIT              // parallel interface to 20x4 LCD
@@ -24,25 +26,29 @@ const int menuFavorite = ScreenLocalSunMoon; // screen number for favorite
     #define FEATURE_PUSH_FAVORITE
 #endif
 
+
+// ************ 2. Software options
+
 // *** Customize menu system. ie. the order in which screen items are presented ***
 // Perturbe the order of screens, making sure that each number *only appears once*
 //
 
 // Logical order, includes everything, 5 per line:
 
-int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenLocalSun, ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
+int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator,                 ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
                 ScreenLocalSunMoon, ScreenLocalMoon,              ScreenLunarEclipse, ScreenEasterDates, 
                 ScreenTimeZones, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, 
-                ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, Screencode_Status, ScreenHex, 
+                ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, ScreenCodeStatus, ScreenHex, 
                 ScreenOctal, ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, 
                 ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, ScreenSidereal, ScreenUTCPosition, 
-                ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence,                ScreenDemoClock};
+                ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenMoonRiseSet, 
+                ScreenDemoClock}; // Demo as the last one
 /*
 // For demo
 int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator,                  ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
                 ScreenLocalSunMoon, ScreenLocalMoon,               ScreenLunarEclipse, ScreenEasterDates, 
                 ScreenTimeZones, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, 
-                ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, Screencode_Status,
+                ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, ScreenCodeStatus,
                                ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, 
                 ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, ScreenSidereal, ScreenUTCPosition, 
                 ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenGPSInfo, ScreenMoonRiseSet,ScreenDemoClock};
@@ -70,8 +76,8 @@ int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenBinary, ScreenBinaryHorB
                 ScreenMathClockDivide};
 */
 
-// don't touch this line:
-const int noOfStates = sizeof(menuIn)/sizeof(menuIn[0]); // compute number of entries in Menu system
+// don't touch this statement:
+const int noOfStates = sizeof(menuIn)/sizeof(menuIn[0]); // no of entries in Menu system
 // *************************************************************************
 
 // Day and clock separators & order of day/month in date: 
@@ -97,16 +103,24 @@ char MIN_SEP  = ':'; // Alternatives: ':', '.', 'm', ...
 //char HOUR_SEP = 'h'; 
 //char MIN_SEP  = '.';
 
-//#define FEATURE_NATIVE_LANGUAGE    // DAY names from nativeDay(), nativeDayLong() for local time; Number clock in native language, otherwise English
+
+// Set display language where DAY names come from nativeDay(), nativeDayLong() for local time (UTC is always in English) 
+// Number clock is in Norwegian for 'no', otherwise English
+
+#define FEATURE_NATIVE_LANGUAGE '  '  // 'no', 'se', 'dk', 'is', 'de', 'fr', 'es', '  '
+//#define FEATURE_NATIVE_LANGUAGE '  '  // anything except those defined above will make the display language for local time English
+
+
+// ************ 3. Minor parameters for some of the displays
 
 const int SECONDS_CLOCK_HELP = 0;                 // no of seconds per minute where normal clock is also shown in binary, BCD etc clocks. 
                                                   // 0 - always off, 60 - always on
 
-int  MATH_PER_MINUTE = 8; //15; // Number of math quizzes per minute, [1...6 in AlbertClock app]
-char MATH_CLOCK_MULTIPLY = 'x'; // '*', 'x', (char)165 = centered dot
-char MATH_CLOCK_DIVIDE   = ':'; // '/', ':'
+int  MATH_PER_MINUTE = 8; //15; // Number of math quizzes per minute, 1...6 in AlbertClock app
+char MATH_CLOCK_MULTIPLY = 'x'; // '*', 'x', (char)165 = centered dot.  Multiplication sign
+char MATH_CLOCK_DIVIDE   = ':'; // '/', ':'.                            Division sign
 
-#define DWELL_TIME_DEMO 15 // seconds per mode as DemoClock cycles through all modes
+#define DWELL_TIME_DEMO 10 // 15, seconds per mode as DemoClock cycles through all modes
 
 const float OPTION_DAYS_WITHOUT_MOON_ARROW = 2.0;  // at full and at new moon
 const float OPTION_DAYS_WITHOUT_MOON_SYMBOL = 2.0; // at full and at new moon

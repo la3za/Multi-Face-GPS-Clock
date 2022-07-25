@@ -1,13 +1,13 @@
 // hardware pins, GPS baudrate
 
 #define analog_buttons_pin A0
-#define LCD_pwm 45 // PWM on Mega pins 2 - 13 or 44 - 46
+#define LCD_PWM 45 // PWM on Mega pins 2 - 13 or 44 - 46
 
 #ifdef FEATURE_POTENTIOMETER
   #define potentiometer A1
 #endif
 
-static const uint32_t GPSBaud =  9600; // QRPlabs GPS
+static const uint32_t gpsBaud =  9600; // QRPlabs GPS
 
 // Uses Serial1, pin 19, for GPS input
 // Arduino Mega: Serial1 on pins 19 (RX) and 18 (TX)

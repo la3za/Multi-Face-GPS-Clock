@@ -17,7 +17,7 @@
 #define ScreenMengenLehrUhr 11
 #define ScreenLinearUhr     12
 #define ScreenInternalTime  13
-#define Screencode_Status   14
+#define ScreenCodeStatus   14
 #define ScreenUTCPosition   15
 #define ScreenNCDXFBeacons2 16  
 #define ScreenNCDXFBeacons1 17 
@@ -47,8 +47,5 @@
 #define ScreenWordClock         32
 #define ScreenSidereal          33
 
-// Unfinished
-#define ScreenGPSInfo           34
-
 // New in v1.3.0:
-#define ScreenDemoClock         35  // the last one
+#define ScreenDemoClock         34  // the last one

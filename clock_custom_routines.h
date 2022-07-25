@@ -1,180 +1,189 @@
 /*
- * 
-nativeDay
+userNames
 nativeDayLong
 TimeZones
 WordClockNorwegian
-
  */
 
-// user defined characters 1-4 used in main code:
-#define NO_DK_OE_small   5
-#define SCAND_AA_small   6
-#define SCAND_AA_capital 7
+// user defined characters, #1-4 are already used in main code (for arrows), so numbers start with #5:
+#define NO_DK_oe_SMALL   5
+#define SE_DE_oe_SMALL   239 
+#define SCAND_aa_SMALL   6
+#define SCAND_AA_CAPITAL 7
+#define ES_IS_a_ACCENT   6
+#define ES_e_ACCENT      5
+#define IS_eth_SMALL     7
+#define IS_THORN_CAPITAL 8
+
+// character definitions are in clock_native.h
 
 // The user may wish to customize the routines in this file according to 
 // desired language for day names in local time display
 
+
+
 /////////////////////////////////////////////////////////////////////////
 // Native language support for names of days of week when local time is displayed:
-// additional characters for Norwegian defined in clock_Norwegian.h
-// native weekday names are defined in functions nativeDay(), nativeDayLong()
+// additional customizable characters for LCD in clock_native.h
+// native weekday names are defined in function nativeDayLong()
 //
-// if FEATURE_NATIVE_LANGUAGE is set, day names from antiveDay() and nativeDayLong() are used
+// if FEATURE_NATIVE_LANGUAGE is set, day names from nativeDayLong() are used
 
-/*
- From here on follows routines that the user may want to configure
-  */
- 
-/////////// Change for native language day names: ////////////////////////////
+void nativeDayLong(float j) {
+ //  Full weekday name in native (= non-English language)
+ //  Max 11 (12) characters in name
 
-                    void nativeDay(float j) {
-                    /*
-                       Print abbreviated weekday in native (= non-English language)
-                    */
-                    const char* myDays[] = {"Son", "Man", "Tir", "Ons", "Tor", "Fre", "Lor"};
-                    int addr = weekday(j) - 1;
-                    strncpy(today, myDays[addr], 4);
+  #if FEATURE_NATIVE_LANGUAGE == 'no' | FEATURE_NATIVE_LANGUAGE == 'dk'                    
+          // Norwegian, no - Danish, dk:
+          char* myDays[] = {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"}; // 7
+          myDays[0][1] = char(NO_DK_oe_SMALL); // søndag
+          myDays[6][1] = char(NO_DK_oe_SMALL); // lørdag
+          
+  #elif FEATURE_NATIVE_LANGUAGE == 'se'                    
+          // Swedish, se:
+          char* myDays[] = {"SXndag", "MXndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"}; // 7
+          myDays[0][1] = char(SE_DE_oe_SMALL); // söndag
+          myDays[6][1] = char(SE_DE_oe_SMALL); // lördag
+          myDays[1][1] = char(SCAND_aa_SMALL); // måndag
 
-                    if (addr == 0 | addr == 6) { // søndag, lørdag
-                      lcd.print(today[0]);
-                      lcd.write(NO_DK_OE_small); // ø
-                      lcd.print(today[2]);
-                    }
-                    else  lcd.print(today);
+  #elif FEATURE_NATIVE_LANGUAGE == 'is'   
+        // Icelandic, is. Longest day is "Miðvikudagur" - 12 characters. There is space, but it looks better if truncated to "Miðvikudag"
+ //         char* myDays[] = {"Sunnudagur", "MXnudagur", "XriXjudagur", "MiXvikudagur", "Fimmtudagur", "FXstudagur", "Laugardagur"}; // 12
+          char* myDays[] = {"Sunnudagur", "MXnudagur", "XriXjudagur", "MiXvikudag", "Fimmtudagur", "FXstudagur", "Laugardagur"}; // 11
+          myDays[1][1] = char(ES_IS_a_ACCENT); // mánudagur
+          myDays[5][1] = char(SE_DE_oe_SMALL); // föstudagu
+          myDays[2][3] = char(IS_eth_SMALL); // þriðjudagur
+          myDays[3][2] = char(IS_eth_SMALL); // miðvikudagur
+          myDays[2][0] = char(IS_THORN_CAPITAL); // þriðjudagur
+          
+          
+  #elif FEATURE_NATIVE_LANGUAGE == 'de' 
+          // German, de:
+          char* myDays[] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};  // 10
 
-#ifdef FEATURE_SERIAL_MENU
-                      Serial.println("nativeDay: ");
-                      Serial.println("  today");
-                      Serial.println(today);
-                  #endif
+  #elif FEATURE_NATIVE_LANGUAGE == 'fr'  
+          // French, fr:
+          char* myDays[] = {"Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"}; // 8
+          
+  #elif FEATURE_NATIVE_LANGUAGE == 'es' 
+          // Spanish, es:
+          char* myDays[] = {"Domingo", "Lunes", "Martes", "MiXrcoles", "Jueve", "Viernes", "SXbado"};  // 9 
+          myDays[3][2] = char(ES_e_ACCENT); // miércoles
+          myDays[6][1] = char(ES_IS_a_ACCENT); // sábado
+                    
+  #else
+          // English (not used, included only in order that myDays always will be defined
+          char* myDays[] = {"Sunday", "Monday", "Tueday", "Wednesday", "Thursday", "Friday", "Saturday"};
+  #endif    
+							
+      int addr = weekday(j) - 1;
 
-                    lcd.print(" ");
-                  }
+#ifdef FEATURE_DAY_PER_SECOND
+//    fake the day -- for testing only
+          addr = second(local/2)%7; // change every second
+#endif
 
-/////////// Change for native language day names ////////////////////////////
+strncpy(today, myDays[addr], 12);
+}
 
-                  void nativeDayLong(float j) {
-                    /*
-                       Print full weekday in native (= non-English language)
-                    */
-                    const char* myDays[] = {"Sondag ", "Mandag ", "Tirsdag", "Onsdag ", "Torsdag", "Fredag ", "Lordag "};
-                    int addr = weekday(j) - 1;
-                    if (addr == 2 | addr == 4) {
-                      strncpy(today, myDays[addr], 8);
-                    }
-                    else {
-                      strncpy(today, myDays[addr], 7);
-                      lcd.print(" ");
-                    }
-
-                    if (addr == 0 | addr == 6) { // søndag, lørdag
-                      lcd.print(today[0]);
-                      lcd.write(NO_DK_OE_small); // ø
-                      lcd.print(&today[2]);
-                    }
-                    else  lcd.print(today);
-
-                    lcd.print(" ");
-                  }
  // Menu item ///////////////////////////////////////////////////////////////////////////////////////////
 
-                    void TimeZones() { // local time, UTC, + many more time zones
-                      
-                      TimeChangeRule *tcr1, *tcr2, *tcr3, *tcr4;        //pointer to local time change rules, use to get TZ abbrev
-                      time_t local1, local2, local3, local4;
-                  
-                      char textbuffer[9];
-                      // get global local time
-                  
-                      local = now() + UTCoffset * 60;
-                      Hour = hour(local);
-                      Minute = minute(local);
-                      Seconds = second(local);
-                  
-                      lcd.setCursor(0, 0); // 1. line *********
-                      sprintf(textbuffer, "%02d%c%02d", Hour, HOUR_SEP, Minute);
-                      lcd.print(textbuffer);
-                      lcd.print(" ");lcd.print(tcr -> abbrev);
-                      
-                      lcd.setCursor(18,0); // end of line 1
-                      sprintf(textbuffer, "%02d", Seconds);
-                      lcd.print(textbuffer);
-                      
-                       
-                      lcd.setCursor(0, 1); // 2. line *********
-                  
-                      if (gps.time.isValid()) {
-                        lcd.setCursor(0, 1);
-                        sprintf(textbuffer, "%02d%c%02d UTC  ", hourGPS, HOUR_SEP,minuteGPS);
-                        lcd.print(textbuffer);
-                        //   lcd.setCursor(14, 3);
-                      }
-                  
-                      lcd.setCursor(0, 2); // ******** 3. line 
-                  
-                   // Indian Standard Time
-                      TimeChangeRule inIST = {"IND", Second, Sun, Mar, 2, 330};  // Indian Standard Time = UTC - 5 hours 30 min
-                   
-                      Timezone India(inIST, inIST);
-                      local2 = India.toLocal(utc, &tcr2);
-                      Hour = hour(local2);
-                      Minute = minute(local2);
-                      sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
-                      lcd.print(textbuffer);
-                      lcd.print(tcr2 -> abbrev);
+void TimeZones() { // local time, UTC, + many more time zones
+  
+  TimeChangeRule *tcr1, *tcr2, *tcr3, *tcr4;        //pointer to local time change rules, use to get TZ abbrev
+  time_t local1, local2, local3, local4;
+
+  char textBuffer[9];
+  // get global local time
+
+  local = now() + utcOffset * 60;
+  Hour = hour(local);
+  Minute = minute(local);
+  Seconds = second(local);
+
+  lcd.setCursor(0, 0); // 1. line *********
+  sprintf(textBuffer, "%02d%c%02d", Hour, HOUR_SEP, Minute);
+  lcd.print(textBuffer);
+  lcd.print(" ");lcd.print(tcr -> abbrev);
+  
+  lcd.setCursor(18,0); // end of line 1
+  sprintf(textBuffer, "%02d", Seconds);
+  lcd.print(textBuffer);
+  
+   
+  lcd.setCursor(0, 1); // 2. line *********
+
+  if (gps.time.isValid()) {
+    lcd.setCursor(0, 1);
+    sprintf(textBuffer, "%02d%c%02d UTC  ", hourGPS, HOUR_SEP,minuteGPS);
+    lcd.print(textBuffer);
+    //   lcd.setCursor(14, 3);
+  }
+
+  lcd.setCursor(0, 2); // ******** 3. line 
+
+// Indian Standard Time
+  TimeChangeRule inIST = {"IND", Second, Sun, Mar, 2, 330};  // Indian Standard Time = UTC - 5 hours 30 min
+
+  Timezone India(inIST, inIST);
+  local2 = India.toLocal(utc, &tcr2);
+  Hour = hour(local2);
+  Minute = minute(local2);
+  sprintf(textBuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
+  lcd.print(textBuffer);
+  lcd.print(tcr2 -> abbrev);
 
 //                     China Standard Time
-                       lcd.setCursor(10, 2);
-                       TimeChangeRule CN = {"CHN", Second, Sun, Mar, 2, 480};  // China  Time = UTC + 8 hours
-                       Timezone China(CN, CN);
-                       local3 = China.toLocal(utc, &tcr3);
-                       Hour = hour(local3);
-                       Minute = minute(local3);
-                       sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
-                       lcd.print(textbuffer);
-                       lcd.print(tcr3 -> abbrev);
-                  
-                       // Turkey  Time
+   lcd.setCursor(10, 2);
+   TimeChangeRule CN = {"CHN", Second, Sun, Mar, 2, 480};  // China  Time = UTC + 8 hours
+   Timezone China(CN, CN);
+   local3 = China.toLocal(utc, &tcr3);
+   Hour = hour(local3);
+   Minute = minute(local3);
+   sprintf(textBuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
+   lcd.print(textBuffer);
+   lcd.print(tcr3 -> abbrev);
+
+   // Turkey  Time
 //                      lcd.setCursor(10, 2);
 //                      TimeChangeRule TT = {"TUR", Second, Sun, Mar, 2, 180};  // Turkey  Time = UTC + 3 hours
 //                      Timezone Turkey(TT, TT);
 //                      local3 = Turkey.toLocal(utc, &tcr3);
 //                      Hour = hour(local3);
 //                      Minute = minute(local3);
-//                      sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
-//                      lcd.print(textbuffer);
+//                      sprintf(textBuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
+//                      lcd.print(textBuffer);
 //                      lcd.print(tcr3 -> abbrev);
-                      
-                      lcd.setCursor(0, 3); //////// line 4
-                       
-                      // US Eastern Time Zone (New York, Detroit)
-                      TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};  // Eastern Daylight Time = UTC - 4 hours
-                      TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};   // Eastern Standard Time = UTC - 5 hours
-                      Timezone usET(usEDT, usEST);
-                      local1 = usET.toLocal(utc, &tcr1);
-                      Hour = hour(local1);
-                      Minute = minute(local1);
-                      sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
-                      lcd.print(textbuffer);
-                      lcd.print(tcr1 -> abbrev);
-                  
-                  lcd.setCursor(19, 3); lcd.print(" "); // blank out rest of menu number in lower right-hand corner
-                  
-                      // Pacific US 
-                      lcd.setCursor(10, 3);
-                      TimeChangeRule usPDT = {"PDT", Second, Sun, Mar, 2, -420};
-                      TimeChangeRule usPST = {"PST", First, Sun, Nov, 2, -480};
-                      Timezone usPacific(usPDT, usPST);
-                      local4 = usPacific.toLocal(utc, &tcr4);
-                      Hour = hour(local4);
-                      Minute = minute(local4);
-                      sprintf(textbuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
-                      lcd.print(textbuffer);
-                      lcd.print(tcr4 -> abbrev);
-                           
-                      oldminute = minuteGPS;
-                    }
+  
+  lcd.setCursor(0, 3); //////// line 4
+   
+  // US Eastern Time Zone (New York, Detroit)
+  TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};  // Eastern Daylight Time = UTC - 4 hours
+  TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};   // Eastern Standard Time = UTC - 5 hours
+  Timezone usET(usEDT, usEST);
+  local1 = usET.toLocal(utc, &tcr1);
+  Hour = hour(local1);
+  Minute = minute(local1);
+  sprintf(textBuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
+  lcd.print(textBuffer);
+  lcd.print(tcr1 -> abbrev);
+
+lcd.setCursor(19, 3); lcd.print(" "); // blank out rest of menu number in lower right-hand corner
+
+  // Pacific US 
+  lcd.setCursor(10, 3);
+  TimeChangeRule usPDT = {"PDT", Second, Sun, Mar, 2, -420};
+  TimeChangeRule usPST = {"PST", First, Sun, Nov, 2, -480};
+  Timezone usPacific(usPDT, usPST);
+  local4 = usPacific.toLocal(utc, &tcr4);
+  Hour = hour(local4);
+  Minute = minute(local4);
+  sprintf(textBuffer, "%02d%c%02d ", Hour, HOUR_SEP, Minute);
+  lcd.print(textBuffer);
+  lcd.print(tcr4 -> abbrev);
+       
+  oldMinute = minuteGPS;
+}
 
 ///////////////////////////////////////////////
 
@@ -188,9 +197,9 @@ void WordClockNorwegian()
   char textbuf[21];
 
 // replace some characters - the X's - with native Norwegian ones:
-  WordTens[4][2] = (char)NO_DK_OE_small;
-  WordOnes[8][0] = (char)SCAND_AA_small;
-  CapiOnes[8][0] = (char)SCAND_AA_capital;
+  WordTens[4][2] = (char)NO_DK_oe_SMALL;
+  WordOnes[8][0] = (char)SCAND_aa_SMALL;
+  CapiOnes[8][0] = (char)SCAND_AA_CAPITAL;
 
   /* The longest symbol
    *  Hours:            xx: ?? 
@@ -199,7 +208,7 @@ void WordClockNorwegian()
    */
  
   //  get local time
-  local = now() + UTCoffset * 60;
+  local = now() + utcOffset * 60;
   Hour = hour(local);
   Minute = minute(local);
   Seconds = second(local);

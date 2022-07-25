@@ -1,8 +1,8 @@
 # Multi Face GPS clock for the Arduino Mega
 
-The purpose of this project is to make available as many clock and clock related functions as possible given the constraint of a 20 x 4 LCD. The number of different screens are now more than thirty. Some are useful, some are very specialized, and some are somewhat weird. All the screens have been laid out with a view to good esthetics and easy readability.
+The purpose of this project is to make available as many clock and clock related functions as possible given the constraint of a 20 x 4 LCD. The number of different screens are now more than thirty. Some are useful, some are very specialized, and some may be unexpected or outright weird. All the screens have been laid out with a view to good esthetics and easy readability.
 
-The clock is based on an Arduino Mega taking time and position data from a GPS. Below it shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
+The clock is inspired by the Clock Kit from QRPLabs (https://qrp-labs.com/clockn.html). It based on an Arduino Mega taking time and position data from a GPS. Below it shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
 
 Here are more examples of clock faces:
 

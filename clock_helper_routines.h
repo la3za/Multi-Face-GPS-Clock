@@ -6,16 +6,16 @@ MoonPhase
 MoonPhaseAccurate
 MoonWaxWane
 MoonSymbol
-update_moon_position
+UpdateMoonPosition
 
-analogbuttonread
+AnalogButtonRead
 
 Maidenhead
-locator_to_latlong
-distance
-decToBinary
+LocatorToLatLong
+Distance
+DecToBinary
 
-printFixedWidth
+PrintFixedWidth
 LcdDate
 LcdUTCTimeLocator
 LcdShortDayDateTimeLocal
@@ -29,13 +29,11 @@ MathMinus
 MathMultiply
 MathDivide
 
+printDouble
 LcdMorse
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
-
-
-
 
 
 void GetNextRiseSet(
@@ -49,14 +47,14 @@ void GetNextRiseSet(
   short pLocal, pRise1, pSet1, pRise2, pSet2;
   double rAz1, sAz1, rAz2, sAz2;
 
-  GetMoonRiseSetTimes(float(UTCoffset) / 60.0, latitude, lon, &pRise1, &rAz1, &pSet1, &sAz1);
+  GetMoonRiseSetTimes(float(utcOffset) / 60.0, latitude, lon, &pRise1, &rAz1, &pSet1, &sAz1);
 
   *pRise = pRise1;
   *rAz = rAz1;
   *pSet = pSet1;
   *sAz = sAz1;
 
-  local = now() + UTCoffset * 60;
+  local = now() + utcOffset * 60;
 
  // local = 1638052000; // 27.11.2021, ~23.30
   
@@ -70,7 +68,7 @@ void GetNextRiseSet(
 #endif
 
   //  find rise/set times for next day also
-  GetMoonRiseSetTimes(float(UTCoffset) / 60.0 - 24.0, latitude, lon, (short*) &pRise2, (double*) &rAz2, (short*) &pSet2, (double*) &sAz2);
+  GetMoonRiseSetTimes(float(utcOffset) / 60.0 - 24.0, latitude, lon, (short*) &pRise2, (double*) &rAz2, (short*) &pSet2, (double*) &sAz2);
 
 #ifdef FEATURE_SERIAL_MOON
   Serial.print(F("pRise2, rAz2: ")); Serial.print(pRise2); Serial.print(F(", ")); Serial.println(rAz2);
@@ -235,9 +233,9 @@ void MoonWaxWane(float Phase) {
   delta = OPTION_DAYS_WITHOUT_MOON_ARROW/2;
   
   if (Phase <= delta)                                                       lcd.print(' '); // hardly visible
-  else if ((Phase > delta) && (Phase < CycleDays / 2. - delta))                 lcd.write(DashedUpArrow); // Waxing moon
+  else if ((Phase > delta) && (Phase < CycleDays / 2. - delta))                 lcd.write(DASHED_UP_ARROW); // Waxing moon
   else if ((Phase >= CycleDays / 2. - delta) && (Phase <= CycleDays / 2. + delta))  lcd.print(' '); // Full moon
-  else if ((Phase > CycleDays / 2. + delta) && (Phase < CycleDays - delta))       lcd.write(DashedDownArrow); //  Waning moon
+  else if ((Phase > CycleDays / 2. + delta) && (Phase < CycleDays - delta))       lcd.write(DASHED_DOWN_ARROW); //  Waning moon
   else                                                                      lcd.print(' '); // hardly visible
 
 }
@@ -260,7 +258,7 @@ void MoonSymbol(float Phase) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void update_moon_position() {
+void UpdateMoonPosition() {
   // from K3NG
   String textbuf;
 
@@ -281,7 +279,7 @@ void update_moon_position() {
 
 //------------------------------------------------------------------
 
-byte analogbuttonread(byte button_number) {
+byte AnalogButtonRead(byte button_number) {
   // K3NG keyer code
   // button numbers start with 0
 
@@ -338,7 +336,7 @@ void Maidenhead(double lon, double latitude, char loc[7]) {
 
 //------------------------------------------------------------------
 
-void locator_to_latlong(char loc[7], double &latitude, double &longitude) {
+void LocatorToLatLong(char loc[7], double &latitude, double &longitude) {
   /*
     convert locator to latitude, longitude
     based on pyhamtools.locator http://pyhamtools.readthedocs.io/en/stable/reference.html#module-pyhamtools.locator
@@ -365,7 +363,7 @@ void locator_to_latlong(char loc[7], double &latitude, double &longitude) {
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-int distance(double lat1, double long1, double lat2, double long2) {
+int Distance(double lat1, double long1, double lat2, double long2) {
   /*
       Calculate distance between two positions on earth,
       angles in degrees, result truncated to nearest km
@@ -398,7 +396,7 @@ int distance(double lat1, double long1, double lat2, double long2) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void decToBinary(int n, int binaryNum[])
+void DecToBinary(int n, int binaryNum[])
 {
   //   https://www.geeksforgeeks.org/program-decimal-binary-conversion/
   // array to store binary number
@@ -419,11 +417,11 @@ void decToBinary(int n, int binaryNum[])
 
 //////////////////////////////////////////////////
 
-void printFixedWidth(Print &out, int number, byte width, char filler = ' ') {
+void PrintFixedWidth(Print &out, int number, byte width, char filler = ' ') {
   int temp = number;
   //
-  // call like this to print number to lcd: printFixedWidth(lcd, val, 3);
-  // or for e.g. minutes printFixedWidth(lcd, minute, 2, '0')
+  // call like this to print number to lcd: PrintFixedWidth(lcd, val, 3);
+  // or for e.g. minutes PrintFixedWidth(lcd, minute, 2, '0')
   //
   // Default filler = ' ', can also be set to '0' e.g. for clock
   // If filler = ' ', it handles negative integers: width = 5 => '   -2'
@@ -466,12 +464,18 @@ void LcdUTCTimeLocator(int lineno)
 {
   char textbuffer[15];
 
-  if (gps.time.isValid()) {
+#ifdef FEATURE_PC_SERIAL_GPS_IN
+        hourGPS = hour(now());
+        minuteGPS = minute(now());
+        secondGPS = second(now());
+#endif
+
+
+//  if (gps.time.isValid()) {
     lcd.setCursor(0, lineno);
-    //       sprintf(textbuffer, "%02d:%02d:%02d UTC  ", hourGPS, minuteGPS, secondGPS);
     sprintf(textbuffer, "%02d%c%02d%c%02d UTC ", hourGPS, HOUR_SEP, minuteGPS, MIN_SEP, secondGPS);
     lcd.print(textbuffer);
-  }
+//  }
 
   if (gps.satellites.isValid()) {
 
@@ -498,27 +502,27 @@ void LcdDate(int Day, int Month, int Year=0) // print date, either day-month or 
     {
       if (Year !=0) 
       { 
-        printFixedWidth(lcd, Year, 4); lcd.print(DATE_SEP);
+        PrintFixedWidth(lcd, Year, 4); lcd.print(DATE_SEP);
       }
-      printFixedWidth(lcd, Month, 2, '0'); lcd.print(DATE_SEP);
-      printFixedWidth(lcd, Day, 2, '0');
+      PrintFixedWidth(lcd, Month, 2, '0'); lcd.print(DATE_SEP);
+      PrintFixedWidth(lcd, Day, 2, '0');
     }
     else if (DATEORDER == 'M')
     {
-      printFixedWidth(lcd, Month, 2, '0'); lcd.print(DATE_SEP);
-      printFixedWidth(lcd, Day, 2, '0'); 
+      PrintFixedWidth(lcd, Month, 2, '0'); lcd.print(DATE_SEP);
+      PrintFixedWidth(lcd, Day, 2, '0'); 
       if (Year !=0) 
       {
-        lcd.print(DATE_SEP);printFixedWidth(lcd, Year, 4);
+        lcd.print(DATE_SEP);PrintFixedWidth(lcd, Year, 4);
       }
     }
     else
     {
-      printFixedWidth(lcd, Day, 2, '0'); lcd.print(DATE_SEP);
-      printFixedWidth(lcd, Month, 2, '0'); 
+      PrintFixedWidth(lcd, Day, 2, '0'); lcd.print(DATE_SEP);
+      PrintFixedWidth(lcd, Month, 2, '0'); 
       if (Year !=0) 
       {
-        lcd.print(DATE_SEP);printFixedWidth(lcd, Year, 4);
+        lcd.print(DATE_SEP);PrintFixedWidth(lcd, Year, 4);
       }
     }
   
@@ -533,7 +537,7 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
 
   char textbuffer[12]; // was [9] - caused all kinds of memory overwrite problems
   // get local time
-  local = now() + UTCoffset * 60;
+  local = now() + utcOffset * 60;
   Hour = hour(local);
   Minute = minute(local);
   Seconds = second(local);
@@ -546,16 +550,32 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
   lcd.setCursor(0, lineno);
   if (dayGPS != 0)
   {
-     #ifdef FEATURE_NATIVE_LANGUAGE // replaced FEATURE_DAY_NAME_NATIVE 7.3.2022 LA3ZA
-          nativeDay(local);
+ //  #ifdef FEATURE_NATIVE_LANGUAGE // replaced FEATURE_DAY_NAME_NATIVE 7.3.2022 LA3ZA
+ 
+     #if FEATURE_NATIVE_LANGUAGE == 'no' |  FEATURE_NATIVE_LANGUAGE == 'se' | FEATURE_NATIVE_LANGUAGE == 'dk' | FEATURE_NATIVE_LANGUAGE == 'is'
+          nativeDayLong(local);
+          sprintf(textbuffer,"%3.3s",today);
+          lcd.print(textbuffer);
+
+     #elif FEATURE_NATIVE_LANGUAGE == 'de' | FEATURE_NATIVE_LANGUAGE == 'fr' | FEATURE_NATIVE_LANGUAGE == 'es'
+          nativeDayLong(local);
+          sprintf(textbuffer,"%3.3s",today);
+          lcd.print(textbuffer);
+             
      #else
-          sprintf(textbuffer, "%3s", dayShortStr(weekday(local)));
-          #ifdef FEATURE_SERIAL_MENU
+         #ifdef FEATURE_DAY_PER_SECOND
+    //      fake the day -- for testing only
+              sprintf(textbuffer, "%3s", dayShortStr( 1+(local/2)%7 )); // change every two seconds
+         #else
+              sprintf(textbuffer, "%3s", dayShortStr(weekday(local)));
+         #endif     
+         #ifdef FEATURE_SERIAL_MENU
               Serial.println("LcdShortDayDateTimeLocal: ");
               Serial.println("  weekday(local), today");
               Serial.println(weekday(local));
               Serial.println(textbuffer);
-          #endif
+         #endif
+          
           lcd.print(textbuffer); lcd.print(" ");
       #endif
      
@@ -565,14 +585,14 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
         {
 // modified so month takes up a fixed space without a leading zero:
 //          lcd.print(static_cast<int>(Month)); lcd.print(DATE_SEP);
-            printFixedWidth(lcd, Month, 2,' '); lcd.print(DATE_SEP);
+            PrintFixedWidth(lcd, Month, 2,' '); lcd.print(DATE_SEP);
             lcd.print(static_cast<int>(Day));
         }
         else
         {
 // modified so day takes up a fixed space without a leading zero:
 //        lcd.print(static_cast<int>(Day)); lcd.print(DATE_SEP);
-          printFixedWidth(lcd, Day, 2,' '); lcd.print(DATE_SEP);
+          PrintFixedWidth(lcd, Day, 2,' '); lcd.print(DATE_SEP);
           lcd.print(static_cast<int>(Month));
         }
       }
@@ -595,7 +615,7 @@ void LcdSolarRiseSet(
   lcd.setCursor(0, lineno);
 
   // create a Sunrise object
-  Sunrise mySunrise(latitude, lon, float(UTCoffset) / 60.);
+  Sunrise mySunrise(latitude, lon, float(utcOffset) / 60.);
 
   byte h, m;
   int hNoon, mNoon;
@@ -625,21 +645,21 @@ void LcdSolarRiseSet(
   // First: print sun rise time
   t = mySunrise.Rise(monthGPS, dayGPS); // Sun rise hour minute
 
-  if (t >= 0) {
+  if (t >= 0) {             // if not satisfied, then e.g. for 'N' then sun never dips below 18 deg at night, as in mid summer in Oslo
     h = mySunrise.Hour();
     m = mySunrise.Minute();
 
     if (ScreenMode == ScreenLocalSunSimpler | ScreenMode == ScreenLocalSunAzEl) lcd.print(" "); // to line up rise time with date on line above
     
-    if (RiseSetDefinition == ' ')
+    if (RiseSetDefinition == ' ') // Actual
     {
-      lcd.print("  "); lcd.write(UpArrow);
+      lcd.print("  "); lcd.write(UP_ARROW);
     }
-    else if (RiseSetDefinition == 'C')
+    else if (RiseSetDefinition == 'C')  // Civil
     {
-      lcd.print("  "); lcd.write(DashedUpArrow);
+      lcd.print("  "); lcd.write(DASHED_UP_ARROW);
     }
-    else lcd.print("   ");
+    else lcd.print("   ");              // Nautical
 
     if (lineno==1) 
     {
@@ -647,16 +667,16 @@ void LcdSolarRiseSet(
         lcd.print("S ");
     }
 
-if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
-   {
+    if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
+    {
     
     if (ScreenMode == ScreenLocalSunSimpler | ScreenMode == ScreenLocalSunAzEl) lcd.setCursor(4, lineno);
     else lcd.setCursor(3, lineno);
     
-    printFixedWidth(lcd, h, 2);
+    PrintFixedWidth(lcd, h, 2);
     lcd.print(HOUR_SEP);
-    printFixedWidth(lcd, m, 2, '0');
-  }
+    PrintFixedWidth(lcd, m, 2, '0');
+    }
   }
   
   // Second: print sun set time
@@ -665,8 +685,8 @@ if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|
 
   lcd.setCursor(9, lineno);
   if (ScreenMode == ScreenLocalSunSimpler| ScreenMode == ScreenLocalSunAzEl) lcd.print("  ");
-  if (RiseSetDefinition == ' ')       lcd.write(DownArrow);
-  else if (RiseSetDefinition == 'C')  lcd.write(DashedDownArrow);
+  if (RiseSetDefinition == ' ')       lcd.write(DOWN_ARROW);
+  else if (RiseSetDefinition == 'C')  lcd.write(DASHED_DOWN_ARROW);
   else                                lcd.print(" ");
 
   if (t >= 0) {
@@ -675,16 +695,25 @@ if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|
 
     if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
     {
-      lcd.print(h, DEC);
+      // improved format 18.06.2022
+      PrintFixedWidth(lcd, h, 2);
       lcd.print(HOUR_SEP);
-      if (m < 10) lcd.print("0");
-      lcd.print(m, DEC);
-      if (ScreenMode == ScreenLocalSunSimpler) 
-      {
-        lcd.print("  ");
-        lcd.print(RiseSetDefinition); // show C, N, A to the very right
-      }
+      PrintFixedWidth(lcd, m, 2, '0');    
+      
+//      lcd.print(h, DEC);
+//      lcd.print(HOUR_SEP);
+//      if (m < 10) lcd.print("0");
+//      lcd.print(m, DEC);
+//      
     }
+  }
+
+// 18.06.2022: the following if {} moved out of if {} above, in order to show e.g. 'N' even around midsummer
+  if (ScreenMode == ScreenLocalSunSimpler) 
+  {
+        lcd.setCursor(18, lineno);
+        lcd.print(" ");
+        lcd.print(RiseSetDefinition); // show C, N, A to the very right
   }
 
 SolarElevation:
@@ -720,18 +749,18 @@ SolarElevation:
       {
         lcd.setCursor(3, lineno);
         lcd.print("El ");
-        printFixedWidth(lcd, (int)float(sun_elevation), 3);
-        lcd.write(DegreeSymbol);
+        PrintFixedWidth(lcd, (int)float(sun_elevation), 3);
+        lcd.write(DEGREE);
         lcd.setCursor(11, lineno);
         lcd.print("Az ");
-        printFixedWidth(lcd, (int)float(sun_azimuth), 3);
-        lcd.write(DegreeSymbol);
+        PrintFixedWidth(lcd, (int)float(sun_azimuth), 3);
+        lcd.write(DEGREE);
         lcd.print("  ");         
       }
 
   ///// Solar noon
 
-  Sunrise my2Sunrise(latitude, lon, float(UTCoffset) / 60.);
+  Sunrise my2Sunrise(latitude, lon, float(utcOffset) / 60.);
   t = my2Sunrise.Noon(monthGPS, dayGPS);
   if (t >= 0) {
     hNoon = my2Sunrise.Hour();
@@ -740,7 +769,7 @@ SolarElevation:
 
   // find max solar elevation, i.e. at local noon
   
-  c_time.dHours = hNoon - UTCoffset / 60.;
+  c_time.dHours = hNoon - utcOffset / 60.;
   c_time.dMinutes = mNoon;
   c_time.dSeconds = 0.0;
 
@@ -763,8 +792,8 @@ SolarElevation:
  
     if (RiseSetDefinition == ' ')
     { 
-      printFixedWidth(lcd, (int)float(sun_elevation), 3);
-      lcd.write(DegreeSymbol);
+      PrintFixedWidth(lcd, (int)float(sun_elevation), 3);
+      lcd.write(DEGREE);
     }
     else if (RiseSetDefinition == 'C')
     {
@@ -780,8 +809,8 @@ SolarElevation:
     {
       // Noon data:
   
-      printFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
-      lcd.write(DegreeSymbol);
+      PrintFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
+      lcd.write(DEGREE);
     }  
     
 }      // if (ScreenMode == ...)
@@ -791,13 +820,13 @@ SolarElevation:
         {
           lcd.setCursor(3, lineno);
           lcd.print("El ");
-          printFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
-          lcd.write(DegreeSymbol); 
-          lcd.print(" ");   //        lcd.print(" @");
+          PrintFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
+          lcd.write(DEGREE); //       added 27.04.2022
+          lcd.print(" ");   
           lcd.setCursor(12, lineno);
-          printFixedWidth(lcd, hNoon, 2);
+          PrintFixedWidth(lcd, hNoon, 2);
           lcd.print(HOUR_SEP); 
-          printFixedWidth(lcd, mNoon, 2,'0');         
+          PrintFixedWidth(lcd, mNoon, 2,'0');         
           lcd.print("  ");       
         }
 }
