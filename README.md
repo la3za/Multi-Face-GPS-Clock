@@ -6,25 +6,32 @@ The clock is inspired by the Clock Kit from QRPLabs (https://qrp-labs.com/clockn
 
 Here are more examples of clock faces:
 
-Solar rise/set time. Line 2 Actual, Line 3 Civil, and Line 4 Nautical rise and set times.
+Solar rise/set time. Line 2 Actual, Line 3 Civil, and Line 4 Nautical rise and set times:
+
 <img src="Images/SunUpDown.jpg" width="40%">
 
 Position data:
+
 <img src="Images/15b-UTCPosition.jpg" width="40%">
 
-Lunar display with line 2 showing elevation and azimuth for the moon, Line 3 shows next time to set and at what azimuth, and Line 4 distance from earth in % of maximum and in km, and finally lunar phase, that the illumination is falling, and % illumination.
+Lunar display with line 2 showing elevation and azimuth for the moon, Line 3 shows next time to set and at what azimuth, and Line 4 distance from earth in % of maximum and in km, and finally lunar phase, that the illumination is falling, and % illumination:
+
 <img src="Images/04-LocalMoon.jpg" width="40%">
 
 Binary, Octal, Decimal and Hex display of time:
+
 <img src="Images/21-BinOctDecHex.jpg" width="40%">
 
 Word clock:
+
 <img src="Images/Word.jpg" width="40%">
 
 Prediction of lunar eclipses:
+
 <img src="Images/LunarEclipses.jpg" width="40%">
 
 Math calculation clock:
+
 <img src="Images/MathSub.jpg" width="40%">
 
 The LA3ZA blog has posts with documentation of hardware and the different screens showing solar and lunar position, their rise and set times, moon phase, date for Easter Sunday in Gregorian and Julian calendars and much more. See keyword "Arduino clock", https://la3za.blogspot.com/search/label/Arduino%20clock, starting with early development in 2016 up to the present. 
