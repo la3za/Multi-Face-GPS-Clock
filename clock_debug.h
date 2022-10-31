@@ -3,14 +3,17 @@
 
 // Serial port output:
 
+//#define FEATURE_SERIAL_PLANETARY // serial output for debugging of planet predictions
 //#define FEATURE_SERIAL_SOLAR // serial output for debugging of solar
-//#define FEATURE_SERIAL_GPS // serial output for debugging of GPS
+//#define FEATURE_SERIAL_GPS // serial output for debugging of GPS, GPSInfo
 //#define FEATURE_SERIAL_MOON // serial output for test of moon functions
 //#define FEATURE_SERIAL_MENU // serial output for menu & general testing
 //#define FEATURE_SERIAL_TIME // serial output for testing of time
 //#define FEATURE_SERIAL_MATH // serial output for debugging of math clock
 //#define FEATURE_SERIAL_LUNARECLIPSE // serial output for debugging of moon eclipse
 //#define FEATURE_SERIAL_EQUATIO // serial output for debugging of Equation of Time (solar time)
+
+//#define DEBUG_GPSInfo    // for running GPSInfo    
        
 // #define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than that of the GPS
                                  // using position defined below

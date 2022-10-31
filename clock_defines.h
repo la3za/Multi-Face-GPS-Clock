@@ -47,5 +47,12 @@
 #define ScreenWordClock         32
 #define ScreenSidereal          33
 
+// New in v1.5.0:
+#define ScreenLocalUTCWeek      34
+#define ScreenPlanetsInner      35
+#define ScreenPlanetsOuter      36
+#define ScreenISOHebIslam       37
+#define ScreenGPSInfo           38
+
 // New in v1.3.0:
-#define ScreenDemoClock         34  // the last one
+#define ScreenDemoClock         39  // the last one

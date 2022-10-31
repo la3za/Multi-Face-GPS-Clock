@@ -1,6 +1,6 @@
 
 // Set version and date manually for code status display
-const char codeVersion[] = "v1.4.0    25.07.2022";
+const char codeVersion[] = "v1.5.0     x.11.2022";
 
 // or set date automatically to ompilation date (US format) - nice to use during development - while version number is set manually
 //const char codeVersion[] = "v1.4.0   "__DATE__;  
@@ -97,17 +97,25 @@ const char codeVersion[] = "v1.4.0    25.07.2022";
             Morse         
             WordClock    
             Sidereal      
-            DemoClock   
-            Reminder  
+            DemoClock 
 
- Still in development: 
- 
-            GPSInfo
+            PlanetVisibility
+            ISOHebIslam
+            GPSInfo     
+             
             
 
 /*
 
   Revisions:
+
+ 1.5.0  xx.11.2022:
+                - PlanetVisibility
+                - ISOHebIslam
+                - GPSInfo
+                - Option for showing local week number (ISO) rather than locator in local time display 
+                - cycleTime in UTCPosition for cycling between different formats for position increased from 4 to 10 sec
+                - fixed bug in menu system for menu # 0, now initialized to menuOrder[iiii] = -1, rather than to 0.
 
  1.4.0  25.07.2022:
                 - Multiple language support: 'no', 'se', 'dk', 'is', 'de', 'fr', 'es' day names for local time in addition to English
@@ -189,6 +197,11 @@ const char codeVersion[] = "v1.4.0    25.07.2022";
 #include "clock_zone.h"         // user-defined setup for local time zone and daylight saving
 
 #include <TinyGPS++.h>          // http://arduiniana.org/libraries/tinygpsplus/
+
+#include "clock_planets.h"
+#include "clock_calendar.h"
+char buffer[80];     // the code uses 70 characters. For display strings in calendar display
+static tmElements_t curr_time;
 
 #if defined(FEATURE_LCD_I2C)
 #include <Wire.h>               // For I2C. Comes with Arduino IDE
@@ -273,7 +286,7 @@ int yearGPS;
 uint8_t monthGPS, dayGPS, hourGPS, minuteGPS, secondGPS, weekdayGPS;
 
 //int backlightVal; // value which controls backlight brighness
-int menuOrder[40]; //menuOrder[noOfStates]; // must be large enough to hold all possible screens!!
+int menuOrder[50]; //menuOrder[noOfStates]; // must be large enough to hold all possible screens!!
 
 
 /*
@@ -291,12 +304,7 @@ TinyGPSPlus gps; // The TinyGPS++ object
 #include "clock_moon_eclipse.h"
 #include "clock_equatio.h"
 
-
-
-
-#ifdef DEBUG_GPSInfo
-
- // builds on the example propgram SatelliteTracker from the TinyGPS++ library
+ // builds on the example program SatelliteTracker from the TinyGPS++ library
   // https://www.arduino.cc/reference/en/libraries/tinygps/
   /*
     From http://aprs.gids.nl/nmea/:
@@ -325,6 +333,8 @@ TinyGPSPlus gps; // The TinyGPS++ object
   TinyGPSCustom totalGPGSVMessages(gps, "GPGSV", 1); // $GPGSV sentence, first element
   TinyGPSCustom messageNumber(gps, "GPGSV", 2);      // $GPGSV sentence, second element
   TinyGPSCustom satsInView(gps, "GPGSV", 3);         // $GPGSV sentence, third element
+  TinyGPSCustom GPSMode(gps, "GPGSA", 2);            // $GPGSA sentence, 2nd element 1-none, 2=2D, 3=3D
+  TinyGPSCustom posStatus(gps, "GPRMC", 2);          // $GPRMC sentence: Position status (A = data valid, V = data invalid)
   TinyGPSCustom satNumber[4]; // to be initialized later
   TinyGPSCustom elevation[4];
   TinyGPSCustom azimuth[4];
@@ -338,7 +348,6 @@ TinyGPSPlus gps; // The TinyGPS++ object
   int snr;
 } sats[MAX_SATELLITES];
 
-#endif
 
 //#include "clock_development.h"
 
@@ -374,7 +383,8 @@ void setup() {
   digitalWrite (PUSHB, HIGH);
 #endif
 
-  // unroll menu system order
+  // initialize and unroll menu system order
+  for (iiii = 0; iiii < sizeof(menuOrder)/sizeof(menuOrder[0]); iiii += 1) menuOrder[iiii] = -1; // fix 5.10.2022
   for (iiii = 0; iiii < noOfStates; iiii += 1) menuOrder[menuIn[iiii]] = iiii;
 
   CodeStatus();  // start screen
@@ -436,7 +446,7 @@ void setup() {
   Serial.println(F("Equation of Time debug"));
 #endif
 
-#ifdef DEBUG_GPSInfo
+
    // from SatelliteTracker (TinyGPS++ example)
    // Initialize all the uninitialized TinyGPSCustom objects
     for (int i=0; i<4; ++i)
@@ -446,7 +456,7 @@ void setup() {
       azimuth[i].begin(  gps, "GPGSV", 6 + 4 * i); // offsets 6, 10, 14, 18
       snr[i].begin(      gps, "GPGSV", 7 + 4 * i); // offsets 7, 11, 15, 19
     }
-#endif   
+ 
 
 }
 
@@ -567,6 +577,26 @@ void loop() {
       if (gps.encode(Serial.read())) { // process gps messages from sw GPS emulator
 #endif
 
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// Necessary for initializing GPSInfo() properly 22.09.2022:
+
+    if (totalGPGSVMessages.isUpdated())
+    {
+      for (int i=0; i<4; ++i)
+      {
+        int no = atoi(satNumber[i].value());
+        // Serial.print(F("SatNumber is ")); Serial.println(no);
+        if (no >= 1 && no <= MAX_SATELLITES)
+        {
+          sats[no-1].elevation = atoi(elevation[i].value());
+          sats[no-1].azimuth = atoi(azimuth[i].value());
+          sats[no-1].snr = atoi(snr[i].value());
+          sats[no-1].active = true;
+        }
+      }
+    }
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
         // when GPS reports new data...
         unsigned long age;
@@ -654,7 +684,8 @@ void loop() {
 
 void menuSystem(int dispState, int DemoMode) // menu System - called at end of loop and from DemoClock
 {
-        if      ((dispState) == menuOrder[ScreenLocalUTC ])     LocalUTC();      // local time, date; UTC, locator
+        if      ((dispState) == menuOrder[ScreenLocalUTC ])     LocalUTC(0);     // local time, date; UTC, locator
+        else if ((dispState) == menuOrder[ScreenLocalUTCWeek])  LocalUTC(1);     // local time, date; UTC, week #
         else if ((dispState) == menuOrder[ScreenUTCLocator])    UTCLocator();    // UTC, locator, # sats
 
         // Sun, moon:
@@ -704,6 +735,12 @@ void menuSystem(int dispState, int DemoMode) // menu System - called at end of l
         else if ((dispState) == menuOrder[ScreenSidereal])      Sidereal();      // sidereal and solar time
         else if ((dispState) == menuOrder[ScreenMorse])         Morse();         // morse time
         else if ((dispState) == menuOrder[ScreenWordClock])     WordClock();     // time in clear text
+
+        else if ((dispState) == menuOrder[ScreenGPSInfo])       GPSInfo();       // Show technical GPS Info
+        else if ((dispState) == menuOrder[ScreenISOHebIslam])   ISOHebIslam();   // ISO, Hebrew, Islamic calendar
+        else if ((dispState) == menuOrder[ScreenPlanetsInner])  PlanetVisibility(1); // Inner planet data
+        else if ((dispState) == menuOrder[ScreenPlanetsOuter])  PlanetVisibility(0); // Inner planet data
+        
         else if ((dispState) == menuOrder[ScreenDemoClock])                      // last menu item
         {
            if (!DemoMode) DemoClock(0);       // Start demo of all clock functions if not already in DemoMode
@@ -716,12 +753,24 @@ void menuSystem(int dispState, int DemoMode) // menu System - called at end of l
 // The rest of this file consists of one routine per menu item:
 
 // Menu item ///////////////////////////////////////////////////////////////////////////////////////////
-void LocalUTC() { // local time, UTC,  locator
+void LocalUTC(           // local time, UTC, locator, option: ISO week #
+                int mode // 0 for original version
+                         // 1 for added week # (new 3.9.2022)
+) { // 
 
   char textBuffer[11];
   // get local time
 
+#ifndef FEATURE_DATE_PER_SECOND 
   local = now() + utcOffset * 60;
+
+#else                             // for stepping date quickly and check calender function
+  local = now() + utcOffset * 60 + dateIteration*86400; //int(86400.0/5.0); // fake local time by stepping per day
+  dateIteration = dateIteration + 1;
+//  Serial.print(dateIteration); Serial.print(": ");
+//  Serial.println(local);
+#endif
+  
   Hour = hour(local);
   Minute = minute(local);
   Seconds = second(local);
@@ -762,7 +811,15 @@ void LocalUTC() { // local time, UTC,  locator
 
 
     lcd.setCursor(0, 1); //////// line 2
-    lcd.print("          ");
+    if (mode==1)
+  {
+    // option added 3.9.2022 - ISO week # on second line
+        GregorianDate a(month(local), day(local), year(local));      
+        IsoDate ISO(a);     
+        lcd.print("Week ");lcd.print(ISO.GetWeek());
+  }
+  else  lcd.print("          ");
+    
     lcd.setCursor(10, 1);
     LcdDate(Day, Month, Year);
 
@@ -1898,8 +1955,10 @@ void UTCPosition() {     // position, altitude, locator, # satellites
 
 
 
+    int cycleTime = 10; // 4.10.2022: was 4 seconds
+
     lcd.setCursor(0, 2);
-    if ((now() / 4) % 3 == 0) { // change every 4 seconds
+    if ((now() / cycleTime) % 3 == 0) { // change every cycleTime seconds
 
       //  decimal degrees
       lcd.setCursor(0, 2);
@@ -1915,7 +1974,7 @@ void UTCPosition() {     // position, altitude, locator, # satellites
       if (lon < 0) lcd.print(" W    ");
       else lcd.print(" E    ");
     }
-    else if ((now() / 4) % 3 == 1) {
+    else if ((now() / cycleTime) % 3 == 1) {
 
       // degrees, minutes, seconds
       lcd.setCursor(0, 2);
@@ -2846,13 +2905,307 @@ void WordClock()
 
 /*****
 Purpose: Menu item
-Finds GPS information not shown elsewhere
+Shows info about 3 outer and 2 inner planets + alternates between solar/lunar info
 
-Argument List: none
+Argument List: inner = 1 for inner planets, else outer planets
 
 Return value: Displays on LCD
 *****/
 
+void PlanetVisibility(int inner // inner = 1 for inner planets, all other values -> outer
+) {
+//
+// Agrees with https://www.heavens-above.com/PlanetSummary.aspx?lat=59.8348&lng=10.4299&loc=Unnamed&alt=0&tz=CET
+// except for brightness or magnitude of mercury: this code says 0.2 when web says 0.6
+  
+  // Julian day ref noon Universal Time (UT) Monday, 1 January 4713 BC in the Julian calendar:
+  //jd = get_julian_date (20, 1, 2017, 17, 0, 0);//UTC
+  Seconds = second(now());
+  Minute = minute(now());
+  Hour = hour(now());
+  Day = day(now());
+  Month = month(now());
+  Year = year(now());
+   
+  jd = get_julian_date (Day, Month, Year, Hour, Minute, Seconds); // local
+ 
+  #ifdef FEATURE_SERIAL_PLANETARY
+    Serial.println("JD:" + String(jd, DEC) + "+" + String(jd_frac, DEC)); // jd = 2457761.375000;
+  #endif
+  
+  get_object_position (2, jd, jd_frac);//earth -- must be included always
+  
+  lcd.setCursor(0, 0); // top line ********* 
+  lcd.print("    El");lcd.write(DEGREE);lcd.print(" Az");lcd.write(DEGREE);lcd.print("   % Magn");
+  
+  if (inner==1){
+    get_object_position (0, jd, jd_frac);
+    lcd.setCursor(0, 2);
+    lcd.print("Mer "); LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
+    
+    lcd.setCursor(0, 3);
+    get_object_position (1, jd, jd_frac);
+    lcd.print("Ven "); LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
+
+    lcd.setCursor(0,1); 
+    if ((now() / 10) % 2 == 0)   // change every 10 seconds
+      { 
+// Moon
+      float Phase, PercentPhase;
+      lcd.print("Lun ");
+      UpdateMoonPosition();
+      MoonPhase(Phase, PercentPhase);
+      LCDPlanetData(moon_elevation, moon_azimuth, PercentPhase/100., -12.7);
+    }
+    else
+    {
+// Sun
+      lcd.print("Sun ");
+
+      /////// Solar elevation //////////////////
+      
+      cTime c_time;
+      cLocation c_loc;
+      cSunCoordinates c_sposn;
+      double dElevation;
+      double dhNoon, dmNoon;
+    
+      c_time.iYear = yearGPS;
+      c_time.iMonth = monthGPS;
+      c_time.iDay = dayGPS;
+      c_time.dHours = hourGPS;
+      c_time.dMinutes = minuteGPS;
+      c_time.dSeconds = secondGPS;
+    
+      c_loc.dLongitude = lon;
+      c_loc.dLatitude  = latitude;
+    
+      c_sposn.dZenithAngle = 0;
+      c_sposn.dAzimuth = 0;
+    
+      float sun_azimuth = 0;
+      float sun_elevation = 0;
+    
+      sunpos(c_time, c_loc, &c_sposn);
+    
+      // Convert Zenith angle to elevation
+      sun_elevation = 90. - c_sposn.dZenithAngle;
+      sun_azimuth = c_sposn.dAzimuth;
+
+      LCDPlanetData(round(sun_elevation), round(sun_azimuth), 1., -26.7);
+
+    }
+  
+  }
+  else  // outer planets
+  {
+    get_object_position (3, jd, jd_frac);
+    lcd.setCursor(0, 1);
+    lcd.print("Mar "); LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+    
+    get_object_position (4, jd, jd_frac);
+    lcd.setCursor(0, 2);
+    lcd.print("Jup "); LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+    
+    get_object_position (5, jd, jd_frac);
+    lcd.setCursor(0, 3);
+    lcd.print("Sat "); LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+
+    if (full) get_object_position (6, jd, jd_frac); // Uranus
+    if (full) get_object_position (7, jd, jd_frac); // Neptune
+  }
+}  
+
+/*****
+Purpose: Menu item
+Shows local time in 4 different calendars: Gregorian (Western), Julian (Eastern), Islamic, Hebrew
+
+Argument List: inner = 1 for inner planets, else outer planets
+
+Return value: Displays on LCD
+
+Issues: Hebrew calendar is quite slow (5+ seconds) on an Arduino Mega
+*****/
+
+void ISOHebIslam() {     // ISOdate, Hebrew, Islamic
+
+//#ifdef FEATURE_FAKE_SERIAL_GPS_IN
+//      hourGPS = hour(now());
+//      minuteGPS = minute(now());
+//      secondGPS = second(now());
+//#endif
+
+#ifdef FEATURE_DATE_PER_SECOND   // for stepping date quickly and check calender function
+    local = now() + utcOffset * 60 + dateIteration*86400; // fake local time by stepping up to 1 sec/day
+    dateIteration = dateIteration + 1;
+//  Serial.print(dateIteration); Serial.print(": ");
+//  Serial.println(local);
+#endif
+
+// algorithms in Nachum Dershowitz and Edward M. Reingold, Calendrical Calculations,
+// Software-Practice and Experience 20 (1990), 899-928
+// code from https://reingold.co/calendar.C
+
+       lcd.setCursor(0, 0); // top line *********
+       // all dates are in local time
+       GregorianDate a(month(local), day(local), year(local));      
+       LcdDate(a.GetDay(), a.GetMonth(), a.GetYear());
+//
+////        Serial.print("Absolute date ");Serial.println(a);
+
+        lcd.setCursor(10, 0);
+        IsoDate ISO(a);  
+        lcd.print(" Week   "); lcd.print(ISO.GetWeek());
+               
+        lcd.setCursor(0, 1);
+        JulianDate Jul(a);
+        LcdDate(Jul.GetDay(), Jul.GetMonth(), Jul.GetYear());
+        lcd.print(" Julian");
+
+        bool Byz = false; //true; - works best if date has year as last item (= EU/US)
+        if (Byz)
+        {
+            lcd.setCursor(10, 1);     
+        //    Byzantine year = Annus Mundi rel to September 1, 5509 BC
+        //    used by the Eastern Orthodox Church from c. 691 to 1728 https://en.wikipedia.org/wiki/Byzantine_calendar
+            int ByzYear = Jul.GetYear() + 5508;
+            if (Jul.GetMonth()>= 9) ByzYear = ByzYear + 1;
+            lcd.print("/");lcd.print(ByzYear);
+            lcd.print("  J/B");
+          }       
+
+        lcd.setCursor(0, 2);
+        char IslamicMonth[12][10] = {{"Muharram "}, {"Safar    "}, {"Rabi I   "}, {"Rabi II  "}, {"Jumada I "}, {"Jumada II"},{"Rajab    "}, {"Sha'ban  "}, {"Ramadan  "}, {"Shawwal  "}, {"DhuAlQada"}, {"DhuAlHija"}}; // left justified
+        IslamicDate Isl(a);
+        int m;
+        m = Isl.GetMonth();
+        LcdDate(Isl.GetDay(), m, Isl.GetYear());    
+        lcd.print(" "); lcd.print(IslamicMonth[m-1]); 
+
+ // Hebrew calendar is complicated and *** v e r y *** slow. Therefore it is on the last line:
+        
+        char HebrewMonth[13][10] = {{"Nisan    "}, {"Iyyar    "}, {"Sivan    "}, {"Tammuz   "}, {"Av       "}, {"Elul     "}, {"Tishri   "}, {"Heshvan  "}, {"Kislev   "}, {"Teveth   "}, {"Shevat   "}, {"Adar     "}, {"Adar II  "}}; // left justified
+ 
+        if (local % 10 == 0)     // only check every x sec. Otherwise no time for the clock to read encoder or buttons
+          {
+              HebrewDate Heb(a);  
+              m = Heb.GetMonth();
+              lcd.setCursor(0, 3);
+              LcdDate(Heb.GetDay(), m, Heb.GetYear());
+              lcd.print(" "); lcd.print(HebrewMonth[m-1]); 
+         //     lcd.setCursor(18, 3); lcd.print("  ");
+          }       
+}
+
+
+/*****
+Purpose: 
+Display all kinds of GPS-related info
+
+Argument List: none
+
+Return value: none
+*****/ 
+
+ void GPSInfo()
+{
+  // builds on the example program SatelliteTracker from the TinyGPS++ library
+  // https://www.arduino.cc/reference/en/libraries/tinygps/
+
+//float SNRavg = 0;
+//int total = 0;
+
+    #ifdef FEATURE_SERIAL_GPS 
+      Serial.println(F("GPSInfo"));
+    #endif
+
+    
+    if (totalGPGSVMessages.isUpdated())
+    {
+
+//https://github.com/mikalhart/TinyGPSPlus/issues/52
+//     int totalMessages = atoi(totalGPGSVMessages.value());
+//     int currentMessage = atoi(messageNumber.value());
+//      for (int i = 0; currentMessage < totalMessages ? i < 4 : i < (atoi(satsInView.value()) % 4); ++i)
+    
+      int totalMessages = atoi(totalGPGSVMessages.value());
+      int currentMessage = atoi(messageNumber.value());    
+      if (totalMessages == currentMessage)
+      {   
+      #ifdef FEATURE_SERIAL_GPS 
+        Serial.print(F("Sats in use = ")); Serial.print(gps.satellites.value());
+        Serial.print(F(" Nums = "));
+      
+        for (int i=0; i<MAX_SATELLITES; ++i)
+        {
+          if (sats[i].active)
+          {
+            Serial.print(i+1);
+            Serial.print(F(" "));
+          }
+        }
+      #endif
+       
+        int total = 0;
+        float SNRavg = 0;
+        #ifdef FEATURE_SERIAL_GPS 
+          Serial.print(F(" SNR = "));
+        #endif
+        
+        for (int i=0; i<MAX_SATELLITES; ++i)
+        {
+          if (sats[i].active)
+          {
+            #ifdef FEATURE_SERIAL_GPS 
+                Serial.print(sats[i].snr);
+                Serial.print(F(" "));
+            #endif
+            if (sats[i].snr >0)          // 0 when not tracking
+            {
+              total = total + 1; 
+              SNRavg = SNRavg + float(sats[i].snr);
+            }
+          }
+        }
+       
+          lcd.setCursor(0,0); lcd.print("In view "); //printFixedWidth(lcd, satsInView.value(), 2);
+          if (satsInView.value()<10) lcd.print(" ");
+          lcd.print(satsInView.value()); lcd.print(" Sats");
+          
+          noSats = gps.satellites.value();  // in list of http://arduiniana.org/libraries/tinygpsplus/
+          lcd.setCursor(0,1); lcd.print("In fix  "); //printFixedWidth(lcd, noSats, 2); 
+          if (noSats<10) lcd.print(" ");
+          lcd.print(noSats);
+ 
+          SNRavg = SNRavg/total; 
+          lcd.print(" SNR "); //printFixedWidth(lcd, (int)SNRavg),2);
+          if ((int)SNRavg<10) lcd.print(" ");
+          lcd.print((int)SNRavg); lcd.print(" dB");
+          lcd.setCursor(0,2); lcd.print("Mode    "); lcd.print(GPSMode.value());lcd.print("D Status  ");
+          lcd.print(posStatus.value()); 
+          
+          float hdop   = gps.hdop.hdop();  // in list of http://arduiniana.org/libraries/tinygpsplus/
+          lcd.setCursor(0,3); lcd.print("Hdop  "); lcd.print(hdop); 
+          if      (hdop<1) lcd.print(" Ideal    ");// 1-2 Excellent, 2-5 Good https://en.wikipedia.org/wiki/Dilution_of_precision_(navigation)
+          else if (hdop<2) lcd.print(" Excellent");
+          else if (hdop<5) lcd.print(" Good     ");
+          else             lcd.print(" No good  ");
+       #ifdef FEATURE_SERIAL_GPS 
+          Serial.print(F(" Total=")); Serial.print(total);
+          Serial.print(F(" InView=")); Serial.print(satsInView.value());       
+              
+          Serial.print(F(" SNRavg=")); Serial.print((int)SNRavg);
+          Serial.print(F(" Mode = ")); Serial.print(GPSMode.value()); // 1-none, 2=2D, 3=3D
+          Serial.print(F(" Status = ")); Serial.print(posStatus.value()); // A-valid, V-invalid
+          Serial.println();
+        #endif
+
+          for (int i=0; i<MAX_SATELLITES; ++i)
+            sats[i].active = false; 
+    }    
+  }
+ 
+}
 
 
 

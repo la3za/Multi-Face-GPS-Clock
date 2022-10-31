@@ -32,6 +32,7 @@ MathDivide
 printDouble
 LcdMorse
 
+LCDPlanetData
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
 
@@ -1160,4 +1161,18 @@ void LcdMorse(int num)
       break;                
   }
 }
+
+
+void LCDPlanetData(float altitudePlanet, float azimuthPlanet, float phase, float magnitude)
+{
+    PrintFixedWidth(lcd, (int)round(altitudePlanet), 3);lcd.print(" ");PrintFixedWidth(lcd, (int)round(azimuthPlanet), 3);
+    lcd.print(" "); PrintFixedWidth(lcd, (int)round(100*phase), 3); lcd.print(" "); 
+    if (magnitude >=0) {lcd.print("+");} // instead of minus sign
+    
+    if (abs(magnitude) < 10)  lcd.print(String(magnitude, 1));
+    else                      lcd.print(String(magnitude, 0)); 
+                  
+}
+
+
  /// THE END ///
