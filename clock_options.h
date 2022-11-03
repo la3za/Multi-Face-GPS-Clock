@@ -33,32 +33,32 @@ const int menuFavorite = ScreenLocalSunMoon; // screen number for favorite
 // Perturbe the order of screens, making sure that each number *only appears once*
 //
 
+/*
 // Everything
 int menuIn[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
                 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
                 30, 31, 32, 33, 34, 35, 36, 37, 38, 39};
+*/
 
 // Logical order, includes almost everything, 5 per line:
+int menuIn[] = {ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
+                ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter, ScreenLunarEclipse, ScreenISOHebIslam, 
+                ScreenEasterDates, ScreenTimeZones, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, 
+                ScreenBar, ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, ScreenCodeStatus, 
+                ScreenHex, ScreenOctal, ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, 
+                ScreenMathClockMultiply, ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, 
+                ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenMoonRiseSet, ScreenSidereal, 
+                ScreenLocalUTC, ScreenUTCPosition, ScreenGPSInfo, ScreenDemoClock}; // Demo as the last one
 /*
-int menuIn[] = {ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
-                ScreenLocalSunMoon, ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter,               
-                ScreenLunarEclipse, ScreenISOHebIslam, ScreenEasterDates, 
-                ScreenTimeZones, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, 
-                ScreenMengenLehrUhr, ScreenLinearUhr, ScreenInternalTime, ScreenCodeStatus, ScreenHex, 
-                ScreenOctal, ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, 
-                ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, 
-                ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenReminder, ScreenMoonRiseSet, 
-                ScreenSidereal, ScreenGPSInfo, ScreenUTCPosition, ScreenDemoClock}; // Demo as the last one
-*/
 // My favorites:
-/*
 int menuIn[] = {ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
                 ScreenLocalSunMoon, ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter,               
                 ScreenISOHebIslam, ScreenLunarEclipse, ScreenEasterDates, 
                 ScreenTimeZones, ScreenCodeStatus, ScreenRoman, ScreenMorse, ScreenWordClock, 
                 ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenMoonRiseSet, ScreenSidereal, 
                 ScreenGPSInfo, ScreenUTCPosition, ScreenDemoClock}; // Demo as the last one
+
 */
 /*
 // Calendar, time zones:
@@ -68,8 +68,8 @@ int menuIn[] = {ScreenLocalUTCWeek,
                 ScreenUTCPosition, ScreenDemoClock}; // Demo as the last one
 
 */
-// Solar, moon, planets:
 /*
+// Solar, moon, planets:
 int menuIn[] = {ScreenLocalUTCWeek,ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, ScreenLocalMoon, 
                 ScreenMoonRiseSet,ScreenLunarEclipse, ScreenPlanetsInner, ScreenPlanetsOuter, ScreenSidereal, ScreenGPSInfo};
 */
@@ -89,16 +89,7 @@ int menuIn[] = {ScreenRoman, ScreenLocalUTC, ScreenUTCLocator, ScreenBinary, Scr
 
 */
 
-
-// Fancy clocks:
-/*
-int menuIn[] = {ScreenLocalUTC, ScreenUTCLocator, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, 
-                ScreenBar, ScreenMengenLehrUhr, ScreenLinearUhr, ScreenHex, ScreenOctal, 
-                ScreenHexOctalClock, ScreenRoman, ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply,
-                ScreenMathClockDivide};
-*/
-
-// don't touch this statement:
+// Don't touch the following statement!!!
 const int noOfStates = sizeof(menuIn)/sizeof(menuIn[0]); // no of entries in Menu system
 // *************************************************************************
 

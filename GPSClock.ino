@@ -1,6 +1,6 @@
 
 // Set version and date manually for code status display
-const char codeVersion[] = "v1.5.0     x.11.2022";
+const char codeVersion[]   = "v1.5.0     3.11.2022";
 
 // or set date automatically to ompilation date (US format) - nice to use during development - while version number is set manually
 //const char codeVersion[] = "v1.4.0   "__DATE__;  
