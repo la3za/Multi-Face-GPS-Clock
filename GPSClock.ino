@@ -109,7 +109,7 @@ const char codeVersion[]   = "v1.5.0     3.11.2022";
 
   Revisions:
 
- 1.5.0  xx.11.2022:
+ 1.5.0  03.11.2022:
                 - PlanetVisibility
                 - ISOHebIslam
                 - GPSInfo
