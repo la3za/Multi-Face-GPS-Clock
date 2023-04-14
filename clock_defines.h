@@ -54,5 +54,8 @@
 #define ScreenISOHebIslam       37
 #define ScreenGPSInfo           38
 
+// New in v1.6.0:
+#define ScreenChemical          39  
+
 // New in v1.3.0:
-#define ScreenDemoClock         39  // the last one
+#define ScreenDemoClock         40  // the last one

@@ -39,9 +39,10 @@ float longitude_manual = -85.395540;
 //float latitude_manual  = 28.6; 
 //float longitude_manual = 77.2; 
 
+//#define FEATURE_DATE_PER_SECOND   // for stepping date quickly and check calender function (local time only)
 //#define FEATURE_DAY_PER_SECOND    // for stepping through day names quickly
 
-//#define FEATURE_PC_SERIAL_GPS_IN  // for faking GPS from a GPS simulator (https://github.com/panaaj/nmeasimulator)
+//#define FEATURE_FAKE_SERIAL_GPS_IN  // for faking GPS from a GPS simulator (https://github.com/panaaj/nmeasimulator)
 // Demo 12.03.2022: didn't work properly with Time Zones & sidereal time, where clock does not advance when this mode is enabled
 
 // Must only be used alone. Don't use if you do not exactly understand this switch:

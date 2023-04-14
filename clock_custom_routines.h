@@ -216,7 +216,7 @@ void WordClockNorwegian()
   lcd.setCursor(0, 0); 
   if (Hour < 10) 
   {
-    lcd.print(CapiOnes[int(Hour)]); lcd.print("      ");
+    lcd.print(CapiOnes[int(Hour)]); lcd.print(F("      "));
   }
   else if (Hour > 10 & Hour < 20) lcd.print(Teens[int(Hour)-10]);
   else
@@ -228,7 +228,7 @@ void WordClockNorwegian()
       lcd.print(" ");
       lcd.print(WordOnes[ones]);
     }
-    else if (ones == 0) lcd.print("      ");
+    else if (ones == 0) lcd.print(F("      "));
     else lcd.print(WordOnes[ones]);
   }
   
@@ -243,7 +243,7 @@ void WordClockNorwegian()
       lcd.print(" ");
       lcd.print(WordOnes[ones]);
     }
-    else if (ones == 0) lcd.print("      ");
+    else if (ones == 0) lcd.print(F("      "));
     else lcd.print(WordOnes[ones]);
   }
   
@@ -259,11 +259,11 @@ void WordClockNorwegian()
       lcd.print(" ");
       lcd.print(WordOnes[ones]);
     }
-    else if (ones == 0) lcd.print("      ");
+    else if (ones == 0) lcd.print(F("      "));
     else lcd.print(WordOnes[ones]);
   }
   
-   lcd.setCursor(0, 3);lcd.print("        ");
+   lcd.setCursor(0, 3);lcd.print(F("        "));
    lcd.setCursor(18, 3); lcd.print("  "); // blank out number in lower right-hand corner 
 }
 

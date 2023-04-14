@@ -33,6 +33,11 @@ printDouble
 LcdMorse
 
 LCDPlanetData
+
+LCDChemicalElement
+LCDChemicalGroupPeriod
+LCDChemicalElementName
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
 
@@ -597,7 +602,7 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
           lcd.print(static_cast<int>(Month));
         }
       }
-      lcd.print("    "); // in order to erase remnants of long string as the month changes
+      lcd.print(F("    ")); // in order to erase remnants of long string as the month changes
       lcd.setCursor(11 - moveLeft, lineno);
       sprintf(textbuffer, " %02d%c%02d%c%02d", Hour, HOUR_SEP, Minute, MIN_SEP, Seconds); // corrected 18.10.2021
       lcd.print(textbuffer);
@@ -654,18 +659,18 @@ void LcdSolarRiseSet(
     
     if (RiseSetDefinition == ' ') // Actual
     {
-      lcd.print("  "); lcd.write(UP_ARROW);
+      lcd.print(F("  ")); lcd.write(UP_ARROW);
     }
     else if (RiseSetDefinition == 'C')  // Civil
     {
-      lcd.print("  "); lcd.write(DASHED_UP_ARROW);
+      lcd.print(F("  ")); lcd.write(DASHED_UP_ARROW);
     }
-    else lcd.print("   ");              // Nautical
+    else lcd.print(F("   "));              // Nautical
 
     if (lineno==1) 
     {
         lcd.setCursor(0, lineno);
-        lcd.print("S ");
+        lcd.print(F("S "));
     }
 
     if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
@@ -685,7 +690,7 @@ void LcdSolarRiseSet(
   t = mySunrise.Set(monthGPS, dayGPS); // Sun set time
 
   lcd.setCursor(9, lineno);
-  if (ScreenMode == ScreenLocalSunSimpler| ScreenMode == ScreenLocalSunAzEl) lcd.print("  ");
+  if (ScreenMode == ScreenLocalSunSimpler| ScreenMode == ScreenLocalSunAzEl) lcd.print(F("  "));
   if (RiseSetDefinition == ' ')       lcd.write(DOWN_ARROW);
   else if (RiseSetDefinition == 'C')  lcd.write(DASHED_DOWN_ARROW);
   else                                lcd.print(" ");
@@ -749,14 +754,14 @@ SolarElevation:
    if (RiseSetDefinition == 'Z') // print current aZimuth, elevation
       {
         lcd.setCursor(3, lineno);
-        lcd.print("El ");
+        lcd.print(F("El "));
         PrintFixedWidth(lcd, (int)float(sun_elevation), 3);
         lcd.write(DEGREE);
         lcd.setCursor(11, lineno);
-        lcd.print("Az ");
+        lcd.print(F("Az "));
         PrintFixedWidth(lcd, (int)float(sun_azimuth), 3);
         lcd.write(DEGREE);
-        lcd.print("  ");         
+        lcd.print(F("  "));         
       }
 
   ///// Solar noon
@@ -820,7 +825,7 @@ SolarElevation:
         if (RiseSetDefinition == 'O') // print sun's data at nOon
         {
           lcd.setCursor(3, lineno);
-          lcd.print("El ");
+          lcd.print(F("El "));
           PrintFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
           lcd.write(DEGREE); //       added 27.04.2022
           lcd.print(" ");   
@@ -828,7 +833,7 @@ SolarElevation:
           PrintFixedWidth(lcd, hNoon, 2);
           lcd.print(HOUR_SEP); 
           PrintFixedWidth(lcd, mNoon, 2,'0');         
-          lcd.print("  ");       
+          lcd.print(F("  "));       
         }
 }
 
@@ -1111,7 +1116,7 @@ void MathDivide(int Term0,      // input number
 
 void printDouble( double val, unsigned int precision){
 
-// prints val with number of decimal places determine by precision
+// prints val with number of decimal places determined by precision
 // NOTE: precision is 1 followed by the number of zeros for the desired number of decimial places
 // example: printDouble( 3.1415, 100); // prints 3.14 (two decimal places)
 
@@ -1162,6 +1167,7 @@ void LcdMorse(int num)
   }
 }
 
+////////////////////////////////////////////////////////////////
 
 void LCDPlanetData(float altitudePlanet, float azimuthPlanet, float phase, float magnitude)
 {
@@ -1174,5 +1180,186 @@ void LCDPlanetData(float altitudePlanet, float azimuthPlanet, float phase, float
                   
 }
 
+////////////////////////////////////////////////////////////////
+
+void LCDChemicalElement(int Hr, int Mn, int Sec)
+//
+// print 1 or 2-letter chemical abbreviation
+{
+const char Elements[59][3] = {{" H"}, {"He"}, {"Li"}, {"Be"}, {" B"}, {" C"}, {" N"}, {" O"}, {" F"}, {"Ne"},
+                              {"Na"}, {"Mg"}, {"Al"}, {"Si"}, {" P"}, {" S"}, {"Cl"}, {"Ar"}, {" K"}, {"Mg"},
+                              {"Sc"}, {"Ti"}, {" V"}, {"Cr"}, {"Mn"}, {"Fe"}, {"Co"}, {"Ni"}, {"Cu"}, {"Zn"}, 
+                              {"Ga"}, {"Ge"}, {"As"}, {"Se"}, {"Br"}, {"Kr"}, {"Rb"}, {"Sr"}, {" Y"}, {"Zr"},
+                              {"Nb"}, {"Mo"}, {"Tc"}, {"Ru"}, {"Rh"}, {"Pd"}, {"Ag"}, {"Cd"}, {"In"}, {"Sn"},
+                              {"Sb"}, {"Te"}, {" I"}, {"Xe"}, {"Cs"}, {"Ba"}, {"La"}, {"Ce"}, {"Pr"}}; 
+
+// Look up 2-letter chemical element from periodic table of elements for local time
+      lcd.print(Elements[Hr-1]);  lcd.print(":"); 
+      lcd.print(Elements[Mn-1]);  lcd.print(":");
+      lcd.print(Elements[Sec-1]); lcd.print(" ");
+
+}
+
+////////////////////////////////////////////////////////////////
+
+void LCDChemicalElementName(int ElementNo)
+{
+  #if FEATURE_NATIVE_LANGUAGE == 'no'
+
+// Stability problems : too much memory and norsk at the same time ...
+
+
+char ElementNames[59][13]={{" Hydrogen   "}, {"Helium      "}, {"Litium      "}, {"Beryllium   "}, {" Bor        "}, 
+                           {" Karbon     "}, {" Nitrogen   "}, {" Oksygen    "}, {" Fluor      "}, {"Neon        "},
+                           {"Natrium     "}, {"Magnesium   "}, {"Aluminium   "}, {"Silisium    "}, {" Fosfor     "},
+                           {" Svovel     "}, {"Klor        "}, {"Argon       "}, {" Kalium     "}, {"Kalsium     "},
+                           {"Scandium    "}, {"Titan       "}, {" Vanadium   "}, {"Krom        "}, {"Mangan      "},
+                           {"Jern        "}, {"Kobolt      "}, {"Nikkel      "}, {"Kobber      "}, {"Sink        "},
+                           {"Gallium     "}, {"Germanium   "}, {"Arsen       "}, {"Selen       "}, {"Brom        "},
+                           {"Krypton     "}, {"Rubidium    "}, {"Strontium   "}, {" Yttrium    "}, {"Zirkonium   "},
+                           {"Niob        "}, {"Molybden    "}, {"Technetium  "}, {"Ruthenium   "}, {"Rhodium     "},
+                           {"Palladium   "}, {"Solv        "}, {"Kadmium     "}, {"Indium      "}, {"Tinn        "},
+                           {"Antimon     "}, {"Tellur      "}, {" Jod        "}, {"Xenon       "}, {"Cesium      "},
+                           {"Barium      "}, {"Lantan      "}, {"Cerium      "}, {"Praseodym   "}};  
+
+     ElementNames[47][1] = char(NO_DK_oe_SMALL); // sølv 
+
+/*
+const char el01[] PROGMEM = " Hydrogen   ";
+const char el02[] PROGMEM = "Helium      ";
+const char el03[] PROGMEM = "Litium      ";
+const char el04[] PROGMEM = "Beryllium   ";
+const char el05[] PROGMEM = " Bor        ";
+const char el06[] PROGMEM = " Karbon     ";
+const char el07[] PROGMEM = " Nitrogen   ";
+const char el08[] PROGMEM = " Oksygen    ";
+const char el09[] PROGMEM = " Fluor      ";
+const char el10[] PROGMEM = "Neon        ";
+
+PGM_P const el_table[] PROGMEM = 
+{
+  el01, el02, el03, el04, el05, el06, el07, el08, el09, el10
+};
+
+*/
+                       
+
+#else // English:
+
+
+char ElementNames[59][13]={{" Hydrogen   "}, {"Helium      "}, {"Lithium     "}, {"Beryllium   "}, {" Boron      "}, 
+                           {" Carbon     "}, {" Nitrogen   "}, {" Oxygen     "}, {" Fluorine   "}, {"Neon        "},
+                           {"Sodium      "}, {"Magnesium   "}, {"Aluminum    "}, {"Silicon     "}, {" Phosphorus "},
+                           {" Sulfur     "}, {"Chlorine    "}, {"Argon       "}, {" Potassium  "}, {"Calcium     "},
+                           {"Scandium    "}, {"Titanium    "}, {" Vanadium   "}, {"Chromium    "}, {"Manganese   "},
+                           {"Iron        "}, {"Cobalt      "}, {"Nickel      "}, {"Copper      "}, {"Zinc        "},
+                           {"Gallium     "}, {"Germanium   "}, {"Arsenic     "}, {"Selenium    "}, {"Bromine     "},
+                           {"Krypton     "}, {"Rubidium    "}, {"Strontium   "}, {" Yttrium    "}, {"Zirconium   "},
+                           {"Niobium     "}, {"Molybdenum  "}, {"Technetium  "}, {"Ruthenium   "}, {"Rhodium     "},
+                           {"Palladium   "}, {"Silver      "}, {"Cadmium     "}, {"Indium      "}, {"Tin         "},
+                           {"Antimony    "}, {"Tellurium   "}, {" Iodine     "}, {"Xenon       "}, {"Cesium      "},
+                           {"Barium      "}, {"Lanthanum   "}, {"Cerium      "}, {"Praseodymium"}};
+
+
+/*
+char ElementNames[61][13]={{" "},
+                           {" Hydrogen"}, {"Helium"}, {"Lithium"}, {"Beryllium"}, {" Boron"}, 
+                           {" Carbon"}, {" Nitrogen"}, {" Oxygen"}, {" Fluorine"}, {"Neon"},
+                           {"Sodium"}, {"Magnesium"}, {"Aluminum"}, {"Silicon"}, {" Phosphorus"},
+                           {" Sulfur"}, {"Chlorine"}, {"Argon"}, {" Potassium"}, {"Calcium"},
+                           {"Scandium"}, {"Titanium"}, {" Vanadium"}, {"Chromium"}, {"Manganese"},
+                           {"Iron"}, {"Cobalt"}, {"Nickel"}, {"Copper"}, {"Zinc"},
+                           {"Gallium"}, {"Germanium"}, {"Arsenic"}, {"Selenium"}, {"Bromine"},
+                           {"Krypton"}, {"Rubidium"}, {"Strontium"}, {" Yttrium"}, {"Zirconium"},
+                           {"Niobium"}, {"Molybdenum"}, {"Technetium"}, {"Ruthenium"}, {"Rhodium"},
+                           {"Palladium"}, {"Silver"}, {"Cadmium"}, {"Indium"}, {"Tin"},
+                           {"Antimony"}, {"Tellurium"}, {" Iodine"}, {"Xenon"}, {"Cesium"},
+                           {"Barium"}, {"Lanthanum"}, {"Cerium"}, {"Praseodymium"}, {"Neodymium"}};
+*/
+#endif                   
+
+
+  #if FEATURE_NATIVE_LANGUAGE == 'no'
+/*
+    char buffer(14);
+    if (ElementNo >=1 & ElementNo <=10) 
+    {
+      // https://www.nongnu.org/avr-libc/user-manual/pgmspace.html#pgmspace_strings
+      strcpy_P(buffer, (PGM_P)pgm_read_word(&el_table[(byte)ElementNo]));  // freezes or resets
+      lcd.print(buffer); 
+    }
+    */
+    if (ElementNo >=1)  lcd.print(ElementNames[ElementNo-1]);
+  #else
+    if (ElementNo >=1) lcd.print(ElementNames[ElementNo-1]);
+  #endif
+  else                 lcd.print(F("            "));
+
+  //  lcd.print(String("1234 ") + String(number));
+  // or
+  //  lcd.print(str);
+  //  for(int i = str.length(); i<16;i++) lcd.print(' ');
+}
+
+////////////////////////////////////////////////////////////////
+
+void LCDChemicalGroupPeriod(int ElementNo)
+//
+// find group and period in periodic system from chemical Element number
+{
+int group = 0, period = 0;
+      if (ElementNo == 1)
+      {
+        group = ElementNo;   period = 1;
+      }
+      else if (ElementNo <= 2)
+      {
+        group = 18; period = 1;
+      }
+      else if (ElementNo <= 4)
+      {
+        group = ElementNo-2; period = 2;
+      }
+      else if (ElementNo <= 10)
+      {
+        group = ElementNo+8; period = 2;
+      }
+      else if (ElementNo <= 12)
+      {
+        group = ElementNo-10; period = 3;
+      }
+      else if (ElementNo <= 18)
+      {
+        group = ElementNo; period = 3;
+      }
+      else if (ElementNo <= 36)
+      {
+        group = ElementNo-18; period = 4;
+      }
+      else if (ElementNo <= 54)
+      {
+        group = ElementNo-36; period = 5;
+      }
+      else if (ElementNo <= 56)
+      {
+        group = ElementNo-54; period = 6;
+      }
+
+      if (ElementNo == 0)
+      {
+        lcd.print(F("           ")); // empty
+      }
+      else if (ElementNo <= 56)
+      {
+        lcd.print(F("Gr "));  lcd.print(group); lcd.print(" ");
+        lcd.print(F("Per ")); lcd.print(period); lcd.print(" ");
+      }
+      else
+      {
+        lcd.print(F("Gr -")); lcd.print(" ");  // no group for Lanthanides
+        lcd.print(F("Per 6")); lcd.print(" ");
+      }
+      
+}
 
  /// THE END ///

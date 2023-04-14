@@ -33,14 +33,15 @@ const int menuFavorite = ScreenLocalSunMoon; // screen number for favorite
 // Perturbe the order of screens, making sure that each number *only appears once*
 //
 
-/*
-// Everything
-int menuIn[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
-                10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-                20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-                30, 31, 32, 33, 34, 35, 36, 37, 38, 39};
-*/
 
+// Everything in order of development (almost):
+int menuIn[] = {34,  1, 23, 24,  3,  4,  5,  6,  7,  8,  9,
+                10, 11, 12, 13, 14,     15, 16, 17, 18, 19,
+                20, 21, 22, 2,          25, 26, 27, 28, 29,
+                30, 31, 32, 33,  0,     35, 36, 37, 38, 39,
+                40};
+
+/*
 // Logical order, includes almost everything, 5 per line:
 int menuIn[] = {ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
                 ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter, ScreenLunarEclipse, ScreenISOHebIslam, 
@@ -50,6 +51,7 @@ int menuIn[] = {ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, Scr
                 ScreenMathClockMultiply, ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, 
                 ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenMoonRiseSet, ScreenSidereal, 
                 ScreenLocalUTC, ScreenUTCPosition, ScreenGPSInfo, ScreenDemoClock}; // Demo as the last one
+*/
 /*
 // My favorites:
 int menuIn[] = {ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, 
