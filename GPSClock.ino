@@ -109,6 +109,7 @@ const char codeVersion[]   = "v1.6.0    14.04.2023";
   Revisions:
 
  1.6.0   14.04.2023:
+                - ChemicalElements: new display
                 - Saved 764 bytes of dynamic memory: replaced lcd-print(".. with lcd.print(F(".. and char by int/float
                 - Changed > to >= so DWELL_TIME in demo mode is correctly implemented 
                 - Fixed small formatting error in week number for single-digit week #
