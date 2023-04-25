@@ -34,7 +34,7 @@ Math calculation clock:
 
 <img src="Images/MathSub.jpg" width="40%">
 
-See [the project wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for images of most of the screens as well as screens showing the various local language adaptations.
+See [the project wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for images of the various screens as well as screens showing the local language adaptations.
 
 The LA3ZA blog has posts with documentation of hardware and the different screens showing solar and lunar position, their rise and set times, moon phase, date for Easter Sunday in Gregorian and Julian calendars and much more. See keyword ["Arduino clock"](https://la3za.blogspot.com/search/label/Arduino%20clock), starting with early development in 2016 up to the present. 
 
