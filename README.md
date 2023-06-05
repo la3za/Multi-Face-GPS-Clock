@@ -42,7 +42,7 @@ The LA3ZA blog has posts with documentation of hardware and the different screen
 
 Starting with version 1.1.0, a rotary encoder with a push button is supported, in addition to the separate push buttons and the pot of the original code. In order not to clutter the schematic too much, only the rotary encoder is shown in the following schematic. Here the rotary encoder selects screen number. A push on the button lets the rotary encoder control the backlight. In the schematic however, the backlight is controlled directly by a separate trim pot and not by software. In that case, a push on the rotary encoder lets one toggle back and forth to a user-selectable favorite screen. 
 
-![Image](Images/2023-06-05-GPS Clock.png)
+![Image](Images/2023-06-05-GPS-Clock.png)
 
 ## Hardware schematic, first version (supported from v1.0.0): ![Image](Images/2021-10-18-GPSClock.png)
 
