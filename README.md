@@ -38,13 +38,13 @@ See [the project wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for i
 
 The LA3ZA blog has posts with documentation of hardware and the different screens showing solar and lunar position, their rise and set times, moon phase, date for Easter Sunday in Gregorian and Julian calendars and much more. See keyword ["Arduino clock"](https://la3za.blogspot.com/search/label/Arduino%20clock), starting with early development in 2016 up to the present. 
 
-## Hardware schematic, second version (supported from v1.1.0): 
+## Hardware schematic, supported from v1.1.0 - 1.6.0: 
 
-Starting with version 1.1.0, a rotary encoder with a push button is supported, in addition to the separate push buttons and the pot of the original code. In order not to clutter the schematic too much, only the rotary encoder is shown in the following schematic. Here the rotary encoder selects screen number. A push on the button lets the rotary encoder control the backlight. In the schematic however, the backlight is controlled directly by a separate trim pot and not by software. In that case, a push on the rotary encoder lets one toggle back and forth to a user-selectable favorite screen. 
+Starting with version 1.1.0, a rotary encoder with a push button is supported, in addition to the separate push buttons and the pot of the original code. In order not to clutter the schematic too much, only the rotary encoder is shown in the following schematic. Here the rotary encoder selects screen number. A push on the button lets the rotary encoder control the backlight. Alternatively, the backlight may be controlled directly by a separate trim pot and not by software. In that case, a push on the rotary encoder lets one toggle back and forth to a user-selectable favorite screen. 
 
 ![Image](Images/2023-06-05-GPS-Clock.png)
 
-## Hardware schematic, first version (supported from v1.0.0): ![Image](Images/2021-10-18-GPSClock.png)
+## Hardware schematic, supported from v1.0.0: ![Image](Images/2021-10-18-GPSClock.png)
 
 The two push buttons control whether the screen number increases or decreases by one. The pot controls the backlight of the LCD. These are the only features supported from v1.0.0 to v1.0.4 of the code.
 
