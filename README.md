@@ -4,6 +4,11 @@ The purpose of this project is to make available as many clock and clock related
 
 The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clockn.html). It is based on an Arduino Mega taking time and position data from a GPS. It supports multiple languages in addition to English (default) for day names when local time is shown: Norwegian, Swedish, Danish, Icelandic, German, French and Spanish. Below the clock shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
 
+## YouTube videos
+Here's a YouTube video showing all the 24 screens in the Favorites subset of clock faces, using the Demo mode with 10 seconds per screen: https://youtu.be/AJEWBOJmE1E
+
+Here's a Youtune video showing how to set up the clock via the new menu system - all engaged by a short press on the rotary control. The clock starts with incorrect GPS baud rate so it won't read the GPS. That is changed and then it shows time in EU date format, Central European Daylight Saving time zone, Spanish local language. This is then changed to US date format, Eastern Daylight Time, and English as local language: https://www.youtube.com/watch?v=mNIamsUlenw
+
 ## Examples of clock faces:
 
 Solar rise/set time. Line 2 Actual, Line 3 Civil, and Line 4 Nautical rise and set times:
