@@ -7,7 +7,7 @@ The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clock
 ## YouTube videos
 * Here's a YouTube video showing all the 24 screens in the Favorites subset of clock faces, using the Demo mode with 10 seconds per screen: https://youtu.be/AJEWBOJmE1E
 
-* Here's a Youtune video showing how to set up the clock via the new menu system - all engaged by a short press on the rotary control. The clock starts with incorrect GPS baud rate so it won't read the GPS. That is changed and then it shows time in EU date format, Central European Daylight Saving time zone, Spanish local language. This is then changed to US date format, Eastern Daylight Time, and English as local language: https://www.youtube.com/watch?v=mNIamsUlenw
+* Here's a Youtube video showing how to set up the clock via the new menu system introduced in ver 2.0.0 of the software - all engaged by a short press on the rotary control. The clock starts with incorrect GPS baud rate so it won't read the GPS. That is changed and then it shows time in EU date format, Central European Daylight Saving time zone, Spanish local language. This is then changed to US date format, Eastern Daylight Time, and English as local language: https://www.youtube.com/watch?v=mNIamsUlenw
 
 ## Examples of clock faces:
 
