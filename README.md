@@ -2,7 +2,11 @@
 
 The purpose of this project is to make available as many clock and clock related functions as possible given the constraint of a 20 x 4 LCD. The number of different screens are now forty, see [Wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for pictures of them all. Some are useful, some are very specialized, and some may be unexpected or outright weird. All the screens have been laid out with a view to good esthetics and easy readability.
 
-The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clockn.html). It is based on an Arduino Mega taking time and position data from a GPS. It supports multiple languages in addition to English (default) for day names when local time is shown: Norwegian, Swedish, Danish, Icelandic, German, French and Spanish. Below the clock shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
+The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clockn.html). It is based on an Arduino Mega taking time and position data from a GPS. It supports multiple languages in addition to English (default) for day names when local time is shown: Norwegian, German, French and Spanish, and Icelandic, Danish, and Swedish. 
+
+The new version 2.0.0 software makes setup much easier as most if not all parameters now can be done via the trotary control, and there is minimal need for editing of the software.
+
+Below the clock shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
 
 ## YouTube videos
 * Here's a YouTube video showing all the 24 screens in the Favorites subset of clock faces, using the Demo mode with 10 seconds per screen: https://youtu.be/AJEWBOJmE1E
