@@ -4,7 +4,7 @@ The purpose of this project is to make available as many clock and clock related
 
 The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clockn.html). It is based on an Arduino Mega taking time and position data from a GPS. It supports multiple languages in addition to English (default) for day names when local time is shown: Norwegian, German, French and Spanish, and Icelandic, Danish, and Swedish. 
 
-The new version 2.0.0 software makes setup much easier as most if not all parameters now can be done via the rotary control, and there is minimal need for editing of the software.
+The new version 2.0.0 software makes setup much easier as most if not all parameters now can be entered via the rotary control, and there is minimal need for editing of the software.
 
 Below the clock shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
 
