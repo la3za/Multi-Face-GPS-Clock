@@ -47,7 +47,7 @@ See [the project wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for i
 
 The LA3ZA blog has posts with documentation of hardware and the different screens showing solar and lunar position, their rise and set times, moon phase, date for Easter Sunday in Gregorian and Julian calendars and much more. See keyword ["Multi-face GPS clock"](https://la3za.blogspot.com/search/label/Multi-face%20GPS%20clock), starting with early development in 2016 up to the present. 
 
-## Hardware schematic, supported from v1.1.0 - 1.6.0: 
+## Hardware schematic, supported from v1.1.0 and onwards: 
 
 Starting with version 1.1.0, a rotary encoder with a push button is supported, in addition to the separate push buttons and the pot of the original code. In order not to clutter the schematic too much, only the rotary encoder is shown in the following schematic. Here the rotary encoder selects screen number. A push on the button lets the rotary encoder control the backlight. Alternatively, the backlight may be controlled directly by a separate trim pot and not by software. In that case, a push on the rotary encoder lets one toggle back and forth to a user-selectable favorite screen. 
 
