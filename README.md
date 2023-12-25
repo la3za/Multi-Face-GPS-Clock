@@ -49,7 +49,7 @@ The LA3ZA blog has posts with documentation of hardware and the different screen
 
 ## Hardware schematic, supported from v2.0.0 and onwards:
 
-The user interface for choosing clock face and for setup is the rotary encoder with push button. Use of the PPS (Pulse per second) output of the GPS for interrupt-driven timing of second pulse is optional from v2.1.1.
+The user interface for choosing clock face and for setup is the rotary encoder with push button. Use of the PPS (Pulse per second) output of the GPS for interrupt-driven timing of second pulse is optional from v2.1.0.
 
 ![Image](Images/2023-12-25-GPS-Clock.png)
 
