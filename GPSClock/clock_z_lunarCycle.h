@@ -73,7 +73,7 @@ static double               VHz[3], RAn[3], Decl[3]; // Dec[] renamed to Decl[]
 static MOONRISESET          MoonRise, MoonSet;
 
 #define PI                  3.1415926535897932384626433832795
-#define RAD                 (PI/180.0)
+//#define RAD                 (PI/180.0)
 #define SMALL_FLOAT         (1e-12)
 
 

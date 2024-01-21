@@ -57,8 +57,12 @@
 // New in v1.6.0:
 #define ScreenChemical          39 
 
-// unreleased
-////#define ScreenReminder          40
+// New in v2.1.0
+#define ScreenBigNumbers2       40
+#define ScreenBigNumbers2UTC    41
+#define ScreenBigNumbers3       42
+#define ScreenBigNumbers3UTC    43
+#define ScreenReminder          44
 
 // New in v1.3.0:
-#define ScreenDemoClock         40  // the last one
+#define ScreenDemoClock         45  // the last one

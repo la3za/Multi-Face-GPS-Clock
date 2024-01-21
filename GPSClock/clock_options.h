@@ -23,10 +23,8 @@
        Rotary + buttons:  As rotary alone + buttons may also be used to change screen
        Rotary + pot:      Rotary chooses screen, push chooses favorite, pot adjusts background light
    Version 2.0.0:
-       Rotary alone:      New menu system, also supports buttons for up/down, and pot for backlight
+       Rotary alone:      New menu system, also supports buttons for up/down
 */
-
-//#define FEATURE_POTENTIOMETER // for background light adjustment with external pot
 
 #define FEATURE_BUTTONS       // two push buttons increase/decrease screen number 
                               // in addition to rotary encoder with push button
@@ -40,60 +38,71 @@
 struct Menu_type
 {
   char  descr[15];
-  int   order[noOfEntries];
+  int8_t order[noOfEntries]; 
 };
 
 // Perturbe the order of screens, making sure that each number *only appears once* per group:
 
-// All = all except the obsolete ScreenLocalSun=2, which is superseded by ScreenLocalSunSimpler=23
+// All = all except the obsolete:
+//   ScreenLocalSun,      superseded by ScreenLocalSunSimpler
+//   ScreenLocalSunAzEl,  superseded by ScreenLocalSunSimpler
+   
 
 Menu_type menuStruct[] =
 {
-  {"Favorites    ", 
-      ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
-      ScreenLocalMoon,  ScreenPlanetsInner, ScreenPlanetsOuter, ScreenLunarEclipse, ScreenEasterDates, 
-      ScreenISOHebIslam, ScreenTimeZones, ScreenUTCPosition, ScreenLocalUTC, ScreenRoman, 
-      ScreenWordClock, ScreenChemical, ScreenCodeStatus, ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, 
-      ScreenWSPRsequence, ScreenSidereal, ScreenGPSInfo, ScreenDemoClock, 
+  {"Favorites 1  ", 
+      ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon,  
+      ScreenPlanetsInner, ScreenPlanetsOuter, ScreenLunarEclipse, ScreenEasterDates, ScreenISOHebIslam, 
+      ScreenTimeZones, ScreenUTCPosition, ScreenLocalUTC, ScreenRoman, ScreenWordClock, 
+      ScreenChemical, ScreenCodeStatus, ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, 
+      ScreenSidereal, ScreenGPSInfo, ScreenBigNumbers2, ScreenBigNumbers2UTC, ScreenBigNumbers3, 
+      ScreenBigNumbers3UTC, ScreenReminder, ScreenDemoClock, 
       -1}, // Must end with negative number in order to enable counting of number of entries},
-  {"All          ",  // except ScreenLocalSun (2)
-      ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
-      ScreenLocalMoon, ScreenMoonRiseSet, ScreenPlanetsInner, ScreenPlanetsOuter,  ScreenLunarEclipse, 
-      ScreenEasterDates, ScreenISOHebIslam, ScreenTimeZones, ScreenUTCPosition, ScreenLocalUTC, 
-      ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, ScreenMengenLehrUhr, 
-      ScreenLinearUhr, ScreenHex, ScreenOctal, ScreenHexOctalClock, ScreenMathClockAdd, 
-      ScreenMathClockSubtract, ScreenMathClockMultiply, ScreenMathClockDivide, ScreenRoman, ScreenMorse, 
-      ScreenWordClock, ScreenChemical, ScreenCodeStatus, ScreenInternalTime, ScreenNCDXFBeacons1, 
-      ScreenNCDXFBeacons2, ScreenWSPRsequence, ScreenSidereal, ScreenGPSInfo, ScreenDemoClock,
+  {"Favorites 2  ", 
+      ScreenLocalUTCWeek, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon,  ScreenPlanetsInner, 
+      ScreenPlanetsOuter, ScreenISOHebIslam, ScreenChemical, ScreenBigNumbers3, ScreenBigNumbers3UTC, 
+      ScreenReminder, ScreenDemoClock, 
+      -1},
+  {"All          ",  
+      ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon, 
+      ScreenMoonRiseSet, ScreenPlanetsInner, ScreenPlanetsOuter,  ScreenLunarEclipse, ScreenEasterDates, 
+      ScreenISOHebIslam, ScreenTimeZones, ScreenUTCPosition, ScreenLocalUTC, ScreenBinary, 
+      ScreenBinaryHorBCD, ScreenBinaryVertBCD, ScreenBar, ScreenMengenLehrUhr, ScreenLinearUhr, 
+      ScreenHex, ScreenOctal, ScreenHexOctalClock, ScreenMathClockAdd, ScreenMathClockSubtract, 
+      ScreenMathClockMultiply, ScreenMathClockDivide, ScreenRoman, ScreenMorse, ScreenWordClock, 
+      ScreenChemical, ScreenCodeStatus, ScreenInternalTime, ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, 
+      ScreenWSPRsequence, ScreenSidereal, ScreenGPSInfo, ScreenBigNumbers2, ScreenBigNumbers2UTC, 
+      ScreenBigNumbers3, ScreenBigNumbers3UTC, ScreenReminder, ScreenDemoClock, 
       -1},  
   {"Calendar     ", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLunarEclipse, ScreenEasterDates, ScreenISOHebIslam,   
-      ScreenTimeZones,  ScreenUTCPosition, ScreenLocalUTC, ScreenCodeStatus, ScreenInternalTime, 
-      ScreenSidereal, ScreenGPSInfo, ScreenDemoClock, 
+      ScreenTimeZones,  ScreenUTCPosition,  ScreenCodeStatus, ScreenSidereal, ScreenGPSInfo, 
+      ScreenReminder, ScreenDemoClock, 
       -1},
   {"Fancy clocks ",
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, 
       ScreenBar, ScreenMengenLehrUhr, ScreenLinearUhr, ScreenHex, ScreenOctal, 
       ScreenHexOctalClock,  ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, ScreenMathClockDivide, 
-      ScreenRoman, ScreenMorse, ScreenWordClock, ScreenChemical, ScreenInternalTime,
-      ScreenCodeStatus, ScreenDemoClock, 
+      ScreenInternalTime, ScreenCodeStatus, ScreenRoman, ScreenMorse, ScreenWordClock, 
+      ScreenChemical, ScreenBigNumbers2, ScreenBigNumbers2UTC, ScreenBigNumbers3, ScreenBigNumbers3UTC, 
+      ScreenDemoClock, 
       -1},
   {"Astronomy    ",
-      ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunAzEl, ScreenLocalSunMoon, 
-      ScreenLocalMoon, ScreenMoonRiseSet,  ScreenLunarEclipse, ScreenEasterDates, ScreenPlanetsInner, 
-      ScreenPlanetsOuter, ScreenCodeStatus, ScreenInternalTime, ScreenSidereal, ScreenGPSInfo, 
+      ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon, 
+      ScreenMoonRiseSet,  ScreenLunarEclipse, ScreenEasterDates, ScreenPlanetsInner, ScreenPlanetsOuter, 
+      ScreenISOHebIslam, ScreenCodeStatus, ScreenInternalTime, ScreenSidereal, ScreenGPSInfo, 
       ScreenDemoClock, 
       -1},
   {"Radio amateur", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalMoon, ScreenUTCPosition, 
-      ScreenMorse, ScreenCodeStatus, ScreenInternalTime, ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, 
-      ScreenWSPRsequence, ScreenGPSInfo, ScreenDemoClock, 
+      ScreenMorse, ScreenCodeStatus, ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, 
+      ScreenGPSInfo, ScreenDemoClock, 
       -1}
-/*
-  {"Test         ", 
-     ScreenLocalUTCWeek, ScreenLocalSunSimpler, ScreenWordClock, ScreenChemical, ScreenCodeStatus, 
-     ScreenInternalTime, ScreenDemoClock, -1}   // for testing of newly developed screens 
-*/
+    // {"Test         ", 
+    //   ScreenLocalUTCWeek, ScreenBar, ScreenLinearUhr, ScreenWSPRsequence, ScreenBigNumbers2, ScreenBigNumbers2UTC, 
+    //   ScreenBigNumbers3, ScreenBigNumbers3UTC,  ScreenGPSInfo, ScreenCodeStatus, ScreenDemoClock, 
+    //   -1}   // for testing of newly developed screens 
+
 };
 
 // *** 2B. Date/time format
@@ -120,7 +129,7 @@ Date_Time dateTimeFormat[]=
    {"French  ", 'L', '/',      'h',    ':'}, // 22/04/2016, 12h04:32
    {"British ", 'L', '/',      ':',    ':'}, // 22/04/2016, 12:04:32
    {"Period  ", 'L', '.',      '.',    '.'}, // 22.04.2016, 12.04.32
-   {"Dot     ", 'L', (char)165,':',    ':'}  // 22*04*2016, 12:04:32
+   {"Dot     ", 'L', (char)DOT,':',    ':'}  // 22*04*2016, 12:04:32
 };
 
 //Order of day/month/year in date: 

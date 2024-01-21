@@ -5,7 +5,7 @@ nativeDayLong
 WordClockNorwegian
  */
 
-// user defined characters, #1-4 are already used in main code (for arrows), so numbers start with #5:
+// user defined characters, #1-4 are already used in main code (for arrows etc), so numbers start with 5:
 #define NO_DK_oe_SMALL   5    // ø
 #define SE_DE_oe_SMALL   239  // ö, already exists in LCD memory
 
@@ -14,8 +14,8 @@ WordClockNorwegian
 #define IS_eth_SMALL     6    // ð 
 #define SCAND_aa_SMALL   7    // å
 #define ES_IS_a_ACCENT   7    // á
-#define ES_e_ACCENT      8    // é
-#define IS_THORN_CAPITAL 8    // þ
+#define ES_e_ACCENT      4    // é   // 26.12.2023: from 8 to 4 as 8 is invalid address
+#define IS_THORN_CAPITAL 4    // þ   // 26.12.2023: from 8 to 4 as 8 is invalid address
 
 // Language is selected according to variable in clock_options.h
 // character definitions are in clock_native.h
@@ -50,7 +50,7 @@ void nativeDayLong(float j) {      // output through global char array today
 int addr = weekday(j) - 1;
 
 #ifdef FEATURE_DAY_PER_SECOND     //    fake the day -- for testing only
-          addr = second(local[timeZoneNumber]/2)%7; // change every 2 seconds
+          addr = second(localTime/2)%7; // change every 2 seconds
 #endif
 
   const uint8_t numCol = 7;
@@ -108,6 +108,58 @@ int addr = weekday(j) - 1;
 
 ///////////////////////////////////////////////
 
+void loadNativeCharacters()
+{
+//  LCD display definitions of special native characters for languages
+// included in setup()
+
+// Norwegian/Danish letters used in native day names and in WordClock, ø: "lørdag, søndag"
+//  https://forum.arduino.cc/t/error-lcd-16x2/211977/6
+    
+    byte OE_small[8] = {B00000, B00001, B01110, B10101, B10101, B01110, B10000, B00000}; // ø, for søndag, lørdag (Sunday, Saturday)
+    lcd.createChar(NO_DK_oe_SMALL, OE_small); //   Danish, Norwegian
+    
+    // ö exists as char(B11101111) = char(239), no need to create it separately, ä, ü, ñ also
+
+#if FEATURE_LANGUAGE_GROUP == 0 || FEATURE_LANGUAGE_GROUP == 2 // es
+    byte a_accent[] = {B00010, B00100, B01110, B00001, B01111, B10001, B01111, B00000};
+    lcd.createChar(ES_IS_a_ACCENT, a_accent);
+    
+    byte e_accent[] = {B00010, B00100, B01110, B10001, B11111, B10000, B01110, B00000};
+    lcd.createChar(ES_e_ACCENT, e_accent);
+#endif
+
+#if FEATURE_LANGUAGE_GROUP == 0 || FEATURE_LANGUAGE_GROUP == 1 || FEATURE_LANGUAGE_GROUP == 2 // no, se
+    // å: "åtte"
+    byte AA_small[8] = {B00100, B00000, B01110, B00001, B01111, B10001, B01111, B00000}; 
+    lcd.createChar(SCAND_aa_SMALL, AA_small); //   Norwegian, Swedish, (Danish)
+#endif
+
+#if FEATURE_LANGUAGE_GROUP == 0 || FEATURE_LANGUAGE_GROUP == 1  // no  
+    // Å: "Åtte"
+    byte AA_capital[8] = {B00100,B00000,B01110,B10001,B11111,B10001,B10001,B00000}; 
+    lcd.createChar(SCAND_AA_CAPITAL, AA_capital); //   Norwegian, (Danish, Swedish)
+#endif
+
+#if FEATURE_LANGUAGE_GROUP == 3 // 'is'
+    // Icelandic, á, ð, Þ
+    byte a_accent[] = {B00010, B00100, B01110, B00001, B01111, B10001, B01111, B00000};
+    lcd.createChar(ES_IS_a_ACCENT, a_accent);
+
+//   https://einhugur.com/blog/index.php/xojo-gpio/hd44780-based-lcd-display/
+    byte Thorn[] =  {B01000, B01110, B01001, B01001, B01110, B01000, B01000, B00000};
+    lcd.createChar(IS_THORN_CAPITAL, Thorn);
+
+      byte eth[] = {B01000, B00100, B01110, B10001, B10001, B10001, B01110, B00000};;
+//    byte eth[] = {B00100, B00010, B01110, B10001, B10001, B10001, B01110, B00000};
+    lcd.createChar(IS_eth_SMALL, eth);
+#endif
+    lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
+}
+
+
+///////////////////////////////////////////////
+
 void WordClockNorwegian()
 {
   char WordOnes[10][5] = {{"null"}, {"en  "}, {"to  "}, {"tre "}, {"fire"}, {"fem "}, {"seks"}, {"sju "}, {"Xtte"}, {"ni  "}}; // left justified
@@ -129,17 +181,17 @@ void WordClockNorwegian()
    */
  
   //  get local time
-  local[timeZoneNumber] = now() + utcOffset * 60;
-  Hour = hour(local[timeZoneNumber]);
-  Minute = minute(local[timeZoneNumber]);
-  Seconds = second(local[timeZoneNumber]);
+  localTime = now() + utcOffset * 60;
+  Hour = hour(localTime);
+  Minute = minute(localTime);
+  Seconds = second(localTime);
 
   lcd.setCursor(0, 0); 
   if (Hour < 10) 
   {
     lcd.print(CapiOnes[int(Hour)]); lcd.print(F("      "));
   }
-  else if (Hour > 10 & Hour < 20) lcd.print(Teens[int(Hour)-10]);
+  else if (Hour > 10 && Hour < 20) lcd.print(Teens[int(Hour)-10]);
   else
   {
     ones = Hour % 10; tens = (Hour - ones) / 10;
@@ -154,7 +206,7 @@ void WordClockNorwegian()
   }
   
   lcd.setCursor(4,1); 
-  if (Minute > 10 & Minute < 20) lcd.print(Teens[int(Minute)-10]);
+  if (Minute > 10 && Minute < 20) lcd.print(Teens[int(Minute)-10]);
   else
   {
     ones = Minute % 10; tens = (Minute - ones) / 10;
@@ -169,7 +221,7 @@ void WordClockNorwegian()
   }
    
   lcd.setCursor(8, 2); 
-  if (Seconds > 10 & Seconds < 20) lcd.print(Teens[int(Seconds)-10]);
+  if (Seconds > 10 && Seconds < 20) lcd.print(Teens[int(Seconds)-10]);
   else
   {
     ones = Seconds % 10; tens = (Seconds - ones) / 10;
@@ -186,6 +238,8 @@ void WordClockNorwegian()
    lcd.setCursor(0, 3);lcd.print(F("        "));
    lcd.setCursor(18, 3); lcd.print("  "); // blank out number in lower right-hand corner 
 }
+
+
 
 
 // THE END /////

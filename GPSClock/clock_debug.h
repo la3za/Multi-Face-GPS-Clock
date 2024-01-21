@@ -1,20 +1,29 @@
-// Debugging options 
+// turn on/off experimental options
+//#define EXP_TIDE_SIDEREAL  // Experimental option - unfinished
+//#define SNR_GPSInfo          // Possible to turn off SNR display as it is somewhat unstable - fixed Dec 2023
 
+// remove memory intensive functions for testing of possible dynamic memory overrun:
+//    Chemical
+// #define REMOVE
+
+// Debugging options 
 // Serial port output on/off:
 
 //#define FEATURE_SERIAL_GPS // serial output for debugging of GPS, GPSInfo
 //#define FEATURE_SERIAL_PLANETARY // serial output for debugging of planet predictions
 //#define FEATURE_SERIAL_SOLAR // serial output for debugging of solar
 //#define FEATURE_SERIAL_MOON // serial output for test of moon functions
-//#define FEATURE_SERIAL_MENU // serial output for menu & general testing
+//#define FEATURE_SERIAL_MENU // serial output for menu & general testing incl demo mode
 //#define FEATURE_SERIAL_TIME // serial output for testing of time/time zone
 //#define FEATURE_SERIAL_MATH // serial output for debugging of math clock
 //#define FEATURE_SERIAL_LUNARECLIPSE // serial output for debugging of moon eclipse
 //#define FEATURE_SERIAL_EQUATIO // serial output for debugging of Equation of Time (solar time)  
+//#define FEATURE_SERIAL_CHAR_SETS  // debug loading of new LCD character sets
+//#define FEATURE_SERIAL_EEPROM  // debug EEPROM read
        
-//#define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than that of the GPS
-                                 // using position defined below
-                                 // Note that altitude = 0 during such a test.
+//#define DEBUG_MANUAL_POSITION // Used for testing of location functions, when one is elsewhere than the position of the GPS
+                                // using position defined below
+                                // Note that altitude = 0 during such a test.
 
 #ifdef DEBUG_MANUAL_POSITION
 // test leading zeroes

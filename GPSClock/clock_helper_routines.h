@@ -45,6 +45,23 @@ InitScreenSelect
 RotarySecondarySetup
 RotarySetup
 
+GPSParse
+
+ArrowCharacters
+BarCharacters
+
+ThreeWideDigits
+draw_digit
+
+ThreeHighDigits2
+doNumber2
+
+gapLessCharacters
+gapLessBar
+
+readPersonEEPROM()
+bubbleSort()
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
 
@@ -66,11 +83,11 @@ void GetNextRiseSet(
   *pSet = pSet1;
   *sAz = sAz1;
 
-  local[timeZoneNumber] = now() + utcOffset * 60;
+  localTime = now() + utcOffset * 60;
 
  // local = 1638052000; // 27.11.2021, ~23.30
   
-  pLocal = 100 * hour(local[timeZoneNumber]) + minute(local[timeZoneNumber]);
+  pLocal = 100 * hour(localTime) + minute(localTime);
 
 #ifdef FEATURE_SERIAL_MOON
   //  Serial.print(F("zone "));Serial.println(zone);
@@ -280,9 +297,8 @@ void UpdateMoonPosition() {
 
   double RA, Dec, topRA, topDec, LST, HA;
 
-
   // UTC time:
-  moon2(yearGPS, monthGPS, dayGPS, (hourGPS + (minuteGPS / 60.0) + (secondGPS / 3600.0)), lon, latitude, &RA, &Dec, &topRA, &topDec, &LST, &HA, &moon_azimuth, &moon_elevation, &moon_dist);
+  moon2(year(now()), month(now()), day(now()), (hour(now()) + (minute(now()) / 60.0) + (second(now()) / 3600.0)), lon, latitude, &RA, &Dec, &topRA, &topDec, &LST, &HA, &moon_azimuth, &moon_elevation, &moon_dist);
 
 #ifdef FEATURE_SERIAL_MOON
   Serial.print(F("moon2: "));
@@ -303,7 +319,7 @@ byte AnalogButtonRead(byte button_number) {
   // 10 k from Vcc to A0, then n x 1k to gnd, n=0...9;
   //if (analog_line_read < 500) { // any of 10 buttons will trigger
 
-  if (analog_line_read < 131 & analog_line_read > 50) { // button 1
+  if (analog_line_read < 131 && analog_line_read > 50) { // button 1
     return 1;
   }
   else if (analog_line_read < 51) { // button 0
@@ -436,6 +452,7 @@ void DecToBinary(int n, int binaryNum[])
 void PrintFixedWidth(Print &out, int number, byte width, char filler = ' ') {
   int temp = number;
   //
+  // Sverre Holm 2022
   // call like this to print number to lcd: PrintFixedWidth(lcd, val, 3);
   // or for e.g. minutes PrintFixedWidth(lcd, minute, 2, '0')
   //
@@ -479,16 +496,16 @@ void LcdUTCTimeLocator(int lineno, int col=0)
 //  "22:30:46 UTC  JO59fu"
 {
 
-#ifdef FEATURE_PC_SERIAL_GPS_IN
-        hourGPS = hour(now());
-        minuteGPS = minute(now());
-        secondGPS = second(now());
-#endif
+// #ifdef FEATURE_PC_SERIAL_GPS_IN
+//         hourGPS = hour(now());
+//         minuteGPS = minute(now());
+//         secondGPS = second(now());
+// #endif
 
 
 //  if (gps.time.isValid()) {
     lcd.setCursor(min(max(col,0),1), lineno);
-    sprintf(textBuffer, "%02d%c%02d%c%02d UTC ", hourGPS, dateTimeFormat[dateFormat].hourSep, minuteGPS, dateTimeFormat[dateFormat].minSep, secondGPS);
+    sprintf(textBuffer, "%02d%c%02d%c%02d UTC ", hour(now()), dateTimeFormat[dateFormat].hourSep, minute(now()), dateTimeFormat[dateFormat].minSep, second(now()));
     lcd.print(textBuffer);
 //  }
 
@@ -550,22 +567,22 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
   // function that displays the following kind of info on lcd row "lineno"
   //  "Wed 20.10     22:30:46" - date separator in fixed location, even if date is ' 9.8'
   // get local time
-  local[timeZoneNumber] = now() + utcOffset * 60;
-  Hour = hour(local[timeZoneNumber]);
-  Minute = minute(local[timeZoneNumber]);
-  Seconds = second(local[timeZoneNumber]);
+  localTime = now() + utcOffset * 60;
+  Hour = hour(localTime);
+  Minute = minute(localTime);
+  Seconds = second(localTime);
   
   // local date
-  Day = day(local[timeZoneNumber]);
-  Month = month(local[timeZoneNumber]);
-  Year = year(local[timeZoneNumber]);
+  Day = day(localTime);
+  Month = month(localTime);
+  Year = year(localTime);
     
   lcd.setCursor(0, lineno);
   if (dayGPS != 0)
   {
      if (languageNumber >=0)
       {      
-          nativeDayLong(local[timeZoneNumber]);
+          nativeDayLong(localTime);
           // 17.05.2023:
           if ((strcmp(languages[languageNumber],"es") == 0) || (strcmp(languages[languageNumber],"de") == 0) )  
                sprintf(textBuffer,"%2.2s",today);  // 2 letters for day name in Spanish, German
@@ -576,14 +593,14 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
  {
          #ifdef FEATURE_DAY_PER_SECOND
     //      fake the day -- for testing only
-              sprintf(textBuffer, "%3s", dayShortStr( 1+(local[timeZoneNumber]/2)%7 )); // change every two seconds
+              sprintf(textBuffer, "%3s", dayShortStr( 1+(localTime/2)%7 )); // change every two seconds
          #else
-              sprintf(textBuffer, "%3s", dayShortStr(weekday(local[timeZoneNumber])));
+              sprintf(textBuffer, "%3s", dayShortStr(weekday(localTime)));
          #endif     
          #ifdef FEATURE_SERIAL_MENU
               Serial.println("LcdShortDayDateTimeLocal: ");
               Serial.println("  weekday(local), today");
-              Serial.println(weekday(local[timeZoneNumber]));
+              Serial.println(weekday(localTime));
               Serial.println(textBuffer);
          #endif
           
@@ -698,7 +715,7 @@ void LcdSolarRiseSet(
 
   lcd.setCursor(9, lineno);
   if (ScreenMode == ScreenLocalSunSimpler| ScreenMode == ScreenLocalSunAzEl) lcd.print(F("  "));
-  if (RiseSetDefinition == ' ')       lcd.write(DOWN_ARROW);
+  if (RiseSetDefinition == ' ')       lcd.write((byte)DOWN_ARROW);
   else if (RiseSetDefinition == 'C')  lcd.write(DASHED_DOWN_ARROW);
   else                                lcd.print(" ");
 
@@ -736,12 +753,12 @@ SolarElevation:
   double dElevation;
   double dhNoon, dmNoon;
 
-  c_time.iYear = yearGPS;
-  c_time.iMonth = monthGPS;
-  c_time.iDay = dayGPS;
-  c_time.dHours = hourGPS;
-  c_time.dMinutes = minuteGPS;
-  c_time.dSeconds = secondGPS;
+  c_time.iYear = year(now());
+  c_time.iMonth = month(now());
+  c_time.iDay = day(now());
+  c_time.dHours = hour(now());
+  c_time.dMinutes = minute(now());
+  c_time.dSeconds = second(now());
 
   c_loc.dLongitude = lon;
   c_loc.dLatitude  = latitude;
@@ -758,18 +775,18 @@ SolarElevation:
   sun_elevation = 90. - c_sposn.dZenithAngle;
   sun_azimuth = c_sposn.dAzimuth;
 
-   if (RiseSetDefinition == 'Z') // print current aZimuth, elevation
-      {
-        lcd.setCursor(0, lineno);
-        lcd.print(F("nowEl "));              // added "now" 18.6.2023
-        PrintFixedWidth(lcd, (int)float(sun_elevation), 3);
-        lcd.write(DEGREE);
-        lcd.setCursor(11, lineno);
-        lcd.print(F("Az "));
-        PrintFixedWidth(lcd, (int)float(sun_azimuth), 3);
-        lcd.write(DEGREE);
-        lcd.print(F("  "));         
-      }
+  if (RiseSetDefinition == 'Z') // print current aZimuth, elevation
+    {
+      lcd.setCursor(0, lineno);
+      lcd.print(F("nowEl "));              // added "now" 18.6.2023
+      PrintFixedWidth(lcd, (int)float(sun_elevation), 3);
+      lcd.write(DEGREE);
+      lcd.setCursor(11, lineno);
+      lcd.print(F("Az "));
+      PrintFixedWidth(lcd, (int)float(sun_azimuth), 3);
+      lcd.write(DEGREE);
+      lcd.print(F("  "));         
+    }
 
   ///// Solar noon
 
@@ -829,19 +846,19 @@ SolarElevation:
 }      // if (ScreenMode == ...)
 
 
-        if (RiseSetDefinition == 'O') // print sun's data at nOon
-        {
-          lcd.setCursor(0, lineno);
-          lcd.print(F("maxEl "));         // added "max" 18.6.2023
-          PrintFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
-          lcd.write(DEGREE);              // added 27.04.2022
-          lcd.print(" ");   
-          lcd.setCursor(12, lineno);
-          PrintFixedWidth(lcd, hNoon, 2);
-          lcd.print(dateTimeFormat[dateFormat].hourSep); 
-          PrintFixedWidth(lcd, mNoon, 2,'0');         
-          lcd.print(F("  "));       
-        }
+  if (RiseSetDefinition == 'O') // print sun's data at n_O_on
+  {
+    lcd.setCursor(0, lineno);
+    lcd.print(F("maxEl "));         // added "max" 18.6.2023
+    PrintFixedWidth(lcd, (int)float(sun_elevationNoon), 3);
+    lcd.write(DEGREE);              // added 27.04.2022
+    lcd.print(" ");   
+    lcd.setCursor(12, lineno);
+    PrintFixedWidth(lcd, hNoon, 2);
+    lcd.print(dateTimeFormat[dateFormat].hourSep); 
+    PrintFixedWidth(lcd, mNoon, 2,'0');         
+    lcd.print(F("  "));       
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -930,12 +947,12 @@ void ComputeEasterDate( // find date of Easter Sunday
 
     *Date = *Date + 13;
   
-  if (*Date > 31 & *Month == 3)
+  if (*Date > 31 && *Month == 3)
   {
     *Date = *Date - 31;
     *Month = *Month + 1;
   }
-  else if (*Date > 30 & *Month == 4)
+  else if (*Date > 30 && *Month == 4)
   {
     *Date = *Date - 30;
     *Month = *Month + 1; 
@@ -1090,7 +1107,7 @@ void MathDivide(int Term0,      // input number
       {
         j = 0;
         // find divisor > 0, < sqrt() and with only two digits in first factor:
-        for (n = 1; (n <= sqrt(Term0) & Term0*n < 100); n++)
+        for (n = 1; (n <= sqrt(Term0) && Term0*n < 100); n++)
         {
           if (Term0%n == 0)
                 {
@@ -1142,34 +1159,34 @@ void LcdMorse(int num)
 {
   switch (num) {
     case 1:
-      lcd.print((char)165);lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");
+      lcd.write(DOT);lcd.print(F("----"));
       break;
     case 2:
-      lcd.print((char)165);lcd.print((char)165);lcd.print("-");lcd.print("-");lcd.print("-");
+      lcd.write(DOT);lcd.write(DOT);lcd.print(F("---"));
       break;
     case 3:
-      lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print("-");lcd.print("-");
+      lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);lcd.print(F("--"));
       break; 
     case 4:
-      lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print("-");
+      lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);lcd.print(F("-"));
       break;  
     case 5:
-      lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);
+      lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);
       break;
     case 6:
-      lcd.print("-");lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);
+      lcd.print(F("-"));lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);
       break; 
     case 7:
-      lcd.print("-");lcd.print("-");lcd.print((char)165);lcd.print((char)165);lcd.print((char)165);
+      lcd.print(F("--"));lcd.write(DOT);lcd.write(DOT);lcd.write(DOT);
       break; 
     case 8:
-      lcd.print("-");lcd.print("-");lcd.print("-");lcd.print((char)165);lcd.print((char)165);
+      lcd.print(F("---"));lcd.write(DOT);lcd.write(DOT);
       break; 
     case 9:
-       lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");lcd.print((char)165);
-       break; 
+      lcd.print(F("----"));lcd.write(DOT);
+      break; 
     default:
-      lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");lcd.print("-");
+      lcd.print(F("-----"));
       break;                
   }
 }
@@ -1189,6 +1206,15 @@ void LCDPlanetData(float altitudePlanet, float azimuthPlanet, float phase, float
 
 ////////////////////////////////////////////////////////////////
 
+#ifdef REMOVE
+void LCDChemicalElement(int Hr, int Mn, int Sec) {
+}
+
+void LCDChemicalElementName(int ElementNo) {
+}
+
+#else
+
 void LCDChemicalElement(int Hr, int Mn, int Sec)
 //
 // print 1 or 2-letter chemical abbreviation
@@ -1201,9 +1227,9 @@ const char Elements[60][3] = {{"  "}, {"H "}, {"He"}, {"Li"}, {"Be"}, {"B "}, {"
                               {"Sb"}, {"Te"}, {"I "}, {"Xe"}, {"Cs"}, {"Ba"}, {"La"}, {"Ce"}, {"Pr"}}; 
 
 // Look up 2-letter chemical element from periodic table of elements for local time
-      lcd.print(Elements[Hr]);  lcd.print(":"); 
-      lcd.print(Elements[Mn]);  lcd.print(":"); 
-      lcd.print(Elements[Sec]); lcd.print(" ");
+      lcd.print(Elements[Hr]);  lcd.print(":"); // Hour
+      lcd.print(Elements[Mn]);  lcd.print(":"); // Minute
+      lcd.print(Elements[Sec]); lcd.print(" "); // Second
 }
 
 ////////////////////////////////////////////////////////////////
@@ -1254,6 +1280,8 @@ void LCDChemicalElementName(int ElementNo) {
   } else  lcd.print(F("            ")); // empty for element 0
 
 }
+
+#endif  // REMOVE
 
 
 ////////////////////////////////////////////////////////////////
@@ -1338,6 +1366,17 @@ void updateIntIntoEEPROM(int address, int number)
   EEPROM.update(address + 1, number & 0xFF);
 }
 
+String readStringFromEEPROM(int addrOffset)
+{
+  int newStrLen = EEPROM.read(addrOffset);
+  char data[newStrLen + 1];
+  for (int i = 0; i < newStrLen; i++)
+  {
+    data[i] = EEPROM.read(addrOffset + 1 + i);
+  }
+  data[newStrLen] = '\0'; // !!! NOTE !!! Remove the space between the slash "/" and "0" (I've added a space because otherwise there is a display bug)
+  return String(data);
+}
 
 ////////////////////////////////////////////////////////////
 void InitScreenSelect()
@@ -1364,19 +1403,26 @@ void RotarySecondarySetup(){ // June 2023
 
   lcd.setCursor(0,2);
   lcd.print(secondaryMenuNumber);lcd.print(" ");
+
+  #ifdef FEATURE_SERIAL_MENU
+      Serial.print(F("2ndary # ")); Serial.println(secondaryMenuNumber);
+  #endif
   
   switch (secondaryMenuNumber) {
 
-//case 0: lcd.print(F("< 0 GPS baud rate > ")); break;
-//case 1: lcd.print(F("< 1 FancyClock help>")); break;
-
 case 0: // 00000000 GPS baud rate //////////////
  {
-  baudRateNumber = readIntFromEEPROM(9); 
-  int oldBaudRateNumber = baudRateNumber;
+  baudRateNumber = EEPROM.read(EEPROM_OFFSET1+5); 
+  #ifdef FEATURE_SERIAL_MENU
+      Serial.print(F("2baudRateNumber ")); Serial.println(baudRateNumber);
+  #endif
+  int8_t oldBaudRateNumber = baudRateNumber;
   
   int noOfMenuIn = sizeof(gpsBaud1)/sizeof(gpsBaud1[1]); 
-  
+  #ifdef FEATURE_SERIAL_MENU
+      Serial.print(F("noOfMenuIn ")); Serial.println(noOfMenuIn);
+      Serial.println(gpsBaud1[baudRateNumber]);
+  #endif
   lcd.setCursor(0,2); PrintFixedWidth(lcd,baudRateNumber, 2); lcd.print(" "); PrintFixedWidth(lcd, gpsBaud1[baudRateNumber], 6);
   startTime = millis();
   while (toggleInternRotary == 0)
@@ -1407,7 +1453,7 @@ case 0: // 00000000 GPS baud rate //////////////
     }   
   } // while
 
-     updateIntIntoEEPROM(9, baudRateNumber);
+     EEPROM.update(EEPROM_OFFSET1+5, baudRateNumber);
      if (baudRateNumber != oldBaudRateNumber)  
      {
         delay(500);
@@ -1419,9 +1465,9 @@ case 0: // 00000000 GPS baud rate //////////////
 } // case 0 // baudrate
 
 
- case 1: // 1111111111 time on per minute for normal clock in most fancy clock displays ////////////////// 
+ case 1: // 1111111111 time for normal clock to be on per minute in most fancy clock displays ////////////////// 
  {
-  secondsClockHelp = EEPROM.read(11);  
+  secondsClockHelp = EEPROM.read(EEPROM_OFFSET1+6);  
   lcd.setCursor(0,2); PrintFixedWidth(lcd, secondsClockHelp, 3); lcd.print(F(" sec per min"));
   startTime = millis();
   while (toggleInternRotary == 0)
@@ -1451,14 +1497,14 @@ case 0: // 00000000 GPS baud rate //////////////
     }   
   } // while
   
-  EEPROM.update(11, secondsClockHelp);
+  EEPROM.update(EEPROM_OFFSET1+6, secondsClockHelp);
   lcd.clear();
   break;
  } // case 1: secondsClockHelp 
 
  case 2: // 222222222 no of seconds per screen as DemoClock cycles through all screen //////////////
  {
-  dwellTimeDemo = EEPROM.read(12);  
+  dwellTimeDemo = EEPROM.read(EEPROM_OFFSET1+7);  
   lcd.setCursor(0,2); PrintFixedWidth(lcd, dwellTimeDemo, 3); lcd.print(F(" sec per screen"));
   startTime = millis();
   while (toggleInternRotary == 0)
@@ -1467,10 +1513,10 @@ case 0: // 00000000 GPS baud rate //////////////
     volatile unsigned char rotaryResult = r.process();   
     if (rotaryResult) {
     if (rotaryResult == r.counterClockwise()) {              // decrease  value
-        dwellTimeDemo = max(dwellTimeDemo - 1,  5);
+        dwellTimeDemo = max(dwellTimeDemo - 1,  4);
       }
       else if (rotaryResult == r.clockwise()){               // increase  value
-        dwellTimeDemo = min(dwellTimeDemo + 1, 60);
+        dwellTimeDemo = dwellTimeDemo + 1; dwellTimeDemo = min(dwellTimeDemo, 60);
       }
     lcd.setCursor(0,2); PrintFixedWidth(lcd, dwellTimeDemo, 3); lcd.print(F(" sec per screen"));
     startTime = millis();  // reset counter if rotary is moved
@@ -1488,17 +1534,14 @@ case 0: // 00000000 GPS baud rate //////////////
     }   
   } // while
   
-  EEPROM.update(12, dwellTimeDemo);
+  EEPROM.update(EEPROM_OFFSET1+7, dwellTimeDemo);
   lcd.clear();
   break;
  } // case 2: dwellTimeDemo 
 
-
-
-
  case 3: // 3333333 no of seconds per math quiz //////////////
  {
-  mathSecondPeriod = EEPROM.read(13);  
+  mathSecondPeriod = EEPROM.read(EEPROM_OFFSET1+8);  
   lcd.setCursor(0,2); PrintFixedWidth(lcd, mathSecondPeriod, 3); lcd.print(F(" sec per quiz  "));
   startTime = millis();
   while (toggleInternRotary == 0)
@@ -1528,10 +1571,47 @@ case 0: // 00000000 GPS baud rate //////////////
     }   
   } // while
   
-  EEPROM.update(13, mathSecondPeriod);
+  EEPROM.update(EEPROM_OFFSET1+8, mathSecondPeriod);
   lcd.clear();
   break;
  } // case 3: mathSecondPeriod
+
+case 4: // 444444 toggle using_PPS on / off //////////////
+ {
+  using_PPS = EEPROM.read(EEPROM_OFFSET1+9);
+  lcd.setCursor(0,2); lcd.print(F("PPS Interrupt: ")); lcd.print(using_PPS);
+  startTime = millis();
+  while (toggleInternRotary == 0)
+  { 
+   // During each loop, check the encoder to see if it has been changed.
+    volatile unsigned char rotaryResult = r.process();   
+    if (rotaryResult) {
+    if (rotaryResult == r.counterClockwise()) {              // decrease  value
+        using_PPS = !using_PPS;
+      }
+      else if (rotaryResult == r.clockwise()){               // increase  value
+        using_PPS = !using_PPS;
+      }
+    lcd.setCursor(0,2); lcd.print(F("PPS Interrupt: ")); lcd.print(using_PPS);
+    startTime = millis();  // reset counter if rotary is moved
+    }
+
+    if (millis() - startTime > menuTimeOut) // check for time-out and return
+        {
+          lcd.clear();
+          return;  // time-out
+        }
+
+    if (r.buttonPressedReleased(25)) {            // 25ms = debounce_delay
+        toggleInternRotary = toggleInternRotary + 1; // internal variable
+        lcd.clear();
+    }   
+  } // while
+  EEPROM.update(EEPROM_OFFSET1+9, using_PPS);
+  lcd.clear();
+  break;
+
+ } // case 4: using_PPS 1 or 0
 
  default:  
       lcd.clear();
@@ -1553,7 +1633,7 @@ void RotarySetup()  //  May-June 2023
   #endif
   
   lcd.clear();
-  lcd.setCursor(0,0); lcd.print(F("< 0 Clock subset >  ")); // menuNumber = 0
+  lcd.setCursor(0,0); lcd.print(F("1. Clock subset >   ")); // menuNumber = 0
 
 // Top-level: Select which menu to enter: 
 
@@ -1572,18 +1652,19 @@ void RotarySetup()  //  May-June 2023
         }
         lcd.setCursor(0,0);        
         switch(menuNumber) {
-        case 0: lcd.print(F("< 0 Clock subset >  ")); break;
-        case 1: lcd.print(F("< 1 Backlight >     ")); break;
-        case 2: lcd.print(F("< 2 Date format >   ")); break;
-        case 3: lcd.print(F("< 3 Time zone >     ")); break;
-        case 4: lcd.print(F("< 4 Local language >")); break;
-        case 5: lcd.print(F("< 5 Secondary menu >")); break;
+        case 0: lcd.print(F("1. Clock subset >    ")); break;
+        case 1: lcd.print(F("2. Backlight >       ")); break;
+        case 2: lcd.print(F("3. Date format >     ")); break;
+        case 3: lcd.print(F("4. Time zone >       ")); break;
+        case 4: lcd.print(F("5. Local language >  ")); break;
+        case 5: lcd.print(F("6. Secondary menu >  ")); break;
          }
         startTime = millis();  // reset counter if rotary is moved
         }
         if (millis() - startTime > menuTimeOut) // check for time-out and return
         {
           menuNumber = 99; // do nothing
+          lcd.clear();       // 07.08.2023
           return;  // time-out
         }
     
@@ -1602,15 +1683,15 @@ switch (menuNumber) {
 
 case 0: // 0000000000 subset of clock menu ////////////////////////
 {
-  subsetMenu = readIntFromEEPROM(1); // read int from addresses 1 and 2
+  subsetMenu = EEPROM.read(EEPROM_OFFSET1+1); 
   startTime = millis();
   int noOfMenuIn = sizeof(menuStruct)/sizeof(menuStruct[0]);
   
   noOfStates = 0;
   while ((menuStruct[subsetMenu].order[noOfStates] >= 0) && (noOfStates <= lengthOfMenuIn))
         noOfStates = noOfStates + 1;                // find no of entries in this submenu
-  lcd.setCursor(0,1); lcd.print(subsetMenu);lcd.print(" ");lcd.print(menuStruct[subsetMenu].descr);
-  lcd.print(" (");PrintFixedWidth(lcd, noOfStates, 2); lcd.print(")");
+  lcd.setCursor(0,1); lcd.print((char)(97+subsetMenu));lcd.print(". ");lcd.print(menuStruct[subsetMenu].descr);
+  lcd.print("(");PrintFixedWidth(lcd, noOfStates, 2);lcd.print(")");
   
   while (toggleInternRotary == 1)
   { 
@@ -1629,8 +1710,8 @@ case 0: // 0000000000 subset of clock menu ////////////////////////
       noOfStates = 0;
       while ((menuStruct[subsetMenu].order[noOfStates] >= 0) && (noOfStates <= lengthOfMenuIn))
         noOfStates = noOfStates + 1;                // find no of entries in this submenu
-      lcd.setCursor(0,1); lcd.print(subsetMenu);lcd.print(" ");lcd.print(menuStruct[subsetMenu].descr);
-      lcd.print(" (");PrintFixedWidth(lcd, noOfStates, 2);lcd.print(")");     
+      lcd.setCursor(0,1); lcd.print((char)(97+subsetMenu));lcd.print(". ");lcd.print(menuStruct[subsetMenu].descr);
+      lcd.print("(");PrintFixedWidth(lcd, noOfStates, 2);lcd.print(")");
       startTime = millis();  // reset counter if rotary is moved
     } 
 
@@ -1647,7 +1728,7 @@ case 0: // 0000000000 subset of clock menu ////////////////////////
     }   
   } // while
 
-updateIntIntoEEPROM(1, subsetMenu);
+EEPROM.update(EEPROM_OFFSET1+1, subsetMenu);
 InitScreenSelect();   //  find no of entries in menuIn
 dispState = 0; // go back to first submenu
 lcd.clear();  
@@ -1657,19 +1738,23 @@ break;
 
  case 1: // 1111111111 backlight ////////////////// 
  {
-  backlightVal = EEPROM.read(0);  
+  backlightVal = EEPROM.read(EEPROM_OFFSET1+0);  
   lcd.setCursor(0,1); PrintFixedWidth(lcd, backlightVal, 6);
   startTime = millis();
+  byte step = 10;
   while (toggleInternRotary == 1)
   { 
    // During each loop, check the encoder to see if it has been changed.
     volatile unsigned char rotaryResultBacklight = r.process();   
     if (rotaryResultBacklight) {
+      step = 10;
     if (rotaryResultBacklight == r.counterClockwise()) {              // decrease backlight value
-        backlightVal = max(backlightVal - 10,   0);
+        if (backlightVal <= 30) step = 2;            // smaller steps for low light (for better photos)
+        backlightVal = max(backlightVal - step,   2);
       }
       else if (rotaryResultBacklight == r.clockwise()){               // increase backlight value
-        backlightVal = min(backlightVal + 10, 250);
+        if (backlightVal < 30) step = 2;            // smaller steps for low light (for better photos)
+        backlightVal = min(backlightVal + step, 250);
       }
     lcd.setCursor(0,1); PrintFixedWidth(lcd, backlightVal, 6);
     analogWrite(LCD_PWM, backlightVal); 
@@ -1688,7 +1773,7 @@ break;
     }   
   } // while
   
-  EEPROM.update(0, backlightVal);
+  EEPROM.update(EEPROM_OFFSET1, backlightVal);
   lcd.clear();
   break;
  } // case 1: backlight 
@@ -1697,12 +1782,12 @@ break;
 case 2: // 2222222222 date format ////////////////
 // code from here instead ? https://stackoverflow.com/questions/53679924/how-to-constrain-a-value-within-a-range
  { 
-  dateFormat = readIntFromEEPROM(3); // read int from EEPROM addresses 3 and 4
-  Day = day(local[timeZoneNumber]);
-  Month = month(local[timeZoneNumber]);
-  Year = year(local[timeZoneNumber]);
+  dateFormat = EEPROM.read(EEPROM_OFFSET1+2); 
+  Day = day(localTime);
+  Month = month(localTime);
+  Year = year(localTime);
   
-  lcd.setCursor(0,1); lcd.print(dateFormat); lcd.print(" ");lcd.print(dateTimeFormat[dateFormat].descr);
+  lcd.setCursor(0,1); lcd.print((char)(97+dateFormat)); lcd.print(". ");lcd.print(dateTimeFormat[dateFormat].descr);
   lcd.setCursor(0,3); LcdDate(Day, Month, Year);
   sprintf(textBuffer, " %02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds);
   lcd.print(textBuffer);
@@ -1724,7 +1809,7 @@ case 2: // 2222222222 date format ////////////////
         if (dateFormat >= noOfMenuIn) dateFormat = dateFormat - noOfMenuIn;
       }
 
-    lcd.setCursor(0,1); lcd.print(dateFormat); lcd.print(" ");lcd.print(dateTimeFormat[dateFormat].descr);
+    lcd.setCursor(0,1); lcd.print((char)(97+dateFormat)); lcd.print(". ");lcd.print(dateTimeFormat[dateFormat].descr);
     lcd.setCursor(0,3); LcdDate(Day, Month, Year);
     sprintf(textBuffer, " %02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds);
     lcd.print(textBuffer);
@@ -1744,7 +1829,7 @@ case 2: // 2222222222 date format ////////////////
     }   
   } // while
 
-  updateIntIntoEEPROM(3, dateFormat);
+  EEPROM.update(EEPROM_OFFSET1+2, dateFormat);
   lcd.clear();
   break;
  }  // case 2: date format
@@ -1757,15 +1842,16 @@ case 3: // 333333333 time zone /////////////////////////////////////////
   #endif
   
   lcd.setCursor(0,1);
-//  numTimeZones is set in clock_zone.h
-  timeZoneNumber = readIntFromEEPROM(7); // read int from EEPROM addresses 7 and 8
-  if ((timeZoneNumber < 0) || (timeZoneNumber >= numTimeZones)) // if EEPROM stores invalid value
+
+  timeZoneNumber = EEPROM.read(EEPROM_OFFSET1+4); 
+  if ((timeZoneNumber < 0) || (timeZoneNumber >= NUMBER_OF_TIME_ZONES-1)) // if EEPROM stores invalid value
        timeZoneNumber = 0;                                      // set to default value 
 
-  lcd.setCursor(0,1); PrintFixedWidth(lcd, timeZoneNumber, 2); lcd.print(" "); lcd.print(tcr[timeZoneNumber] -> abbrev);lcd.print("  ");
+  lcd.setCursor(0,1); lcd.print((char)(97+timeZoneNumber)); //PrintFixedWidth(lcd, timeZoneNumber, 2); 
+  lcd.print(". "); lcd.print(tcr -> abbrev);lcd.print("  ");
 
   lcd.setCursor(9,3); lcd.print(F("UTC"));
-  utcOffset = local[timeZoneNumber] / long(60) - utc / long(60); // order of calculation is important 
+  utcOffset = localTime / long(60) - utc / long(60); // order of calculation is important 
   if (utcOffset >=0)  lcd.print("+");
   lcd.print(float(utcOffset)/60); lcd.print("  ");
 
@@ -1779,20 +1865,23 @@ case 3: // 333333333 time zone /////////////////////////////////////////
     if (rotaryResult) {
     if (rotaryResult == r.counterClockwise()) {              
         timeZoneNumber = timeZoneNumber - 1;
-        if (timeZoneNumber < firstZone) timeZoneNumber = timeZoneNumber + numTimeZones - firstZone + 1;
+        if (timeZoneNumber < firstZone) timeZoneNumber = timeZoneNumber + NUMBER_OF_TIME_ZONES - firstZone;
       }
       else if (rotaryResult == r.clockwise()){               
         timeZoneNumber = timeZoneNumber + 1;
-        if (timeZoneNumber > numTimeZones) timeZoneNumber = timeZoneNumber - numTimeZones + firstZone - 1;
+        if (timeZoneNumber > NUMBER_OF_TIME_ZONES-1) timeZoneNumber = timeZoneNumber - NUMBER_OF_TIME_ZONES + firstZone;
       }
 #ifdef FEATURE_SERIAL_TIME      
-//        Serial.print(F("firstZone ")); Serial.print(firstZone); Serial.print(F(" numTimeZones "));Serial.print(numTimeZones);
         Serial.print(F("Z: timeZoneNumber "));Serial.print(timeZoneNumber);Serial.print(F(" "));Serial.println(tcr[timeZoneNumber] -> abbrev);
 #endif
       
-      lcd.setCursor(0,1); PrintFixedWidth(lcd, timeZoneNumber, 2); lcd.print(" "); 
-      lcd.print(tcr[timeZoneNumber] -> abbrev);lcd.print("  ");
-      utcOffset = local[timeZoneNumber] / long(60) - utc / long(60); // order of calculation is important
+      lcd.setCursor(0,1); lcd.print((char)(97+timeZoneNumber)); lcd.print(". ");
+      
+      tz = *timeZones_arr[timeZoneNumber]; 
+      localTime = tz.toLocal(utc,&tcr);
+
+      lcd.print(tcr -> abbrev);lcd.print("  ");
+      utcOffset = localTime / long(60) - utc / long(60); // order of calculation is important
       lcd.setCursor(9,3); lcd.print(F("UTC")); 
       if (utcOffset >=0)  lcd.print("+");
       lcd.print(float(utcOffset)/60); lcd.print("  ");
@@ -1810,7 +1899,7 @@ case 3: // 333333333 time zone /////////////////////////////////////////
     }   
   } // while
  
-  updateIntIntoEEPROM(7, timeZoneNumber);
+  EEPROM.update(EEPROM_OFFSET1+4, timeZoneNumber);
   lcd.clear();
   break;
 }  // case 3: time zone 
@@ -1821,19 +1910,19 @@ case 3: // 333333333 time zone /////////////////////////////////////////
   
   lcd.setCursor(0,1);
   byte numLanguages = sizeof(languages) / sizeof(languages[0]);
-  languageNumber = readIntFromEEPROM(5); // read int from EEPROM addresses 5 and 6
-  
-  lcd.setCursor(4,1);
+  languageNumber = EEPROM.read(EEPROM_OFFSET1+3); 
+  lcd.print((char)(98+languageNumber));lcd.print(". ");
+  //lcd.setCursor(4,1);
   if (languageNumber >=0) lcd.print(languages[languageNumber]);
   else                    lcd.print(F("en"));
 
   if (languageNumber >=0)
     {
-    nativeDayLong(local[timeZoneNumber]);
+    nativeDayLong(localTime);
     sprintf(todayFormatted,"%12s", today);
     }
   else // English
-    sprintf(todayFormatted, "%12s", dayStr(weekday(local[timeZoneNumber])));  // normal
+    sprintf(todayFormatted, "%12s", dayStr(weekday(localTime)));  // normal
     lcd.setCursor(0,3);; lcd.print(todayFormatted);
  
   startTime = millis();
@@ -1874,18 +1963,18 @@ case 3: // 333333333 time zone /////////////////////////////////////////
           lcd.clear();
           return;  // time-out
         }    
-  
-    lcd.setCursor(4,1); 
+    lcd.setCursor(0,1);lcd.print((char)(98+languageNumber));lcd.print(". ");
+    //lcd.setCursor(4,1); 
     if (languageNumber >=0) lcd.print(languages[languageNumber]);
     else                    lcd.print(F("en"));
 
     if (languageNumber >=0)
     {
-      nativeDayLong(local[timeZoneNumber]);
+      nativeDayLong(localTime);
       sprintf(todayFormatted,"%12s", today);
     }
     else // English
-      sprintf(todayFormatted, "%12s", dayStr(weekday(local[timeZoneNumber])));  // normal
+      sprintf(todayFormatted, "%12s", dayStr(weekday(localTime)));  // normal
     lcd.setCursor(0,3);; lcd.print(todayFormatted);
  
     
@@ -1895,7 +1984,7 @@ case 3: // 333333333 time zone /////////////////////////////////////////
     }   
   } // while
 
-  updateIntIntoEEPROM(5, languageNumber); 
+  EEPROM.update(EEPROM_OFFSET1+3, languageNumber); 
   lcd.clear();
   break;
   
@@ -1903,8 +1992,8 @@ case 3: // 333333333 time zone /////////////////////////////////////////
  
 case 5: // 55555555 Secondary menu //////////////
  {
-  int noOfMenuIn = 4; 
-  lcd.setCursor(0,1); lcd.print(F("<<GPS baudrate   >>   "));
+  int noOfMenuIn = 5; 
+  lcd.setCursor(0,1); lcd.print(F("a. GPS baudrate >    "));
   
   startTime = millis();
   secondaryMenuNumber = 0;
@@ -1921,13 +2010,13 @@ case 5: // 55555555 Secondary menu //////////////
         secondaryMenuNumber = secondaryMenuNumber + 1;
         if (secondaryMenuNumber >= noOfMenuIn) secondaryMenuNumber = secondaryMenuNumber - noOfMenuIn;
       }
-      //lcd.setCursor(0,1); lcd.print(secondaryMenuNumber); 
       lcd.setCursor(0,1);
       switch (secondaryMenuNumber) { 
-      case 0: lcd.print(F("<< GPS baudrate >>  ")); break;
-      case 1: lcd.print(F("<< FancyClock help>>")); break;
-      case 2: lcd.print(F("<< Dwell time demo>>")); break;
-      case 3: lcd.print(F("<< Time, math quiz>>")); break;
+      case 0: lcd.print(F("a. GPS baudrate >   ")); break;
+      case 1: lcd.print(F("b. FancyClock help >")); break;
+      case 2: lcd.print(F("c. Dwell time demo >")); break;
+      case 3: lcd.print(F("d. Time, math quiz >")); break;
+      case 4: lcd.print(F("e. GPS PPS >        ")); break;
       }
       startTime = millis();  // reset counter if rotary is moved
     } 
@@ -1949,13 +2038,874 @@ case 5: // 55555555 Secondary menu //////////////
 
 
 default:  
-      return;            // exit!                   
-      
+      return;            // exit!     
+
 } // switch
   
 }
 
+////////////////////////////////////////////////
 
 
+void GPSParse()
+{
+// From TinyGPSParse.ino
+// Purpose is to extract additional GPS info, in particular SNR per satellite. Used in GPSInfo()
+
+#ifdef FEATURE_SERIAL_GPS 
+      Serial.println(F("*** Enter  GPSParse"));
+    #endif
+
+  if (totalGPGSVMessages.isUpdated())    
+  {
+    for (int i=0; i<4; ++i)
+    {
+      int no = atoi(satNumber[i].value());
+      #ifdef FEATURE_SERIAL_GPS
+            Serial.print(F("SatNumber is ")); Serial.println(no);
+      #endif
+              
+        if (no >= 1 && no <= MAX_SATELLITES)
+        {
+          sats[no-1].elevation = atoi(elevation[i].value());
+          sats[no-1].azimuth = atoi(azimuth[i].value());
+          sats[no-1].snr = atoi(snr[i].value());
+//                sats[no-1].snr = min(sats[no-1].snr, 99);    // to limit wild values 30.05.2023
+          sats[no-1].active = true;
+        }
+        #ifdef FEATURE_SERIAL_GPS
+        //      Serial.print(F(", SNR ")); Serial.println(sats[no-1].snr);
+        #endif  
+    }
+
+      int totalMessages = atoi(totalGPGSVMessages.value());
+      int currentMessage = atoi(messageNumber.value());
+      if (totalMessages == currentMessage)
+      {   
+        #ifdef FEATURE_SERIAL_GPS 
+          Serial.print(F("Sats=")); Serial.print(gps.satellites.value());
+          Serial.print(F(" Nums="));
+        #endif
+       
+        #ifdef FEATURE_SERIAL_GPS 
+        for (int i=0; i<MAX_SATELLITES; ++i)
+          if (sats[i].active)
+          {
+            Serial.print(i+1);
+            Serial.print(F(" "));
+          }
+        Serial.print(F(" Elevation="));
+        for (int i=0; i<MAX_SATELLITES; ++i)
+          if (sats[i].active)
+          {
+            Serial.print(sats[i].elevation);
+            Serial.print(F(" "));
+          }
+        Serial.println();
+        Serial.print(F("        Azimuth="));
+        
+        for (int i=0; i<MAX_SATELLITES; ++i)
+          if (sats[i].active)
+          {
+            Serial.print(sats[i].azimuth);
+            Serial.print(F(" "));
+          }
+        
+          Serial.print(F(" SNR="));
+        #endif
+          SNRAvg = 0.0;
+          totalSats = 0;
+          for (int i=0; i<MAX_SATELLITES; ++i)
+          if (sats[i].active)
+           {
+             #ifdef FEATURE_SERIAL_GPS
+               Serial.print(sats[i].snr);
+               Serial.print(F(" "));
+             #endif
+            if (sats[i].snr >0)          // 0 when not tracking
+             {
+              totalSats = totalSats + 1; 
+              SNRAvg = SNRAvg + float(sats[i].snr);
+             }
+           }
+          if (totalSats>0) SNRAvg = SNRAvg/totalSats; 
+          else                      SNRAvg = 0;               // 16.11.2022
+        
+          #ifdef FEATURE_SERIAL_GPS
+            Serial.println();Serial.print(" SNRAvg "); Serial.print(SNRAvg); 
+            Serial.print(", "); Serial.println(round(SNRAvg));
+          #endif
+
+          for (int i=0; i<MAX_SATELLITES; ++i)
+          sats[i].active = false;
+      }
+
+  } // (totalGPGSVMessages.isUpdated())
+
+    #ifdef FEATURE_SERIAL_GPS 
+      Serial.println(F("*** Exit  GPSParse"));
+    #endif
+
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Store bit maps, designed using editor at https://maxpromer.github.io/LCD-Character-Creator/
+const byte upDashedArray[8]   PROGMEM = {0x4, 0xa, 0x15, 0x0, 0x4, 0x0, 0x4, 0x0};
+const byte downDashedArray[8] PROGMEM = {0x4, 0x0, 0x4, 0x0, 0x15, 0xa, 0x4, 0x0};
+const byte upArray[8]         PROGMEM = {0x4, 0xe, 0x15, 0x4, 0x4, 0x4, 0x4, 0x0};
+const byte downArray[8]       PROGMEM = {0x4, 0x4, 0x4, 0x4, 0x15, 0xe, 0x4, 0x0};
+
+void loadArrowCharacters()
+{
+  // upload characters to the lcd
+  memcpy_P(buffer,upDashedArray, 8);
+  lcd.createChar(DASHED_UP_ARROW, buffer);
+  memcpy_P(buffer,downDashedArray, 8);
+  lcd.createChar(DASHED_DOWN_ARROW, buffer);
+  memcpy_P(buffer,upArray, 8);
+  lcd.createChar(UP_ARROW, buffer);
+  memcpy_P(buffer,downArray, 8); 
+  lcd.createChar((byte)DOWN_ARROW, buffer);
+  lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+const byte oneFilled[8] PROGMEM = {
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000
+};
+
+const byte twoFilled[8] PROGMEM = {
+  B11000,
+  B11000,
+  B11000,
+  B11000,
+  B11000,
+  B11000,
+  B11000,
+  B11000
+};
+
+const byte threeFilled[8] PROGMEM = {
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100
+};
+
+const byte fourFilled[8] PROGMEM = {
+  B11110,
+  B11110,
+  B11110,
+  B11110,
+  B11110,
+  B11110,
+  B11110,
+  B11110
+};
+
+void loadSimpleBarCharacters()
+{
+// upload characters to the lcd
+  memcpy_P(buffer,oneFilled, 8);
+  lcd.createChar(ONE_BAR, buffer);
+  memcpy_P(buffer,twoFilled, 8);
+  lcd.createChar(TWO_BARS, buffer);
+  memcpy_P(buffer,threeFilled, 8);
+  lcd.createChar(THREE_BARS, buffer);
+  memcpy_P(buffer,fourFilled, 8);
+  lcd.createChar(FOUR_BARS, buffer);
+  lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////
+// the 8 arrays that form each segment of the custom numbers, 2 high, 3 wide
+/*
+LT= left top
+UB= upper bar
+RT= right top
+LL= lower left
+LB= lower bar
+LR= lower right
+UMB= upper middle bars(upper middle section of the '8')
+LMB= lower middle bars(lower middle section of the '8')
+*/
+
+const byte LT[8] PROGMEM = 
+{
+  B00111,
+  B01111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111
+};
+const byte UB[8] PROGMEM =
+{
+  B11111,
+  B11111,
+  B11111,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000
+};
+const byte RT[8] PROGMEM =
+{
+  B11100,
+  B11110,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111
+};
+const byte LL[8] PROGMEM =
+{
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B01111,
+  B00111
+};
+const byte LB[8] PROGMEM =
+{
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B11111,
+  B11111,
+  B11111
+};
+const byte LR[8] PROGMEM =
+{
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B11110,
+  B11100
+};
+const byte UMB[8] PROGMEM =
+{
+  B11111,
+  B11111,
+  B11111,
+  B00000,
+  B00000,
+  B00000,
+  B11111,
+  B11111
+};
+const byte LMB[8] PROGMEM =
+{
+  B11111,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B11111,
+  B11111,
+  B11111
+};
+
+void loadThreeWideDigits()
+// https://forum.arduino.cc/t/large-alphanumeric-on-lcd/8946/3
+{
+
+// assignes each segment a write number
+ memcpy_P(buffer,LT, 8);
+ lcd.createChar((byte)0 , buffer);
+ memcpy_P(buffer,UB, 8);
+ lcd.createChar(1 , buffer);
+ memcpy_P(buffer,RT, 8);
+ lcd.createChar(2 , buffer);
+ memcpy_P(buffer,LL, 8);
+ lcd.createChar(3 , buffer);
+ memcpy_P(buffer,LB, 8);
+ lcd.createChar(4 , buffer);
+ memcpy_P(buffer,LR, 8);
+ lcd.createChar(5 , buffer);
+ memcpy_P(buffer,UMB, 8);
+ lcd.createChar(6 , buffer);
+ memcpy_P(buffer,LMB, 8);
+ lcd.createChar(7 , buffer);
+ lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
+}
+
+// position in display
+int x = 0;
+int y = 0;
+
+///////////////////////////////////////////////////////
+
+void custom0()
+{ // uses segments to build the number 0
+  lcd.setCursor(x, y); // set cursor to column 0, line 0 (first row)
+  lcd.write(byte(0));  // call each segment to create
+  lcd.write(byte(1));  // top half of the number
+  lcd.write(byte(2));
+  lcd.setCursor(x, y+1); // set cursor to colum 0, line 1 (second row)
+  lcd.write(byte(3));  // call each segment to create
+  lcd.write(byte(4));  // bottom half of the number
+  lcd.write(byte(5));
+}
+
+void custom1()
+{
+  lcd.setCursor(x,y+0);
+  //lcd.write(byte(1)); // 25.10.2023
+  lcd.write(ALL_OFF);
+  //lcd.write(byte(2)); // 25.10.2023
+  lcd.write(byte(0));
+  lcd.write(ALL_OFF);
+  lcd.setCursor(x,y+1);
+  lcd.write(ALL_OFF);
+  lcd.write(byte(5));
+  lcd.write(ALL_OFF);
+}
+
+void custom2()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(6));
+  lcd.write(byte(6));
+  lcd.write(byte(2));
+  lcd.setCursor(x, y+1);
+  lcd.write(byte(3));
+  lcd.write(byte(7));
+  lcd.write(byte(7));
+}
+
+void custom3()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(6));
+  lcd.write(byte(6));
+  lcd.write(byte(2));
+  lcd.setCursor(x, y+1);
+  lcd.write(byte(7));
+  lcd.write(byte(7));
+  lcd.write(byte(5)); 
+}
+
+void custom4()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(3));
+  lcd.write(byte(4));
+  lcd.write(byte(2));
+  lcd.setCursor(x, y+1);
+  lcd.write(ALL_OFF);
+  lcd.write(ALL_OFF);
+  lcd.write(byte(5));
+}
+
+void custom5()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(0));
+  lcd.write(byte(6));
+  lcd.write(byte(6));
+  lcd.setCursor(x, y+1);
+  lcd.write(byte(7));
+  lcd.write(byte(7));
+  lcd.write(byte(5));
+}
+
+void custom6()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(0));
+  lcd.write(byte(6));
+  lcd.write(byte(6));
+  lcd.setCursor(x, y+1);
+  lcd.write(byte(3));
+  lcd.write(byte(7));
+  lcd.write(byte(5));
+}
+
+void custom7()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(1));
+  lcd.write(byte(1));
+  lcd.write(byte(2));
+  lcd.setCursor(x,y+1);
+  lcd.write(ALL_OFF);
+  lcd.write(byte(0));
+  lcd.write(ALL_OFF);
+}
+
+void custom8()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(0));
+  lcd.write(byte(6));
+  lcd.write(byte(2));
+  lcd.setCursor(x,y+1);
+  lcd.write(byte(3));
+  lcd.write(byte(7));
+  lcd.write(byte(5));
+}
+
+void custom9()
+{
+  lcd.setCursor(x,y);
+  lcd.write(byte(0));
+  lcd.write(byte(6));
+  lcd.write(byte(2));
+  lcd.setCursor(x, y+1);
+  lcd.write(ALL_OFF);
+  lcd.write(ALL_OFF);
+  lcd.write(byte(5));
+}
+
+void draw_digit(byte digit, byte xpos, byte ypos)
+// three width wide digits
+{
+  x = xpos;
+  y = ypos;
+  switch (digit) {
+  case 0:
+    custom0();
+    break;
+  case 1:
+    custom1();
+    break;
+  case 2:
+    custom2();
+    break;
+  case 3:
+    custom3();
+    break;
+  case 4:
+    custom4();
+    break;
+  case 5:
+    custom5();
+    break;
+  case 6:
+    custom6();
+    break;
+  case 7:
+    custom7();
+    break;
+  case 8:
+    custom8();
+    break;
+  case 9:
+    custom9();
+    break;
+  }
+}
+
+////////////////////////////////////////////////////////////////
+// 2x3 numbers variant 2 with space in second half of character below
+
+const byte c0[8] PROGMEM = //upper small, in: 1
+{
+  B00111,
+  B00111,
+  B00111,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000
+};
+const byte c1[8] PROGMEM = //left line, in 1,4,6,0
+{
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100
+};
+const byte c2[8] PROGMEM =  // upper filled, in 1,2,3,5,6,7,8,9,0
+{
+  B11111,
+  B11111,
+  B11111,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000
+};
+const byte c3[8] PROGMEM = // mirrored inverted L, in 2,3,4,6,7,8,9,0
+{
+  B11111,
+  B11111,
+  B11111,
+  B00111,
+  B00111,
+  B00111,
+  B00111,
+  B00111
+};
+const byte c4[8] PROGMEM = // inverted L, in 2,5,6,7,9,0
+{
+  B11111,
+  B11111,
+  B11111,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B11100
+};
+const byte c5[8] PROGMEM =  // right line, in 4,0
+{
+  B00111,
+  B00111,
+  B00111,
+  B00111,
+  B00111,
+  B00111,
+  B00111,
+  B00111,
+};
+const byte c6[8] PROGMEM =  // colon
+{
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B01110,
+  B01110,
+  B01110
+};
+
+/////////////////////////////////
+void loadThreeHighDigits2()
+{
+    memcpy_P(buffer,c0, 8);
+    lcd.createChar((byte)0, buffer);                      // digit piece
+    memcpy_P(buffer,c1, 8);
+    lcd.createChar(1, buffer);                      // digit piece
+    memcpy_P(buffer,c2, 8);
+    lcd.createChar(2, buffer);                      // digit piece
+    memcpy_P(buffer,c3, 8);
+    lcd.createChar(3, buffer);                      // digit piece
+    memcpy_P(buffer,c4, 8);
+    lcd.createChar(4, buffer);                      // digit piece
+    memcpy_P(buffer,c5, 8);
+    lcd.createChar(5, buffer);                      // digit piece
+    memcpy_P(buffer,c6, 8);
+    lcd.createChar(6, buffer);                      // digit piece
+    lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
+}
+
+////////////////////////////////////////////////////////
+void doNumber2(byte num, byte r, byte c) {
+    lcd.setCursor(c,r);
+    switch(num) {
+      case 0: lcd.write(byte(4)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(1)); lcd.write(byte(5)); 
+              lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(2)); break;
+            
+      case 1: lcd.write(byte(0)); lcd.write(byte(1)); 
+              lcd.setCursor(c,r+1); lcd.print(" "); lcd.write(byte(1));
+              lcd.setCursor(c,r+2); lcd.write(byte(0)); lcd.write(byte(2)); break;
+            
+      case 2: lcd.write(byte(2)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(4)); lcd.write(byte(2)); 
+              lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(2)); break;  
+            
+      case 3: lcd.write(byte(2)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(0)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(2)); break;  
+              
+            
+      case 4: lcd.write(byte(1)); lcd.write(byte(5)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(2)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+2); lcd.print(" "); lcd.write(byte(0)); break;  
+            
+      case 5: lcd.write(byte(4)); lcd.write(byte(2)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(2)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(2)); break; 
+
+      case 6: lcd.write(byte(1)); lcd.print(" ");     
+              lcd.setCursor(c,r+1); lcd.write(byte(4)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(2)); break;  
+
+      case 7: lcd.write(byte(2)); lcd.write(byte(3));
+              lcd.setCursor(c,r+1); lcd.print(" "); lcd.write(byte(5)); 
+              lcd.setCursor(c,r+2); lcd.print(" ");  lcd.write(byte(0)); break;  
+
+      case 8: lcd.write(byte(4)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(4)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(2)); break;  
+   
+      case 9: lcd.write(byte(4)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+1); lcd.write(byte(2)); lcd.write(byte(3)); 
+              lcd.setCursor(c,r+2);  lcd.print(" "); lcd.write(byte(0)); break;  
+
+       case 11: lcd.setCursor(c,r); lcd.write(byte(6));       // colon
+                lcd.setCursor(c,r+1); lcd.write(byte(6)); break; 
+    } 
+}
+
+
+// Progress bar with every other vertical line filled, 
+// advantage: space between characters in display are no longer visible
+// only 7 dots high, not the full 8. For WSPR time bar
+// https://robodoupe.cz/2015/progress-bar-pro-arduino-a-lcd-displej/
+  const byte g70[8] PROGMEM = {
+    B00000,
+    B10101,
+    B10000,
+    B10000,
+    B10000,
+    B10000,
+    B10000,
+    B10101}; //0 |__ 
+  const byte g71[8] PROGMEM = {
+    B00000,
+    B10101,
+    B10100,
+    B10100, 
+    B10100, 
+    B10100, 
+    B10100, 
+    B10101}; //1 ||_ 
+  const byte g72[8] PROGMEM = {
+    B00000, 
+    B10101,
+    B10101,
+    B10101, 
+    B10101, 
+    B10101, 
+    B10101, 
+    B10101}; //2 ||| 
+  const byte g73[8] PROGMEM = {
+    B00000,
+    B10101,
+    B00000,
+    B00000,
+    B00000, 
+    B00000, 
+    B00000, 
+    B10101}; //3 ___ 
+  const byte g74[8] PROGMEM = {
+    B00000,
+    B10101,
+    B00001,
+    B00001,
+    B00001, 
+    B00001, 
+    B00001, 
+    B10101}; //4 __| 
+  const byte g75[8] PROGMEM = {
+    B00000,
+    B10101,
+    B10001,
+    B10001,
+    B10001, 
+    B10001, 
+    B10001, 
+    B10101}; //5 |_| 
+
+byte filled;
+byte empty;
+
+//////////////////////////////////////////////////////////
+void loadGapLessCharacters7()
+{
+  memcpy_P(buffer,g70, 8);
+  lcd.createChar((byte)0, buffer);
+  memcpy_P(buffer,g71, 8);
+  lcd.createChar(1, buffer);
+  memcpy_P(buffer,g72, 8);
+  lcd.createChar(2, buffer);
+  memcpy_P(buffer,g73, 8);
+  lcd.createChar(3, buffer);
+  memcpy_P(buffer,g74, 8);
+  lcd.createChar(4, buffer);
+  memcpy_P(buffer,g75, 8);
+  lcd.createChar(5, buffer);
+  lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
+  filled = 2;
+  empty = 3;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+#define NCOLS 20
+#define NROWS 4
+
+
+void gapLessBar(unsigned nr, unsigned total, unsigned firstPos, unsigned lastPos, unsigned line)
+// https://robodoupe.cz/2015/progress-bar-pro-arduino-a-lcd-displej/
+// framed progress bar, every other segment only, so that gap between characters melts in
+// data is displayed in columns firstPos ... lastPos
+
+{
+    firstPos = max(firstPos, 0);        // 1...NCOLS-1, first position with data
+    lastPos  = min(lastPos,  NCOLS-1);  // ... NCOLS-1, last position with data
+    lastPos  = max(lastPos, firstPos+1); // cannot go right to left!!
+    line     = max(line,0); line = min(line,NROWS);
+
+    int Nseg = lastPos - firstPos +1 ;  // no of positions to use on LCD (first, ..., last)
+
+    float noOfSubSegments = 3.0; // no of subsegments used per character
+    float segmentNoReal = (float(nr)/float(total) )* (Nseg-1.0/noOfSubSegments); // 1/segmentNoReal 19.12.2023
+    int segmentNoInt    = int(segmentNoReal);
+    byte subSegmentNo   = byte(noOfSubSegments *(segmentNoReal-segmentNoInt));
+
+    // draw on LCD
+
+    // 1: left-hand symbol
+    lcd.setCursor(firstPos, line);
+    if (segmentNoInt == 0) lcd.write(byte(0)); // initial left-hand symbol, |::
+    else                   lcd.write(filled);  // filled,                   |||
+    
+    // 2: upper and lower frame :::
+    {  
+    for (int j = firstPos + segmentNoInt; j < lastPos; j++) // 
+      {
+        lcd.setCursor(j,line);lcd.write(empty);  // :::
+      }
+    }
+ 
+    // 3: draw 0 ... Nseg completely filled segments
+
+    int jmax = firstPos + segmentNoInt ;
+    for (int j = firstPos+1; j < jmax; j++)
+      {
+       // if (j>0)
+        {
+        // #ifdef DEBUG
+        //   lcd.setCursor(0,3); lcd.print(j);lcd.print(" "); 
+        //   lcd.setCursor(6,3); lcd.print(segmentNoInt);lcd.print(" ");
+        //   lcd.print(firstPos);lcd.print(" ");lcd.print(lastPos);lcd.print(" ");
+        // #endif
+        lcd.setCursor(j, line); lcd.write(filled);
+        }
+      }
+
+     // 4: draw closing, right-hand symbol
+    if (segmentNoInt < Nseg-2) 
+    {
+      lcd.setCursor(lastPos,line); lcd.write(byte(4)); // ::|, final   symbol  
+    }
+
+    // 5 draw sub segment
+    if (segmentNoInt < Nseg-1)  // nothing if final segment has been filled
+    {
+      lcd.setCursor(firstPos + segmentNoInt, line);                        
+      lcd.write(subSegmentNo); // 0, 1, 2 =|::, ||:, |||
+      if (segmentNoInt == Nseg-2) lcd.write(4);           // added 19.12.2023 - only important when counting down
+    }
+    else if (segmentNoInt == Nseg-1)
+    {  // 4 = ::|, 5 = |:|, filled = |||
+      lcd.setCursor(firstPos + segmentNoInt, line);
+      if (subSegmentNo == 0) lcd.write(5);      // 
+      if (subSegmentNo == 1) lcd.write(filled); // 
+      if (subSegmentNo == 2) lcd.write(filled); // |||
+     }
+
+    // debug info on screen
+    #ifdef DEBUG
+      if (line < NROWS)
+      {
+        lcd.setCursor(firstPos,line+1); lcd.print(segmentNoReal); lcd.print("    ");
+        lcd.setCursor(firstPos+6,line+1); lcd.print(segmentNoInt); lcd.print(" ");lcd.print(subSegmentNo);lcd.print("      ");
+      }
+    #endif
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#define MAX_NO_OF_PERSONS 16  // for Reminder()
+#define LENGTH_NAME     10  // min 9 + 1, was 11
+
+typedef struct
+  {
+      char Name[LENGTH_NAME];
+      byte Day; // was int
+      byte Month;
+      int  Year;
+  }   person_type;
+
+person_type person[MAX_NO_OF_PERSONS];
+byte lengthPersonData;
+byte indStart = 0;  // must be outside of Reminder()
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+void readPersonEEPROM()
+{
+  int addrOffset;  // not byte as 256 is too small
+
+  lengthPersonData = EEPROM.read(EEPROM_OFFSET2);      // position 0,  length of struct 
+  #ifdef FEATURE_SERIAL_EEPROM
+      Serial.print("Number of records: ");Serial.println(lengthPersonData);
+  #endif    
+
+  for (int i=0; i<lengthPersonData; ++i)
+  {
+    addrOffset = EEPROM_OFFSET2 + 1 + i*20;
+    String Nan = readStringFromEEPROM(addrOffset);      // positions 1, ... , 13
+      Nan.toCharArray(person[i].Name,LENGTH_NAME);
+    person[i].Day = EEPROM.read(addrOffset + 14);
+    person[i].Month = EEPROM.read(addrOffset + 15);
+    int Yr = readIntFromEEPROM(addrOffset + 16); // positions 16, 17
+      person[i].Year = Yr;
+    #ifdef FEATURE_SERIAL_EEPROM  
+      Serial.print(i); Serial.print(", "); Serial.print(addrOffset); Serial.print(": "); Serial.print(person[i].Name); Serial.print(": ");Serial.print(person[i].Day);Serial.print("-");Serial.print(person[i].Month);Serial.print("-");Serial.println(person[i].Year);
+    #endif  
+  }  
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+// from https://forum.arduino.cc/t/the-order-of-bubble-sorting/657618/5
+// modified for float input
+
+void bubbleSort(float a[],int index_array[], int size) {
+
+//  Serial.print(*index_array);Serial.println(" ");
+//  Serial.print(*a); Serial.println(" ");    
+  
+  for (int i = 0; i < (size - 1); i++) {
+    for (int o = 0; o < (size - (i + 1)); o++) {
+        if (a[o] > a[o + 1]) {             
+        float t = a[o];
+        int indB = index_array[o];
+        a[o] = a[o + 1];
+        index_array[o] = index_array[o + 1];
+        a[o + 1] = t;
+        index_array[o + 1] = indB;
+        }
+    }
+  }
+}
+
+
+/////////////////////////////////////////////////////////////////
 
  /// THE END ///
