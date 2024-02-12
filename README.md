@@ -57,9 +57,9 @@ See [wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for more details 
 
 ## Other users
 
-Mitch, W4OA, made a nice 3D case for the clock. 
+Mitch, W4OA, made a nice 3D case for the clock. His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/W4OA).
 
 ![Image](W4OA/Multi_Face_GPS_Clock_W4OA.jpg)
 
-His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/W4OA).
+
 
