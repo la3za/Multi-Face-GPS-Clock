@@ -55,4 +55,11 @@ The user interface for choosing clock face and for setup is the rotary encoder w
 
 See [wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for more details on hardware and software setup.
 
+## Other users
+
+Mitch, W4OA, made a nice 3D case for the clock. 
+
+![Image](W4OA/Multi_Face_GPS_Clock_W4OA.jpg)
+
+His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/W4OA).
 
