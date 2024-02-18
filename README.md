@@ -61,5 +61,7 @@ Mitch, W4OA, made a nice 3D case for the clock. His design and his STL-files can
 
 ![Image](W4OA/Multi_Face_GPS_Clock_W4OA.jpg)
 
+Please get in touch if you want to display your implementation here!
+
 
 
