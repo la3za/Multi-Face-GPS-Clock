@@ -1,4 +1,4 @@
-# Multi Face GPS clock for the Arduino Mega
+# Multi Face GPS Clock for the Arduino Mega
 
 The purpose of this project is to make available as many clock and clock related functions as possible given the constraint of a 20 x 4 LCD. The number of different screens are now more than forty, see [Wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for pictures of them all. Some are useful, some are very specialized, and some are there just because they can be made. All the screens have been laid out with a view to good esthetics and easy readability.
 
