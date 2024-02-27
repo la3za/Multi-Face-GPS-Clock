@@ -59,9 +59,13 @@ See [wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for more details 
 
 ## Other users
 
-Mitch, W4OA, made a nice 3D case for the clock. His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/W4OA).
+Mitch, W4OA, made a nice 3D case for the clock. His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/Builds/W4OA):
 
-![Image](W4OA/Multi_Face_GPS_Clock_W4OA.jpg)
+![Image](Builds/W4OA/Multi_Face_GPS_Clock_W4OA.jpg)
+
+Here is the breadboard of Michael, DK7UX, with GPS from QRPLabs QLG1 or QLG2. It shows how simple the hardware is:
+
+![Image](Builds/DK7UX.jpg)
 
 Please get in touch if you want to display your implementation here!
 
