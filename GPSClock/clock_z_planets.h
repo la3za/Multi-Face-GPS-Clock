@@ -60,8 +60,8 @@ float magnitude = 0;
 //float lat = 53.5; //GPS Position of Hamburg in deg
 //float lon = 10;
 
-float lat = 59.83; //GPS Position of Asker, Norway in deg
-float lonPlanet = 10.43;
+float lat = 0.0; // 59.83; //GPS Position of Asker, Norway in deg
+float lonPlanet = 0.0;  //10.43;
 boolean full = false; // full output of planeterary output on serial port, otherwise bare minimum (only if EATURE_SERIAL_PLANETARY is set)
 
 
@@ -283,13 +283,28 @@ void calc_magnitude(int object_number, float R) {// R = distance earth to object
 
   //float magnitude = 0;
   float ring_magn = -0.74;
-  if (object_number == 0) magnitude = -0.36 + 5 * log10(r * R) + 0.027 * phase_angle;             //Mercury
-  if (object_number == 1) magnitude = -4.34 + 5 * log10(r * R) + 0.013 * phase_angle;             //Venus
-  if (object_number == 3) magnitude = -1.51 + 5 * log10(r * R) + 0.016 * phase_angle;             //Mars
-  if (object_number == 4) magnitude = -9.25 + 5 * log10(r * R) + 0.014 * phase_angle;             //Jupiter
-  if (object_number == 5) magnitude = -9.00 + 5 * log10(r * R) + 0.044 * phase_angle + ring_magn; //Saturn
-  if (object_number == 6) magnitude = -7.15 + 5 * log10(r * R) + 0.001 * phase_angle;             //Uranus
-  if (object_number == 7) magnitude = -6.90 + 5 * log10(r * R) + 0.001 * phase_angle;             //Neptune
+  // Input from Richard ... 17.2.2024 on blog for Mercury and 21.02.2024 for Venus.
+  // Formula from the publication 'Meeus, Astronomical Algorithms' (Second Edition), Chapter 41, Page 286
+  // Mars, Jupiter also updated according to Meeus
+   
+  //if (object_number == 0) magnitude = -0.36 + 5 * log10(r * R) + 0.027 * phase_angle;             //Mercury
+  //if (object_number == 1) magnitude = -4.34 + 5 * log10(r * R) + 0.013 * phase_angle;             //Venus
+  //if (object_number == 3) magnitude = -1.51 + 5 * log10(r * R) + 0.016 * phase_angle;             //Mars
+  //if (object_number == 4) magnitude = -9.25 + 5 * log10(r * R) + 0.014 * phase_angle;             //Jupiter
+  //
+  if (object_number == 0) magnitude = -0.42 + 5 * log10(r * R) + 0.038 * phase_angle 
+      - 0.000273 * phase_angle * phase_angle + 0.000002 * phase_angle * phase_angle * phase_angle;    //Mercury
+  if (object_number == 1) magnitude = -4.40 + 5 * log10(r * R) + 0.00009 * phase_angle
+      + 0.000239 * phase_angle * phase_angle - 0.00000065 * phase_angle * phase_angle * phase_angle;  //Venus
+  if (object_number == 3) magnitude = -1.52 + 5 * log10(r * R) + 0.016 * phase_angle;                 //Mars
+  if (object_number == 4) magnitude = -9.40 + 5 * log10(r * R) + 0.005 * phase_angle;                 //Jupiter
+ 
+  // Not exactly the same as Meeus as here ring_magn is a constant.
+  if (object_number == 5) magnitude = -9.00 + 5 * log10(r * R) + 0.044 * phase_angle + ring_magn;      //Saturn
+
+// As is, not used in Multi Face GPS Clock
+  if (object_number == 6) magnitude = -7.15 + 5 * log10(r * R) + 0.001 * phase_angle;                   //Uranus
+  if (object_number == 7) magnitude = -6.90 + 5 * log10(r * R) + 0.001 * phase_angle;                   //Neptune
   #ifdef FEATURE_SERIAL_PLANETARY
     Serial.println("magnitude:" + String(magnitude, 2));
   #endif

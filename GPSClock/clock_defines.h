@@ -64,5 +64,10 @@
 #define ScreenBigNumbers3UTC    43
 #define ScreenReminder          44
 
+// New in v2.2.0
+#define ScreenEquinoxes         45
+#define ScreenSolarEclipse      46
+#define ScreenNextEvents        47
+
 // New in v1.3.0:
-#define ScreenDemoClock         45  // the last one
+#define ScreenDemoClock         48  // must be the last one

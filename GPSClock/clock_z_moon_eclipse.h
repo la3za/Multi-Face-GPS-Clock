@@ -81,17 +81,21 @@ void MoonEclipse( int tYear, // input year
       U = U - 0.0182 * cos(M6);
       U = U + 0.0004 * cos(2 * M6);
       U = U - 0.0005 * cos(M5 + M6);
-      float RP = 1.2847 + U;
-      float RU = 0.7404 - U;
-      float MP = (1.5572 + U - D9) / 0.545;
-      if (MP < 0) continue;
-      float MU = (1.0129 - U - D9) / 0.545;
+      
+      float RP = 1.2847 + U;                  // Meeus: penumbra
+      float RU = 0.7404 - U;                  // Meeus: umbra
+      float MP = (1.5572 + U - D9) / 0.545;   // Meeus: penumbral eclipse
+      
+      if (MP < 0) continue;                   // continue <=> break out of loop
+      float MU = (1.0129 - U - D9) / 0.545;   // Meeus: umbral eclipse
+      
       float D5 = 1.5572 + U;
       float D6 = 1.0129 - U;
       D7 = 0.4679 - U;
       float N = (0.5458 + 0.04 * cos(M6)) / 60;
-      D5 = sqrt(D5 * D5 - D9 * D9) / N;
-      if (MU > 0) D6 = sqrt(D6 * D6 - D9 * D9) / N;
+
+      D5 = sqrt(D5 * D5 - D9 * D9) / N;               // Meeus: semiduations in hrs 
+      if (MU > 0) D6 = sqrt(D6 * D6 - D9 * D9) / N;   // Meeus: semiduations in hrs
       if (MU > 1) D7 = sqrt(D7 * D7 - D9 * D9) / N;
 
       // convert Julian to M/D/Y
@@ -106,9 +110,9 @@ void MoonEclipse( int tYear, // input year
       float Ca = (long)((Ba / 365.25) - 0.3343);
       float Da = (long)(365.25 * Ca);
       float E = (long)((Ba - Da) / 30.61);
-      Da = Ba - Da - (long)(30.61 * E) + F;
-      float M = E - 1;
-      float Ya = Ca - 4716;
+      Da = Ba - Da - (long)(30.61 * E) + F;   // day
+      float M = E - 1;                        // month
+      float Ya = Ca - 4716;                   // year
       if ( E > 13.5) M = M - 12;
       if ( M < 2.5) Ya = Ya + 1;
       float H = 24 * (Da - (long)Da);

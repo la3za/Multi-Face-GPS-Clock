@@ -1,8 +1,8 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.1.0    21.01.2024";
+const char codeVersion[] = "v2.2.0    09.06.2024";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
-//const char codeVersion[] = "v2.1.0   "__DATE__;
+//const char codeVersion[] = "v2.1.1   "__DATE__;
 
 /*
   LA3ZA Multi Face GPS Clock
@@ -29,19 +29,17 @@ const char codeVersion[] = "v2.1.0    21.01.2024";
 
 
   Features:
-           GPS clock on 20x4 LCD
+           GPS clock with 20x4 LCD display
            Controlled by a GPS module outputting data over a serial interface, and optionally using the PPS output for accurate sync
            typ. QRPLabs QLG1 GPS Receiver kit, or the QLG2
            GPS is handled with the TinyGPS++ library
            Shows raw GPS data such as UTC time and date, position, altitude, and number of satellitess
            Also with various forms of binary, BCD, hex and octal displays
            Shows derived GPS data such as 6-digit locator
-           Finds local time and handles daylight saving automatically using the Timezone library
+           Finds local time and handles daylight saving automatically for any location using the Timezone library
            Finds local sunset and sunrise, either actual value, or civil, nautical, or astronomical using the Sunrise library
-           The clock also gives local solar height based on the Sunpos library from the K3NG rotator controller.
-           The clock also provides the lunar phase as well as predicts next rise/set time for the moon
+           The clock also gives local solar height and provides the lunar phase as well as predicts next rise/set time for the moon
            Azimuth and elevation is found for all planets
-
 
            Input:   from GPS, data and optionally also PPS (pulse per second) pulse
            Output:
@@ -63,8 +61,37 @@ const char codeVersion[] = "v2.1.0    21.01.2024";
 
 /*
  Revisions:
+ 2.2.0   09.06.2024:
+                - NextEvents() - New screen showing Next Equinox/Solstice, Easter, Lunar/Solar Eclipses in sorted order
+                - SolarEclipse() - New screen showing solar eclipses for this year and coming years (table-based -> 2030)
+                - Equinoxes() - New screen for time of equinoxes and solstices
+
+                - Demo mode: Choice of increase, decrease, or random next screen number in Secondary menu
+                - More languages selectable: {"en", "es", "fr", "de", "no", "se", "dk", "is", ... 
+                    Any language with max 4 special letters can be implemented
+                - InternalTime(): Julian Day - jd - (since 4713 BC) displayed instead of local now()
+                --  jd variable renamed to jd1970 in InternalTime() and Sidereal() 
+                - UTCLocator(1) now has same layout as LocalUTC(1)
+                -- UTCLOCALLANGUAGE if defined (default): UTCLocator() day also in local language, was always English 
+                - No longer need to reset processor on GPS baudrate change. 
+                -- CodeStatus shown for a brief period after setting GPS baudrate or PPS flag
+                - Rewritten to use the more accurate https://github.com/jpb10/SolarCalculator longer instead of 
+                     https://github.com/chaeplin/Sunrise and sunpos from https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries, 
+                -- Sunrise library was inaccurate, obsolete, and won't compile for Metro Express without a fix
+                - Now runs on Adafruit Metro Express (M0). Much faster Hebrew calendar
+                -- Some fixes to code which was OK for Mega, but not Metro Express: RotarySetup(), Sidereal(), [Sunrise.cpp]
+                -- Metro Express: Flash as EEPROM OK but Reminder() won't work with flash. Interrupt works, but not software reset 
+                - Changed definition of languageNumber: -1 was English, now 0 is English
+                - Saved dynamic memory by using lcd.print(F(" ")) and putting MyDays in PROGMEM
+                
+                - Fixes for ver 2.1.0:
+                -- More accurate prediction of sun rise/set times
+                -- Nesting error in RotarySetup(): case 4: local language. Only apparent for fast processor like Metro
+                -- More accurate formula for Mercury, Venus, Mars, Jupiter magnitudes in clock_z_planets.h, now follows Meeus [thanks Richard]
+                -- Islamic, Hebrew clock's second didn't increment immediately. Now less latency as routine is entered and at full minute
+                
  2.1.0   21.01.2024:
-                - Optional interrupt-driven time setting from GPS PPS: second changes more accurately (inspired by Bruce E. Hall GPS clock)
+                - Implemented interrupt-driven time setting from GPS PPS (optional): second changes more accurately (inspired by Bruce E. Hall GPS clock)
                 -- New parameters in Secondary menu: PPS enabled/disabled
                 - Several sets of user-defined characters for LCD enabled:
                   -- WSPR: Progressbar showing on lower line
@@ -75,15 +102,17 @@ const char codeVersion[] = "v2.1.0    21.01.2024";
                 - More screens that change every 5/10 seconds. In addition to ScreenUTCPosition, ScreenNCDXFBeacons1, 
                                                                              ScreenNCDXFBeacons2, ScreenPlanetsInner
                   -- also ScreenLocalSunSimpler, ScreenISOHebIslam, ScreenReminder  
-                - Completely rewritten and corrected multiple timezone handling with Timezone library
                 - 4 ArrowCharacters now in PROGMEM, saves 8 bytes per LCD character, ie. 32 for 4 arrows
                 - ISOHebIslam now has display of lunar phase with lunar calendars, Islamic, Hebrew
-                - NCDXF beacon switch-over was 1 second too late, now corrected
-                - Changed loop counter for Demo, no longer absolute time as it failed for corrupt GPS time
-                - Better test of GPS quality before estimating SNR
-                - Small formatting fixes for LCD display and updating when time-out from Setup
                 - Changed several "if (cond1 & cond2)" to "if (cond1 && cond2)" 
                 - Removed support for potentiometer for backlight control as it is now done through menu system
+                - Fixes for ver 2.0.0:
+                -- Completely rewritten and corrected multiple timezone handling with Timezone library
+                -- NCDXF beacon switch-over was 1 second too late, now corrected
+                -- Changed loop counter for Demo, no longer absolute time as it failed for corrupt GPS time
+                -- Better test of GPS quality before estimating SNR
+                -- Small formatting fixes for LCD display and updating when timing out from Setup
+
 
  2.0.0   02.08.2023: 
                 - New menu system for setup by pushing rotary control, instead of editing clock_options.h
@@ -240,7 +269,6 @@ One routine per clock face, i.e. one per menu item:
 
 */
 
-byte presentCharacterSet = 0;  // indicates which character set which has been loaded to user-definable memory of LCD
 // LCD characters: set 0: arrows for solar rise/set (default):
 #define DASHED_UP_ARROW 1    // user defined character
 #define DASHED_DOWN_ARROW 2  // user defined character
@@ -260,24 +288,40 @@ byte presentCharacterSet = 0;  // indicates which character set which has been l
 #define EEPROM_OFFSET1 0    // first address for setup info in EEPROM, adresses used: EEPROM_OFFSET1 ... EEPROM_OFFSET1+9
 #define EEPROM_OFFSET2 100  // first address for birthday info for Reminder()
 
-///// load user-defined setups //////
+#define noOfScreens 50  // must be large enough to hold all possible screens in menu!!
+#define NUMBER_OF_TIME_ZONES 20  // no of time zones defined in clock_timezone.h
+
+#define RAD (PI / 180.0)
+//#define SMALL_FLOAT (1e-12)
+
 #include "clock_defines.h"
 #include "clock_debug.h"  // debugging options via serial port
 
-#define noOfEntries 50  // 50, must be large enough to hold all possible screens in menu!!
+char textBuffer[21];  // 1 line on lcd, 20 characters; For display of strings
 
-char textBuffer[21];  // 1 line on lcd, 20 characters was: buffer[80]; For display strings
-
-const int lengthOfMenuIn = noOfEntries;
-byte menuOrder[noOfEntries];  // chosen submenu is here, from int --> byte
+const int lengthOfMenuIn = noOfScreens;
+byte menuOrder[noOfScreens];  // chosen submenu is here, from int --> byte
 int noOfStates = 0;           // no of actual entries in chosen submenu_name
-
-#define NUMBER_OF_TIME_ZONES 20  // no of time zones defined in clock_timezone.h
 
 long utcOffset = 0;  // value set automatically by means of Timezone library
 
-#include "clock_options.h"       // customization of order and number of menu items
+struct Menu_type
+{
+  char  descr[10];   // shortened from [15], 10.02.2024
+  int8_t order[noOfScreens]; 
+};
+
+struct Date_Time
+{
+  char descr[10];
+  char dateOrder;
+  char dateSep;
+  char hourSep;
+  char minSep;
+};
+
 #include "clock_pin_settings.h"  // hardware pins
+#include "clock_options.h"       // customization of order and number of menu items
 
 //////////////////////////////////////
 
@@ -287,6 +331,8 @@ long utcOffset = 0;  // value set automatically by means of Timezone library
 
 #include <TimeLib.h>           // https://github.com/PaulStoffregen/Time - timekeeping functionality
 #include <Timezone_Generic.h>  // https://github.com/khoih-prog/Timezone_Generic
+#include <SolarCalculator.h>   // https://www.arduino.cc/reference/en/libraries/solarcalculator/ 19.02.2024
+
 
 #include <TinyGPS++.h>  // http://arduiniana.org/libraries/tinygpsplus/
 #include "clock_z_planets.h"
@@ -297,47 +343,48 @@ Timezone tz;  // holds currently selected timezone
 #include "clock_timezone.h"  // timezone definitions, including daylight saving rules
 
 #if defined(FEATURE_LCD_I2C)
-#include <Wire.h>               // For I2C. Comes with Arduino IDE
-#include <LiquidCrystal_I2C.h>  // Install NewliquidCrystal_1.3.4.zip https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads/
+  #include <Wire.h>               // For I2C. Comes with Arduino IDE
+  #include <LiquidCrystal_I2C.h>  // Install NewliquidCrystal_1.3.4.zip https://bitbucket.org/fmalpartida/new-liquidcrystal/downloads/
 #endif
 
 #if defined(FEATURE_LCD_4BIT)
-#include <LiquidCrystal.h>
+  #include <LiquidCrystal.h>
 #endif
 
 #include <rotary.h>  // rotary handler https://bitbucket.org/Dershum/rotary_button/src/master/
-
-#include <Sunrise.h>  // https://github.com/chaeplin/Sunrise, http://www.andregoncalves.info/ag_blog/?p=47
-// Now in AVR-Libc version 1.8.1, Aug. 2014 (not in Arduino official release)
-
-// K3NG https://blog.radioartisan.com/yaesu-rotator-computer-serial-interface/
-//      https://github.com/k3ng/k3ng_rotator_controller
-#include <sunpos.h>  // http://www.psa.es/sdg/archive/SunPos.cpp (via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries)
 #include <moon2.h>   // via https://github.com/k3ng/k3ng_rotator_controller/tree/master/libraries
 
 #if defined(FEATURE_LCD_I2C)
 //            set the LCD address to 0x27 and set the pins on the I2C chip used for LCD connections:
 //                     addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
-LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
+  LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);  // Set the LCD I2C address
 #endif
 
 #if defined(FEATURE_LCD_4BIT)
-LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
+  LiquidCrystal lcd(lcd_rs, lcd_enable, lcd_d4, lcd_d5, lcd_d6, lcd_d7);
 #endif
 
 Rotary r = Rotary(PIN_A, PIN_B, PUSHB);  // Initialize the Rotary object
 
-#define RAD (PI / 180.0)
-#define SMALL_FLOAT (1e-12)
+byte LCDchar0_3 = 0; // 0 means unknown status
+byte LCDchar4_5 = 0;
+byte LCDchar6_7 = 0;
+#define LCDARROWS  1 // for LCDchar0_3
+#define LCDNATIVE  2 // for LCDchar4_5, LCDchar6_7
+#define LCD3WIDE   3 // for LCDchar0_3, LCDchar4_5, LCDchar6_7
+#define LCD3HIGH   4 // for LCDchar0_3, LCDchar4_5, LCDchar6_7
+#define LCDGAPLESS 5 // for LCDchar0_3, LCDchar4_5 
+#define LCDBARS    6 // for LCDchar4_5
+#define LCDARING   7 // for LCDchar6_7
 
 byte buffer[8];  // temporary storage for PROGMEM characters before writing to LCD
 
 static uint32_t gpsBaud;  // stores baud rate for GPS, read from gpsBaud1 - array
-int dispState;            // depends on button, decides which screen to display
+int dispState;            // depends on rotary, decides which screen to display
 int demoDispState;        // decides what to display in Demo Mode
 int demoDuration = 0;     // counter for time between Demo screens
 
-char today[15];           //
+char today[15];           // for storing string with day name 
 char todayFormatted[15];  // for storing string with day name up to 12 characters long
 double latitude, lon, alt;
 int Year;
@@ -375,14 +422,18 @@ int8_t subsetMenu = 0;      // variable for choosing subset of possible clock fa
 byte backlightVal = 10;     // (0...255) initial backlight value
 int8_t dateFormat = 0;      // variable for choosing date/time format
 int8_t languageNumber = 0;  // variable for choosing language for local time day names
+int8_t presentLanguageNumber = 0; // remembering the present language for detecting need for change
 int8_t timeZoneNumber = 0;  // variable for choosing time zone
 
 // Initial values for secondary menu parameter - stored in EEPROM
 int8_t baudRateNumber = 1;     // points to entry in array of possible baudrates
-int8_t secondsClockHelp = 6;   // no of seconds per minute of normal clock display for fancy clocks
+int8_t demoStepType = 0;       // step type in demo (increase +, decrease -, random)
 int8_t dwellTimeDemo = 10;     // no of seconds per screen as DemoClock cycles through all screen
+int8_t secondsClockHelp = 6;   // no of seconds per minute of normal clock display for fancy clocks
 int8_t mathSecondPeriod = 10;  // 1...6 per minute, i.e. 10-60 seconds in AlbertClock app
-boolean using_PPS = 0;         // toggle use of PPS pulse from GPS for interrupt and more accurate timeing
+boolean using_PPS = false;     // toggle use of PPS pulse from GPS for interrupt and more accurate timeing
+
+char demoStepTypeText[][7] = {"+", "-", "random"}; // hard-coded index range 0..2 for demoStepType here and there in code
 
 // builds on the example program SatelliteTracker from the TinyGPS++ library
 // https://www.arduino.cc/reference/en/libraries/tinygps/
@@ -431,30 +482,31 @@ struct
 float SNRAvg = 0.0;
 int totalSats = 0;
 
+#ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function
+  int dateIteration;
+#endif
+
 #include "clock_language.h"         // user customable functions and character sets for multiple local languages, was "clock_custom_routines.h"
 #include "clock_helper_routines.h"  // library of functions
 
 #include "clock_z_moon_eclipse.h"
 #include "clock_z_equatio.h"
 
-#ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function
-int dateIteration;
-#endif
 //#include "clock_development.h"  // uncomment if new function is under development
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void readGPS() {
   // ******** start gps time update
-#ifndef FEATURE_FAKE_SERIAL_GPS_IN
-  while (Serial1.available()) {
-    if (gps.encode(Serial1.read())) {  // process gps messages from hw GPS
+  #ifndef FEATURE_FAKE_SERIAL_GPS_IN
+    while (Serial1.available()) {
+      if (gps.encode(Serial1.read())) {           // process gps messages from hw GPS (default mode)
 
-#else  // normal mode:
-  while (Serial.available()) {
-    if (gps.encode(Serial.read())) {                           // process gps messages from sw GPS emulator
-#endif
-    }  // (gps.encode(Serial.read()))
-  }    // while (Serial.available())
+  #else  // normal mode:
+    while (Serial.available()) {
+      if (gps.encode(Serial.read())) {            // process gps messages from sw GPS emulator
+  #endif 
+      }  // (gps.encode(Serial.read()))
+    }    // while (Serial.available())
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -467,29 +519,28 @@ void syncCheck() {                         // from GPS_Clock_triple.ino by Bruce
 //                                                    from GPS_Clock_triple.ino by Bruce E. Hall, w8bh.net
 void ppsHandler() {  // 1pps interrupt handler:
   pps = 1;           // flag that signal was received
+  #ifdef FEATURE_INTERRUPTTEST
+    state = !state; // for Built in LED
+  #endif
 }
 ////////////////////////////////////////////////////////////////////////////////
 
 void syncTimeGPS() {
-  // unsigned long age;
   //if (gps.time.isValid())     // 29.08.2023 as gps.time.* was sometimes way off (due to corrupt GPS data?)
-  if (gps.time.isValid() && gps.location.age() < 500)  // age in millisecs
+  if (gps.time.isValid()) // && gps.location.age() < 500)  // age in millisecs: too strict. W8BH uses "<= 1000"
   {
     // when GPS reports new data...
-    hourGPS = gps.time.hour();
+    hourGPS   = gps.time.hour();
     minuteGPS = gps.time.minute();
     secondGPS = gps.time.second();
-    dayGPS = gps.date.day();
-    monthGPS = gps.date.month();
-    yearGPS = gps.date.year();
-    //age = gps.location.age();            // age in millisecs
-
-    //if (gps.time.isValid() && age < 500) {                                // younger than 0.5 sec, added valid 30.08.2023
+    dayGPS    = gps.date.day();
+    monthGPS  = gps.date.month();
+    yearGPS   = gps.date.year();
+                             
     // set the Time to the latest GPS reading
     setTime(hourGPS, minuteGPS, secondGPS, dayGPS, monthGPS, yearGPS);  // Versions from 17.04.2020+: Arduino time = UTC
     weekdayGPS = weekday();
     if (using_PPS) adjustTime(1);  // if using interrupt adjust forward 1 second (only integer seconds)
-                                   // } // age < 500
 
     utc = now();  // updated even if GPS data stream stops in order to avoid frozen UTC display
                   //if (using_PPS) utc = utc + 1; // if using interrupt adjust forward 1 second
@@ -503,13 +554,11 @@ void syncTimeGPS() {
 #else
     localTime = now() + utcOffset * 60;                        // utcOffset in minutes is set manually in clock_options.h (was in clock_zone.h)
 #endif
-  }  // age < 500
+  }  // gps.time.isValid
 
 #ifdef FEATURE_SERIAL_TIME
-  Serial.print(F("Utc         "));
-  Serial.println(now());
-  Serial.print(F("Local       "));
-  Serial.println(localTime);
+  Serial.print(F("Utc         "));  Serial.println(now());
+  Serial.print(F("Local       "));  Serial.println(localTime);
   //     Serial.print(F("diff [sec]  ")); Serial.println(long(localTime - now()));
   // //  Serial.print(F("diff,m1 ")); Serial.println(long(localTime - now()) / long(60));
   //     Serial.print(F("diff [min]  ")); Serial.println(long(localTime) / long(60) - long(now() / long(60));
@@ -529,7 +578,13 @@ void updateDisplay() {
       // this is for jumping from screen to screen in demo Mode:
       if ((dispState == menuOrder[ScreenDemoClock]) && (demoDuration >= dwellTimeDemo))  // demo mode: increment screen number, new 30.8.2023
       {
-        demoDispState += 1;                                  // increment screen number in demo mode
+        if (demoStepType == 1)
+          demoDispState -= 1;                       // decrement screen number in demo mode                              
+        else if (demoStepType == 2)
+          demoDispState = random(0, noOfStates-1);  // random choice of screen number in demo mode (noOfStates-1 in order not to recursively select demo Mode itself)
+        else
+          demoDispState += 1;                     // increment screen number in demo mode
+
         if (demoDispState < 0) demoDispState += noOfStates;  // but not below the lowest number
         demoDispState = demoDispState % noOfStates;          // or above the largest number
 #ifdef FEATURE_SERIAL_MENU
@@ -543,8 +598,8 @@ void updateDisplay() {
         Serial.println(oldMinute);
         //            Serial.print(F("now() ")); Serial.println(now());
         //            Serial.print(minute(now())); Serial.print(":");Serial.println(second(now()));
-        Serial.print(F("demoDuration "));
-        Serial.println(demoDuration);
+        //Serial.print(F("demoDuration "));
+        //Serial.println(demoDuration);
         Serial.println(" ");
 #endif
         demoDuration = 0;  // reset counter of seconds between demo screen
@@ -604,14 +659,30 @@ void checkEncoder()  // check and read rotation and button of rotary encoder
 
   if (r.buttonPressedReleased(500))  // 500 ms = long press for reset of processor
   {
-    lcd.clear();
-    lcd.print(" *** R E S E T *** ");
-    delay(1000);
-    resetFunc();  // call reset
+    #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
+      lcd.clear();
+      lcd.print(F(" *** R E S E T *** "));
+      delay(1000);
+      resetFunc();  // call reset
+    #endif  
+    // #else // https://microchip.my.site.com/s/article/Implement-software-reset-on-SAMD21-SAMW25
+    //   #define APP_START 0x00000000 
+    //   uint32_t app_start_address; //Global variable
+    //   app_start_address = *(uint32_t *)(APP_START + 4);
+    //   /* Rebase the Stack Pointer */ 
+    //   __set_MSP(*(uint32_t *) APP_START); 
+    //   /* Rebase the vector table base address */ 
+    //   SCB->VTOR = ((uint32_t) APP_START & SCB_VTOR_TBLOFF_Msk); 
+    //   /* Jump to application Reset Handler in the application */ 
+    //   asm("bx %0"::"r"(app_start_address)); 
+    //#endif
   }
 
   if (r.buttonPressedReleased(25))  // 25 ms debounce_delay = short press to enter setup menu
   {
+    // make sure native characters are loaded (for local language display in RotarySetup)
+    loadNativeCharacters(languageNumber);
+
     RotarySetup();   // call setup
     oldMinute = -1;  // to get immediate display of some info.  09.08.2023
   }
@@ -653,69 +724,29 @@ void readButtons()      // read separate buttons (not the one in rotary encoder)
 ////////////////////////////////////////////////////////////////////////////////
 
 void ScreenSelect(int disp, int DemoMode)  // menu System - called from inside loop [from updateTime()] and from DemoClock
-
-// presentCharacterSet = 0: native & arrows: the normal case for LCD
-//                       1: native & bars
-//                       2: 2 character wide symbols for large digits (8)
-//                       3: 3 character wide symbols for large digits (8)
-//                       4: characters for progressbar (6)
 {
-  // in case default characters are needed and not already set, make sure they are loaded:
-  if (   disp != menuOrder[ScreenBar] && disp != menuOrder[ScreenLinearUhr]
-      && disp != menuOrder[ScreenBigNumbers2] && disp != menuOrder[ScreenBigNumbers2UTC]
-      && disp != menuOrder[ScreenBigNumbers3] && disp != menuOrder[ScreenBigNumbers3UTC]
-      && disp != menuOrder[ScreenDemoClock] && disp != menuOrder[ScreenWSPRsequence]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("1: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet >= 2) loadNativeCharacters();  // reload user-defined characters for native languages
-    if (presentCharacterSet != 0) loadArrowCharacters();   // reload user-defined characters for arrows
-    presentCharacterSet = 0;                           // native & arrows
-  }
-
-  if (disp == menuOrder[ScreenLocalUTC])              LocalUTC(0);            // local time, date; UTC, locator
-  else if (disp == menuOrder[ScreenLocalUTCWeek])     LocalUTC(1);            // local time, date; UTC, week #
-  else if (disp == menuOrder[ScreenUTCLocator])       UTCLocator();           // UTC, locator, # sats
+  if (disp == menuOrder[ScreenLocalUTC])                LocalUTC(0);            // local time, date; UTC, locator
+  else if (disp == menuOrder[ScreenLocalUTCWeek])       LocalUTC(1);            // local time, date; UTC, week #
+  else if (disp == menuOrder[ScreenUTCLocator])         UTCLocator(1);          // UTC, locator, # sats
 
   // Sun, moon:
-  else if (disp == menuOrder[ScreenLocalSun])         LocalSun(0);            // local time, sun x 3
-  else if (disp == menuOrder[ScreenLocalSunMoon])     LocalSunMoon();         // local time, sun, moon
-  else if (disp == menuOrder[ScreenLocalMoon])        LocalMoon();            // local time, moon size and elevation
-  else if (disp == menuOrder[ScreenMoonRiseSet])      MoonRiseSet();          // Moon rises and sets at these times
+  else if (disp == menuOrder[ScreenLocalSun])           LocalSun(0);            // local time, sun x 3
+  else if (disp == menuOrder[ScreenLocalSunMoon])       LocalSunMoon();         // local time, sun, moon
+  else if (disp == menuOrder[ScreenLocalMoon])          LocalMoon();            // local time, moon size and elevation
+  else if (disp == menuOrder[ScreenMoonRiseSet])        MoonRiseSet();          // Moon rises and sets at these times
 
   // Nice to have
-  else if (disp == menuOrder[ScreenTimeZones])        TimeZones();            // Other time zones
+  else if (disp == menuOrder[ScreenTimeZones])          TimeZones();            // Other time zones
 
   // Fancy, sometimes near unreadable displays, fun to program, and fun to look at:
-  else if (disp == menuOrder[ScreenBinary])           Binary(2);              // Binary, horizontal, display of time
-  else if (disp == menuOrder[ScreenBinaryHorBCD])     Binary(1);              // BCD, horizontal, display of time
-  else if (disp == menuOrder[ScreenBinaryVertBCD])    Binary(0);              // BCD vertical display of time
-  else if (disp == menuOrder[ScreenBar]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("Bar: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet != 1)                     loadSimpleBarCharacters();        // define user-defined characters for bars
-    presentCharacterSet = 1;                          Bar();                  // horizontal bar
-  } else if (disp == menuOrder[ScreenMengenLehrUhr])  MengenLehrUhr();        // set theory clock
-  else if (disp == menuOrder[ScreenLinearUhr]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("Linear: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet != 1)                       loadSimpleBarCharacters();  // define user-defined characters for bars
-    presentCharacterSet = 1;                            LinearUhr();          // Linear clock
-  }
+  else if (disp == menuOrder[ScreenBinary])             Binary(2);              // Binary, horizontal, display of time
+  else if (disp == menuOrder[ScreenBinaryHorBCD])       Binary(1);              // BCD, horizontal, display of time
+  else if (disp == menuOrder[ScreenBinaryVertBCD])      Binary(0);              // BCD vertical display of time
+  else if (disp == menuOrder[ScreenBar])                Bar();                  // horizontal bar
+  else if (disp == menuOrder[ScreenMengenLehrUhr])      MengenLehrUhr();        // set theory clock
+  else if (disp == menuOrder[ScreenLinearUhr])          LinearUhr();          // Linear clock
   // debugging:
-  else if (disp == menuOrder[ScreenInternalTime])
-    InternalTime();                                                           // Internal time - for debugging
+  else if (disp == menuOrder[ScreenInternalTime])       InternalTime();       // Internal time - for debugging
   else if (disp == menuOrder[ScreenCodeStatus])         CodeStatus();         //
 
   // GPS Location
@@ -724,11 +755,7 @@ void ScreenSelect(int disp, int DemoMode)  // menu System - called from inside l
   // WSPR and beacons:
   else if (disp == menuOrder[ScreenNCDXFBeacons2])      NCDXFBeacons(2);      // UTC + NCDXF beacons, 18-28 MHz
   else if (disp == menuOrder[ScreenNCDXFBeacons1])      NCDXFBeacons(1);      // UTC + NCDXF beacons, 14-21 MHz
-  else if (disp == menuOrder[ScreenWSPRsequence]) {
-    if (presentCharacterSet != 4) loadGapLessCharacters7();
-    presentCharacterSet = 4;
-    WSPRsequence();  // UTC + Coordinated WSPR band/frequency (20 min cycle)
-  }
+  else if (disp == menuOrder[ScreenWSPRsequence])       WSPRsequence();  // UTC + Coordinated WSPR band/frequency (20 min cycle)
 
   else if (disp == menuOrder[ScreenHex])                HexOctalClock(0);     // Hex clock
   else if (disp == menuOrder[ScreenOctal])              HexOctalClock(1);     // Octal clock
@@ -749,61 +776,26 @@ void ScreenSelect(int disp, int DemoMode)  // menu System - called from inside l
   else if (disp == menuOrder[ScreenSidereal])           Sidereal();           // sidereal and solar time
   else if (disp == menuOrder[ScreenMorse])              Morse();              // morse time
   else if (disp == menuOrder[ScreenWordClock])          WordClock();          // time in clear text
-
   else if (disp == menuOrder[ScreenGPSInfo])            GPSInfo();            // Show technical GPS Info
   else if (disp == menuOrder[ScreenISOHebIslam])        ISOHebIslam();        // ISO, Hebrew, Islamic calendar
   else if (disp == menuOrder[ScreenPlanetsInner])       PlanetVisibility(1);  // Inner planet data
   else if (disp == menuOrder[ScreenPlanetsOuter])       PlanetVisibility(0);  // Inner planet data
-  else if (disp == menuOrder[ScreenChemical])           LocalUTC(2);              // local time + chemical element
-  else if (disp == menuOrder[ScreenBigNumbers2]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("Big 2: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet != 2) loadThreeHighDigits2();  // define 8 user-defined characterS
-    presentCharacterSet = 2;
-                                                        BigNumbers2(0);       // local time with big numbers
-  } else if (disp == menuOrder[ScreenBigNumbers2UTC]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("Big 1: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet != 2) loadThreeHighDigits2();  // define 8 user-defined characterS
-    presentCharacterSet = 2;
-                                                        BigNumbers2(1);       // UTC with big numbers
-  }
+  else if (disp == menuOrder[ScreenChemical])           LocalUTC(2);          // local time + chemical element
 
-  else if (disp == menuOrder[ScreenBigNumbers3]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("Big 4: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet != 3) loadThreeWideDigits();  // define 8 user-defined characterS
-    presentCharacterSet = 3;                            BigNumbers3(0);       // local time with big numbers
-  } else if (disp == menuOrder[ScreenBigNumbers3UTC]) {
-#ifdef FEATURE_SERIAL_CHAR_SETS
-    Serial.print(F("Big 3: disp, presentCharacterSet "));
-    Serial.print(disp);
-    Serial.print(" ");
-    Serial.println(presentCharacterSet);
-#endif
-    if (presentCharacterSet != 3) loadThreeWideDigits();  // define 8 user-defined characterS
-    presentCharacterSet = 3;                            BigNumbers3(1);       // UTC with big numbers
-  }
-
-  else if (disp == menuOrder[ScreenReminder])           Reminder();           // Show dates to remember and elapsed time
+  else if (disp == menuOrder[ScreenBigNumbers2])        BigNumbers2(0);       // local time with big numbers
+  else if (disp == menuOrder[ScreenBigNumbers2UTC])     BigNumbers2(1);       // UTC with big numbers
+  else if (disp == menuOrder[ScreenBigNumbers3])        BigNumbers3(0);       // local time with big numbers
+  else if (disp == menuOrder[ScreenBigNumbers3UTC])     BigNumbers3(1);       // UTC with big numbers
+  else if (disp == menuOrder[ScreenReminder])           Reminder();           // Show dates to remember and elapsed time (from EEPROM) 
+  else if (disp == menuOrder[ScreenEquinoxes])          Equinoxes();          // Show equinoxes, solstices
+  else if (disp == menuOrder[ScreenSolarEclipse])       SolarEclipse();       // time for solar eclipses
+  else if (disp == menuOrder[ScreenNextEvents])         NextEvents();         // Show next Easter, eclipse(s), equinox/solstice in sorted order
  
   else if (disp == menuOrder[ScreenDemoClock])  // last menu item
   {
     if (!DemoMode)                                      DemoClock(0);         // Start demo of all clock functions if not already in DemoMode
     else                                                DemoClock(1);         // continue with demo mode
-  } else                          //added 12.7.2023
+  } else                          // Error handling, added 12.7.2023
   {
     lcd.setCursor(0, 0);
     lcd.print(F("Warning:"));
@@ -833,7 +825,7 @@ void readEEPROM() {
   if ((subsetMenu < 0) || (subsetMenu >= noOfMenuIn))  // if EEPROM stores invalid value
   {
     subsetMenu = 0;                                 //  set to default value on very first startup
-    EEPROM.update(EEPROM_OFFSET1 + 1, subsetMenu);  // make sure EEPROM has a valid value
+    EEPROMMyupdate(EEPROM_OFFSET1 + 1, subsetMenu, 1);  // make sure EEPROM has a valid value
   }
 
   noOfMenuIn = sizeof(dateTimeFormat) / sizeof(dateTimeFormat[0]);
@@ -841,48 +833,57 @@ void readEEPROM() {
   if ((dateFormat < 0) || (dateFormat >= noOfMenuIn))  // if EEPROM stores invalid value
   {
     dateFormat = 0;                                 //  set to default value on very first startup
-    EEPROM.update(EEPROM_OFFSET1 + 2, dateFormat);  // make sure EEPROM has a valid value
+    EEPROMMyupdate(EEPROM_OFFSET1 + 2, dateFormat, 1);  // make sure EEPROM has a valid value
   }
 
   uint8_t numLanguages = sizeof(languages) / sizeof(languages[0]);
   languageNumber = EEPROM.read(EEPROM_OFFSET1 + 3);               //
-  if ((languageNumber < -1) || (languageNumber >= numLanguages))  // if EEPROM stores invalid value
+  if ((languageNumber < 0) || (languageNumber >= numLanguages))  // if EEPROM stores invalid value
   {
-    languageNumber = -1;                                // set to default value (-1 = English) on very first startup
-    EEPROM.update(EEPROM_OFFSET1 + 3, languageNumber);  // make sure EEPROM has a valid value
+    languageNumber = 0;                                // set to default value (0 = English) on very first startup
+    EEPROMMyupdate(EEPROM_OFFSET1 + 3, languageNumber, 1);  // make sure EEPROM has a valid value
   }
 
   timeZoneNumber = EEPROM.read(EEPROM_OFFSET1 + 4);
   if ((timeZoneNumber < 0) || (timeZoneNumber > NUMBER_OF_TIME_ZONES - 1)) {
     timeZoneNumber = 0;
-    EEPROM.update(EEPROM_OFFSET1 + 4, timeZoneNumber);
+    EEPROMMyupdate(EEPROM_OFFSET1 + 4, timeZoneNumber, 1);
   }
 
   baudRateNumber = EEPROM.read(EEPROM_OFFSET1 + 5);
   if ((baudRateNumber < 0) || (baudRateNumber > sizeof(gpsBaud1) / sizeof(gpsBaud1[0]))) {
     baudRateNumber = 1;
-    EEPROM.update(EEPROM_OFFSET1 + 5, baudRateNumber);
-  }
+    EEPROMMyupdate(EEPROM_OFFSET1 + 5, baudRateNumber, 1);
+  } 
 
   secondsClockHelp = EEPROM.read(EEPROM_OFFSET1 + 6);
   if (secondsClockHelp < 0 || secondsClockHelp > 60) {
     secondsClockHelp = 12;
-    EEPROM.update(EEPROM_OFFSET1 + 6, secondsClockHelp);
+    EEPROMMyupdate(EEPROM_OFFSET1 + 6, secondsClockHelp, 1);
   }
+
   dwellTimeDemo = EEPROM.read(EEPROM_OFFSET1 + 7);
   if (dwellTimeDemo < 4 || dwellTimeDemo > 60) {
     dwellTimeDemo = 8;
-    EEPROM.update(EEPROM_OFFSET1 + 7, dwellTimeDemo);
+    EEPROMMyupdate(EEPROM_OFFSET1 + 7, dwellTimeDemo, 1);
   }
+  
   mathSecondPeriod = EEPROM.read(EEPROM_OFFSET1 + 8);
   if (mathSecondPeriod < 4 || mathSecondPeriod > 60) {
     mathSecondPeriod = 10;
-    EEPROM.update(EEPROM_OFFSET1 + 8, mathSecondPeriod);
+    EEPROMMyupdate(EEPROM_OFFSET1 + 8, mathSecondPeriod, 1);
   }
+
   using_PPS = EEPROM.read(EEPROM_OFFSET1 + 9);
-  if (using_PPS < 0 || using_PPS > 1) {
-    using_PPS = 0;
-    EEPROM.update(EEPROM_OFFSET1 + 9, using_PPS);
+  if (using_PPS !=false & using_PPS != true) {
+    using_PPS = false;
+    EEPROMMyupdate(EEPROM_OFFSET1 + 9, using_PPS, 1);
+  }
+
+  demoStepType = EEPROM.read(EEPROM_OFFSET1 + 10);
+  if (demoStepType < 0 || demoStepType > 2) {
+    demoStepType = 0;
+    EEPROMMyupdate(EEPROM_OFFSET1 + 10, demoStepType, 1);
   }
 
 #ifdef FEATURE_SERIAL_EEPROM
@@ -906,12 +907,6 @@ void setup() {
   digitalWrite(PIN_B, HIGH);
   digitalWrite(PUSHB, HIGH);
 
-  loadArrowCharacters();        // define 4 up/down-arrows to indicate solar rise/set
-  loadNativeCharacters();       // define letters for day names in non-English languages
-  presentCharacterSet = 0;  // <=> arrows & native
-
-  //lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
-
   pinMode(LCD_PWM, OUTPUT);  // for backlight control
 
 #ifdef FEATURE_SERIAL_EEPROM
@@ -919,19 +914,51 @@ void setup() {
   Serial.println(F("EEPROM debug"));
 #endif
 
+#ifdef FEATURE_SERIAL_NEXTEVENTS
+  Serial.begin(115200);
+  Serial.println(F("NextEvents debug"));
+#endif
+ 
+  
   readEEPROM();        // read stored parameter values (settable in menu system)
-  readPersonEEPROM();  // read data into variables lengthPersonData, person for Reminder()
+  #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
+    readPersonEEPROM();  // read data into variables lengthPersonData, person for Reminder()
+   #else
+  // //   readDefaults();      // read reasonable startup values (settable in menu system)
+   // using_PPS = false;
+  #endif 
+ 
+  #ifdef FEATURE_SERIAL_LOAD_CHARACTERS  // check loading of new custom characters to LCD
+    Serial.begin(115200);
+    Serial.println(F("Character set debug"));
+  #endif
+  
+////////// test code ///
+#ifdef FEATURE_INTERRUPTTEST
+  int checkPin = digitalPinToInterrupt(GPS_PPS);  
+  lcd.setCursor(0,0);
+  if (checkPin == -1) {
+    lcd.print("Invalid interrupt "); lcd.print(GPS_PPS);
+  }
+  else {
+    lcd.print("Valid interrupt "); lcd.print(GPS_PPS);  // even for pin D4 for Metro??
+  }
+  delay(1000);
+#endif
 
+////
+  randomSeed(analogRead(1));  // initalize random number with random noise (for demo order). Pin A1 unconnected
   InitScreenSelect();  // Initalize screen selection order
 
   gpsBaud = gpsBaud1[baudRateNumber];
-#ifndef FEATURE_FAKE_SERIAL_GPS_IN  // the usual way of reading GPS
-  Serial1.begin(gpsBaud);
-#else
-  Serial.begin(gpsBaud);                                       // for faking GPS data from software simulator
-#endif
+    #ifndef FEATURE_FAKE_SERIAL_GPS_IN  // the usual way of reading GPS
+      Serial1.begin(gpsBaud);
+    #else
+      Serial.begin(gpsBaud);            // for faking GPS data from software simulator
+  #endif
 
   attachInterrupt(digitalPinToInterrupt(GPS_PPS), ppsHandler, RISING);  // enable 1pps GPS time sync
+ // works here for METRO: https://forum.arduino.cc/t/interrupt-not-being-called-in-arduino-m0-pro/485356 
 
   CodeStatus();  // show start screen
   lcd.setCursor(0, 3);
@@ -977,7 +1004,7 @@ void setup() {
 
 #ifdef FEATURE_SERIAL_MENU
   Serial.begin(115200);
-  Serial.println(F("menu "));
+  Serial.println(F("Menu debug"));
 #endif
 
 #ifdef FEATURE_SERIAL_TIME
@@ -1009,7 +1036,6 @@ void setup() {
   Serial.println(F("Character set debug"));
 #endif
 
-
 #ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function
   dateIteration = 0;
 #endif
@@ -1020,9 +1046,14 @@ void setup() {
 void loop() {
   readGPS();        // decode incoming GPS
   GPSParse();       // GPS statuscode snippet from TinyGPSParse.ino
-  syncCheck();      // set time with interrupt (and without interrupt)
-  updateDisplay();  // select software for selected screen
+  syncCheck();      // set time with interrupt (or without interrupt)
+  updateDisplay();  // select function for selected screen
   checkEncoder();   // check and read rotary encoder + its button
+
+  
+  #ifdef FEATURE_INTERRUPTTEST
+    digitalWrite(LED_BUILTIN, state);
+  #endif
 
   // In support of old user interface with buttons:
 #ifdef FEATURE_BUTTONS  // separate buttons which may be in addition to rotary encoder
@@ -1040,16 +1071,17 @@ void loop() {
 // Menu item ///////////////////////////////////////////////////////////////////////////////////////////
 
 void LocalUTC(  // local time, UTC, locator, option: ISO week #
-  int mode      // 0 for original version
+  byte mode     // 0 for original version
                 // 1 for added week # (new 3.9.2022)
                 // 2 for Chemical element on last two lines (27.3.2023)
 ) {             //
 
+loadNativeCharacters(languageNumber);
 #ifndef FEATURE_DATE_PER_SECOND
   localTime = now() + utcOffset * 60;
 
 #else  // for stepping date quickly and check calender function
-  localTime = now() + utcOffset * 60 + dateIteration * 86400;  //int(86400.0/5.0); // fake local time by stepping per day
+  localTime = now() + utcOffset * 60 + dateIteration * 3600; //86400;  //int(86400.0/5.0); // fake local time by stepping per day
   dateIteration = dateIteration + 1;
 //  Serial.print(dateIteration); Serial.print(": ");
 //  Serial.println(local);
@@ -1072,20 +1104,8 @@ void LocalUTC(  // local time, UTC, locator, option: ISO week #
   {
 
     // right-adjusted long day name:
-
-    if (languageNumber >= 0) {
-      nativeDayLong(localTime);  // output in "today"
-      sprintf(todayFormatted, "%12s", today);
-    } else  // English
-    {
-
-#ifdef FEATURE_DAY_PER_SECOND                                            //      fake the day -- for testing only
-      sprintf(todayFormatted, "%12s", dayStr(1 + (localTime / 2) % 7));  // change every two seconds
-#else
-      sprintf(todayFormatted, "%12s", dayStr(weekday(localTime)));  // normal
-#endif
-    }
-
+    nativeDayLong(localTime);  // output in "today"
+    sprintf(todayFormatted, "%12s", today);
     lcd.setCursor(8, 0);
     lcd.print(todayFormatted);
 
@@ -1094,8 +1114,15 @@ void LocalUTC(  // local time, UTC, locator, option: ISO week #
       // option added 3.9.2022 - ISO week # on second line
       GregorianDate a(month(localTime), day(localTime), year(localTime));
       IsoDate ISO(a);
-      if (!strcmp(languages[languageNumber], "no")) lcd.print(F("Uke "));
-      else lcd.print(F("Week "));
+      if      (strcmp(languages[languageNumber], "no")==0) lcd.print(F("Uke "));
+      else if (strcmp(languages[languageNumber], "dk")==0) lcd.print(F("Uge "));
+      else if (strcmp(languages[languageNumber], "ny")==0) lcd.print(F("Veke "));
+      else if (strcmp(languages[languageNumber], "se")==0) lcd.print(F("Vecka "));
+      else if (strcmp(languages[languageNumber], "is")==0) lcd.print(F("Vika "));
+      else if (strcmp(languages[languageNumber], "de")==0) lcd.print(F("Woche "));
+      else if (strcmp(languages[languageNumber], "fr")==0) lcd.print(F("Sem. ")); // "Semaine" is too long
+      else if (strcmp(languages[languageNumber], "es")==0) lcd.print(F("Semana "));
+      else lcd.print(F("Week "));  // also Dutch
 
       lcd.print(ISO.GetWeek());
       lcd.print(" ");  // added space 15.01.2023 - needed for 1-digit week numbers
@@ -1124,7 +1151,7 @@ void LocalUTC(  // local time, UTC, locator, option: ISO week #
       LCDChemicalElementName(Sec);  // Display full name of chemical element
 
       lcd.setCursor(18, 3);
-      lcd.print("  ");
+      lcd.print(F("  "));
     }
 
     if (mode != 2)  // 30.05.2023 from LCDUTCTimeLocator -> UTC time + No sats
@@ -1152,40 +1179,67 @@ void LocalUTC(  // local time, UTC, locator, option: ISO week #
 
 // Menu item //////////////////////////////////////////////////////////////////////////////////////////
 
-void UTCLocator() {  // UTC, locator, # satellites
-
+void UTCLocator(  // UTC, locator, # satellites
+     byte mode    // 0 for original version
+                  // 1 for same layout as LocalUTC(1) - new 28.02.2024
+){
   // #ifdef FEATURE_FAKE_SERIAL_GPS_IN
   //       hourGPS = hour(now());
   //       minuteGPS = minute(now());
   //       secondGPS = second(now());
   // #endif
 
+  loadNativeCharacters(languageNumber);
+
   lcd.setCursor(0, 0);  // top line *********
-                        //  if (gps.time.isValid()) {
-  sprintf(textBuffer, "%02d%c%02d%c%02d         UTC", hour(now()), dateTimeFormat[dateFormat].hourSep, minute(now()), dateTimeFormat[dateFormat].minSep, second(now()));
-  lcd.print(textBuffer);
-  //  }
-
-  // UTC date
-
-  //if (dayGPS != 0)
-  {
-    lcd.setCursor(0, 1);  // line 1
-    lcd.print(dayStr(weekdayGPS));
-    lcd.print(F("   "));  // two more spaces 14.04.2018
-
-    lcd.setCursor(10, 1);
-    LcdDate(dayGPS, monthGPS, yearGPS);
+  //  if (gps.time.isValid())
+  if (mode==0)
+  { 
+    sprintf(textBuffer, "%02d%c%02d%c%02d         UTC", hour(now()), dateTimeFormat[dateFormat].hourSep, minute(now()), dateTimeFormat[dateFormat].minSep, second(now()));
+    lcd.print(textBuffer);
   }
+  else  // mode == 1
+  {
+    sprintf(textBuffer, "%02d%c%02d%c%02d", hour(now()), dateTimeFormat[dateFormat].hourSep, minute(now()), dateTimeFormat[dateFormat].minSep, second(now()));
+    lcd.print(textBuffer);
+    #ifndef UTCLOCALLANGUAGE        // New 27.2.2024
+      lcd.print(dayStr(weekdayGPS));
+    #else
+       nativeDayLong(now());   // output in "today"
+      sprintf(todayFormatted, "%12s", today);   // print right-justified
+      lcd.print(todayFormatted);
+    #endif
+  }
+  // UTC date
+  //if (dayGPS != 0)
+  lcd.setCursor(0, 1);  // line 1
+  if (mode==0)
+  {
+    #ifndef UTCLOCALLANGUAGE        // New 27.2.2024
+      lcd.print(dayStr(weekdayGPS));
+    #else
+      nativeDayLong(now());   // output in "today"
+      sprintf(todayFormatted, "%-12s", today);   // print right-justified
+      lcd.print(todayFormatted);
+    #endif
+    
+    lcd.print(F("   "));  // two more spaces 14.04.2018
+  }
+  else  // mode == 1
+    lcd.print(F("UTC"));
+  
+  lcd.setCursor(10, 1);
+  LcdDate(dayGPS, monthGPS, yearGPS);
+
   if (gps.location.isValid()) {
 
-#ifndef DEBUG_MANUAL_POSITION
-    latitude = gps.location.lat();
-    lon = gps.location.lng();
-#else
-    latitude = latitude_manual;
-    lon = longitude_manual;
-#endif
+  #ifndef DEBUG_MANUAL_POSITION
+      latitude = gps.location.lat();
+      lon = gps.location.lng();
+  #else
+      latitude = latitude_manual;
+      lon = longitude_manual;
+  #endif
 
     //char locator[7];
     Maidenhead(lon, latitude, textBuffer);
@@ -1210,6 +1264,9 @@ void LocalSun(  // local time, sun x 3
                 // 2 toggle between Civil+Nautical (= 1) and Noon and now display
 ) 
 {
+  loadNativeCharacters(languageNumber);
+  loadArrowCharacters();
+
   //
   // shows Actual (0 deg), Civil (-6 deg), and Nautical (-12 deg) sun rise/set
   //
@@ -1242,8 +1299,13 @@ void LocalSun(  // local time, sun x 3
 
     if (now() % 20 < 10) {
       LcdSolarRiseSet(2, 'C', ScreenLocalSunSimpler);
+
+      if (now()%20 == 0)                                       // blank out line first, in case not written during midsummer
+      {
+        lcd.setCursor(0,3); lcd.print(F("                  "));  
+      }
       LcdSolarRiseSet(3, 'N', ScreenLocalSunSimpler);
-        lcd.setCursor(17, 3); lcd.print(" "); // remove deg symbol
+      //lcd.setCursor(17, 3); lcd.print(" "); // remove deg symbol
     }
     else {
       LcdSolarRiseSet(2, 'O', ScreenLocalSunAzEl);  // noon info
@@ -1270,6 +1332,9 @@ void LocalSunAzEl() {  // local time, sun x 3
   //
   // shows Actual (0 deg), Civil (-6 deg), and Nautical (-12 deg) sun rise/set
   //
+  loadNativeCharacters(languageNumber);
+  loadArrowCharacters();
+
   LcdShortDayDateTimeLocal(0, 0);  // line 0
   if (gps.location.isValid()) {
     if (minuteGPS != oldMinute) {
@@ -1302,6 +1367,8 @@ void LocalSunMoon() {  // local time, sun, moon
   //
   // shows solar rise/set in a chosen definition (Actual, Civil, ...)
   //
+  loadNativeCharacters(languageNumber);
+  loadArrowCharacters();
 
   LcdShortDayDateTimeLocal(0, 0);  // line 0, (was time offset 2) to the left
 
@@ -1383,7 +1450,7 @@ void LocalSunMoon() {  // local time, sun, moon
       PrintFixedWidth(lcd, (int)round(PercentPhaseM), 3);
       lcd.print("%");
 
-      UpdateMoonPosition();
+      UpdateMoonPosition();  // calls K3NG moon2()
       lcd.setCursor(16, 3);
       PrintFixedWidth(lcd, (int)round(moon_elevation), 3);
       lcd.write(DEGREE);
@@ -1405,6 +1472,8 @@ void LocalMoon() {  // local time, moon phase, elevation, next rise/set
 
   //  String textbuf;
   float percentage;
+  loadNativeCharacters(languageNumber);
+  loadArrowCharacters();
 
   LcdShortDayDateTimeLocal(0, 0);  // line 0, (was 1 position left) to line up with next lines
 
@@ -1414,17 +1483,17 @@ void LocalMoon() {  // local time, moon phase, elevation, next rise/set
       // days since last new moon
       float Phase, PercentPhase;
 
-      UpdateMoonPosition();
+      UpdateMoonPosition(); // calls K3NG moon2()
 
       lcd.setCursor(0, 3);  // line 3
       //
-      //        lcd.print("  ");
+      //        lcd.print(F("  "));
       //        textbuf = String(moon_dist, 0);
       //        lcd.print(textbuf); lcd.print(" km");
 
       lcd.print(" ");
       PrintFixedWidth(lcd, int(round(moon_dist / 4067.0)), 3);
-      lcd.print("% ");
+      lcd.print(F("% "));
 
       PrintFixedWidth(lcd, int(round(moon_dist / 1000.0)), 3);
       lcd.print(F("'km "));
@@ -1673,10 +1742,10 @@ void MoonRiseSet(void) {
         PrintFixedWidth(lcd, MoonSetHr, 2, '0');
         lcd.print(dateTimeFormat[dateFormat].hourSep);  // doesn't handle 00:48 well with ' ' as separator
         PrintFixedWidth(lcd, MoonSetMin, 2, '0');
-        lcd.print("  ");
+        lcd.print(F("  "));
         PrintFixedWidth(lcd, (int)round(sAz2), 4);
         lcd.write(DEGREE);
-        lcd.print("  ");
+        lcd.print(F("  "));
         lineUsed = lineUsed + 1;
       }
       //      else
@@ -1716,10 +1785,10 @@ void MoonRiseSet(void) {
             PrintFixedWidth(lcd, MoonRiseHr, 2, '0');
             lcd.print(dateTimeFormat[dateFormat].hourSep);
             PrintFixedWidth(lcd, MoonRiseMin, 2, '0');
-            lcd.print("  ");
+            lcd.print(F("  "));
             PrintFixedWidth(lcd, (int)round(rAz2), 4);
             lcd.write(DEGREE);
-            lcd.print("  ");
+            lcd.print(F("  "));
           } else {
             lcd.print(pRise2);
             lcd.print(F("              "));
@@ -1741,10 +1810,10 @@ void MoonRiseSet(void) {
             PrintFixedWidth(lcd, MoonSetHr, 2, '0');
             lcd.print(dateTimeFormat[dateFormat].hourSep);  // doesn't handle 00:48 well with ' ' as separator
             PrintFixedWidth(lcd, MoonSetMin, 2, '0');
-            lcd.print("  ");
+            lcd.print(F("  "));
             PrintFixedWidth(lcd, (int)round(sAz2), 4);
             lcd.write(DEGREE);
-            lcd.print("  ");
+            lcd.print(F("  "));
           } else {
             lcd.print(pSet2);
             lcd.print(F("              "));
@@ -1753,7 +1822,7 @@ void MoonRiseSet(void) {
       }
 
       lcd.setCursor(18, 3);
-      lcd.print("  ");
+      lcd.print(F("  "));
     }
   }
   oldMinute = minuteGPS;
@@ -1763,6 +1832,12 @@ void MoonRiseSet(void) {
 
 void lcdTimeZone(byte zoneNumber)  // display time on LCD in desired time zone. Called by TimeZones()
 {
+  // this function writes to Serial: "[TZ] Read from EEPROM, size =  4096 , offset =  0" - from inside library???
+
+  // https://github.com/JChristensen/Timezone/blob/master/README.md:
+  // This reads both the daylight and standard time rules previously stored at EEPROM address 100:
+  // Timezone usPacific(100);
+
   Timezone tzLocal;
   time_t local;
   TimeChangeRule *tcrLocal;
@@ -1989,6 +2064,8 @@ void Bar(void) {
   // get local time
   // updated 12.10.2023 with proper bars rather than approximate symbols
 
+  loadSimpleBarCharacters();  // load user-defined characters for LCD, if not already loaded                        
+
   localTime = now() + utcOffset * 60;
   Hour = hour(localTime);
   Minute = minute(localTime);
@@ -2013,7 +2090,7 @@ void Bar(void) {
   }
 
   lcd.setCursor(18, 0);
-  lcd.print("1h");
+  lcd.print(F("1h"));
 
   lcd.setCursor(0, 1);
   imax = Minute / 5;
@@ -2027,7 +2104,7 @@ void Bar(void) {
   else if (Minute % 5 == 3) lcd.write(THREE_BARS);
   else if (Minute % 5 == 4) lcd.write((byte)FOUR_BARS);
   lcd.setCursor(18, 1);
-  lcd.print("5m");
+  lcd.print(F("5m"));
 
   // seconds in 12 characters, with a break every 3 characters
   lcd.setCursor(0, 2);
@@ -2043,7 +2120,7 @@ void Bar(void) {
   else if (Seconds % 5 == 4) lcd.write((byte)FOUR_BARS);
 
   lcd.setCursor(18, 2);
-  lcd.print("5s");
+  lcd.print(F("5s"));
 
   lcd.setCursor(18, 3);
   if (Hour > 12) lcd.print(F("PM"));
@@ -2109,7 +2186,7 @@ void MengenLehrUhr(void) {
   } else lcd.print(F("    "));
 
   lcd.setCursor(18, 0);
-  lcd.print("5h");
+  lcd.print(F("5h"));
 
   // second line shows remainder and has 1 hour resolution
 
@@ -2141,7 +2218,7 @@ void MengenLehrUhr(void) {
   } else lcd.print(F("    "));
 
   lcd.setCursor(18, 1);
-  lcd.print("1h");
+  lcd.print(F("1h"));
 
   // third line shows a bar for every 5 minutes
   int ii;
@@ -2161,7 +2238,7 @@ void MengenLehrUhr(void) {
   }
 
   lcd.setCursor(18, 2);
-  lcd.print("5m");
+  lcd.print(F("5m"));
 
   // fourth line shows remainder and has 1 minute resolution
   lcd.setCursor(0, 3);
@@ -2196,7 +2273,7 @@ void MengenLehrUhr(void) {
   } else lcd.print(F("    "));
 
   lcd.setCursor(18, 3);
-  lcd.print("1m");
+  lcd.print(F("1m"));
 }
 
 /*****
@@ -2213,6 +2290,8 @@ void LinearUhr(void) {
 
   int imax;
   int ii;
+   
+  loadSimpleBarCharacters();  // load user-defined characters for LCD, if not loaded                       
 
   // get local time
   localTime = now() + utcOffset * 60;
@@ -2229,7 +2308,7 @@ void LinearUhr(void) {
     lcd.write(ALL_ON);
   }
   lcd.setCursor(17, 0);
-  lcd.print("10h");
+  lcd.print(F("10h"));
 
   // second line shows remainder and has 1 hour resolution
   lcd.setCursor(0, 1);
@@ -2245,7 +2324,7 @@ void LinearUhr(void) {
     if (ii == 4) lcd.print(" ");
   }
   lcd.setCursor(18, 1);
-  lcd.print("1h");
+  lcd.print(F("1h"));
 
   // third line shows a bar for every 10 minutes
   lcd.setCursor(0, 2);
@@ -2262,7 +2341,7 @@ void LinearUhr(void) {
     if (ii == 4) lcd.print(" ");
   }
   lcd.setCursor(17, 2);
-  lcd.print("10m");
+  lcd.print(F("10m"));
 
   // last line shows remainder and has 1 minute resolution
   lcd.setCursor(0, 3);
@@ -2287,12 +2366,12 @@ void LinearUhr(void) {
   else if (Seconds / 12 == 4) lcd.write((byte)FOUR_BARS);
 
   lcd.setCursor(18, 3);
-  lcd.print("1m");
+  lcd.print(F("1m"));
 }
 
 /*****
 Purpose: Menu item
-Finds internal time: jd, j2000, etc
+Finds internal time: jd1970, j2000, etc
 
 Argument List: None
 
@@ -2304,33 +2383,42 @@ void InternalTime() {  // UTC, Unix time, J2000, etc
   lcd.setCursor(0, 0);  // top line *********
   if (gps.time.isValid()) {
 
-    float jd = now() / 86400.0;  // cdn(now()); // now/86400, i.e. no of days since 1970
-    float j2000 = jd - 10957.5;  // 1- line
-    lcd.print("j2k ");
+    float jd1970 = now() / 86400.0;  // cdn(now()); // now/86400, i.e. no of days since 1970 [No leap seconds]
+    float j2000 = jd1970 - 10957.5;  // 1- line
+    lcd.print(F("j2k "));
     lcd.print(j2000);
-
-    // #ifdef FEATURE_FAKE_SERIAL_GPS_IN
-    //     hourGPS = hour(now());
-    //     minuteGPS = minute(now());
-    //     secondGPS = second(now());
-    // #endif
 
     lcd.setCursor(12, 0);
     sprintf(textBuffer, "%02d%c%02d%c%02d UTC ", hour(now()), dateTimeFormat[dateFormat].hourSep, minute(now()), dateTimeFormat[dateFormat].minSep, second(now()));
     lcd.print(textBuffer);
 
-    lcd.setCursor(0, 1);
-    lcd.print(F("jd1970 "));
-    lcd.print(jd);
-
     lcd.setCursor(0, 2);
-    lcd.print(F("now    "));
-    lcd.print(now());
+    lcd.print(F("jd1970 "));
+    lcd.print(jd1970,3);
+   
+    lcd.setCursor(0, 1);
+    Seconds = second(now());
+    Minute = minute(now());
+    Hour = hour(now());
+    Day = day(now());
+    Month = month(now());
+    Year = year(now());
 
+    // new 9.2.2024
+    jd = get_julian_date(Day, Month, Year, Hour, Minute, Seconds);  // local - since year 4713 BC
+    
+    lcd.print(F("jd   "));
+    lcd.print(jd,1);lcd.print("+"); lcd.print(jd_frac,3);  // more accurate
+    // float jdd = jd + jd_frac; lcd.print(jdd);  // loses accuracy relative to previous line
+   
     lcd.setCursor(0, 3);
-    lcd.print(F("local  "));
-    localTime = now() + utcOffset * 60;
-    lcd.print(localTime);
+    lcd.print(F("unix   "));
+    lcd.print(now());   
+    lcd.setCursor(18, 3); lcd.print(F("  ")); // blank out menu number    
+
+    // lcd.print(F("local  "));
+    // localTime = now() + utcOffset * 60;
+    // lcd.print(localTime);
   }
 }
 /*****
@@ -2486,7 +2574,7 @@ void UTCPosition() {  // position, altitude, locator, # satellites
   // enough space on display for 2469 m
   lcd.setCursor(14, 2);
   PrintFixedWidth(lcd, (int)round(alt), 4, ' ');
-  lcd.print(" m");
+  lcd.print(F(" m"));
 
   //  if (gps.satellites.isValid()) { // 16.11.2022
   if (gps.satellites.isUpdated()) {
@@ -2522,8 +2610,8 @@ const char locationP[19][7] PROGMEM = {
   "KI88hr", "KM72jb", "KP20eh", "IM12jt", "GF05tj", "FH17mw", "FJ69cc"
 };
 const char qth[19][8] PROGMEM = {
-  "N York ", "Inuvik ", "Califor", "Hawaii ", "N Zeala", "Austral", "Japan  ", "Nsibirs", "H Kong ", "Colombo", "Pretori",
-  "Kenya  ", "Tel Avi", "Finland", "Madeira", "B Aires", "Lima   ", "Caracas"
+  "N York ", "Inuvik ", "Califor", "Hawaii ", "N Zeala", "Perth  ", "Japan  ", "Nsibirs", "H Kong ", "Colombo", "Pretori",
+  "Kenya  ", "Israel ", "Finland", "Madeira", "B Aires", "Peru   ", "Venezue"
 };
 
 
@@ -2582,9 +2670,12 @@ void WSPRsequence() {  // UTC, + WSPR band/frequency for coordinated WSPR
   // 20 min cycle over 10 bands from 160m to 10m
 
   int ii;
+  int isec;
   // 10.4.2023: changed from char to int and float storage to save RAM:
   int band[11] = { 160, 80, 60, 40, 30, 20, 17, 15, 12, 10 };
   float qrg[11] = { 1838.100, 3570.100, 5366.200, 7040.100, 10140.200, 14097.100, 18106.100, 21096.100, 24926.100, 28126.100 };
+
+  loadGapLessCharacters7();   // load LCD characters if not loaded
 
   LcdUTCTimeLocator(0);  // top line *********
   /*
@@ -2593,18 +2684,22 @@ void WSPRsequence() {  // UTC, + WSPR band/frequency for coordinated WSPR
   lcd.setCursor(0, 1);
   lcd.print(F("WSPR band hopping:  "));
 
+  //ii = (minuteGPS % 20) / 2;  // ii from 0 to 9, adresses band
   ii = (minuteGPS % 20) / 2;  // ii from 0 to 9, adresses band
+  //Serial.print("ii, secondGPS  "); Serial.print(ii);Serial.print(" ");Serial.println(secondGPS);
 
   // WSPR transmission starts 1 second into even minute and lasts for 110.6 = 60 + 50.6 seconds
   if ((minuteGPS % 2 == 0 && secondGPS < 1) || (minuteGPS % 2 == 1 && secondGPS > 52)) {
     lcd.setCursor(0, 2);
     lcd.print(F("                    "));
-    //lcd.setCursor(18, 3); lcd.print("  "); // blank out menu number
+    //lcd.setCursor(18, 3); lcd.print(F("  ")); // blank out menu number
     lcd.setCursor(0, 3);
     lcd.print(F("                    "));
   } else {
-    int isec = secondGPS - 1;
+    isec = secondGPS - 1;
     if (minuteGPS % 2 == 1) isec = isec + 60;
+    //Serial.print("minuteGPS "); Serial.println(minuteGPS);
+    //Serial.print("isec      "); Serial.println(isec);
     lcd.setCursor(0, 2);
     lcd.print(band[ii]);
     lcd.print(F(" m "));
@@ -2681,7 +2776,7 @@ void HexOctalClock(byte val) {
     lcd.print(textBuffer);
 
     lcd.setCursor(18, 3);
-    lcd.print(" H");
+    lcd.print(F(" H"));
     lcd.setCursor(7, 3);
     sprintf(textBuffer, "%02X%c%02X%c%02X", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds);  // hex
     lcd.print(textBuffer);
@@ -3132,8 +3227,8 @@ void Sidereal()  // LST - Local Sidereal Time
 {
   double LST_hours, LST_degrees;
 
-  float jd = now() / 86400.0;  // cdn(now()); // now/86400, i.e. no of days since 1970
-  float j2000 = jd - 10957.5;  // 1- line
+  float jd1970 = now() / 86400.0;  // cdn(now()); // now/86400, i.e. no of days since 1970
+  float j2000 = jd1970 - 10957.5;  // 1- line
 
   double decimal_time = hour(now()) + (minute(now()) / 60.0) + (second(now()) / 3600.0);
   double LST = 100.46 + 0.985647 * j2000 + gps.location.lng() + 15 * decimal_time;
@@ -3163,6 +3258,7 @@ void Sidereal()  // LST - Local Sidereal Time
   double tc = 4.0 * lon + tv;  // correction in minutes: Deviation from center of time zone + Equation of Time
 
   // display results:
+ loadNativeCharacters(languageNumber);
 
   LcdShortDayDateTimeLocal(0, 0);  // line 0 local time
 
@@ -3180,11 +3276,17 @@ void Sidereal()  // LST - Local Sidereal Time
   lcd.print(textBuffer);
 
   lcd.setCursor(0, 2);
-  lcd.print(F("Sidereal"));
+  lcd.print(F("Sidereal"));   // remove this for Metro, and "In view" starts on (18,2) and continues on (0,3)
   lcd.setCursor(12, 2);
   PrintFixedWidth(lcd, rHours, 2, '0');
   lcd.print(dateTimeFormat[dateFormat].hourSep);
   PrintFixedWidth(lcd, rMinutes, 2, '0');
+
+#ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
+// For some reason needed for Metro to overwrite a duplicate "Si" "dereal"
+  lcd.setCursor(18,1); lcd.print(F("  "));
+  lcd.setCursor( 0,3); lcd.print(F("       ")); 
+#endif
 
   // sidereal calc # 2
   //    double localsidereal = localSiderealTime(lon, jd, float(utcOffset) / 60.0); // in radians
@@ -3412,6 +3514,11 @@ void DemoClock(byte inDemo  // 0 or 1
     lcd.print(F("  *** D E M O ***   "));
     lcd.setCursor(0, 1);
     lcd.print(F("Multi Face GPS Clock"));
+
+    lcd.setCursor(14,2);
+    sprintf(textBuffer, "%6s",demoStepTypeText[demoStepType]);   // print right-justified -> garbish
+    lcd.print(textBuffer);
+    
     lcd.setCursor(0, 3);
     lcd.print(F("github/la3za "));
     PrintFixedWidth(lcd, dwellTimeDemo, 3);
@@ -3430,7 +3537,11 @@ Return value: none
 *****/
 
 void WordClock() {
-  if ((languageNumber >= 0) && !(strcmp(languages[languageNumber], "no"))) WordClockNorwegian();
+  if (strcmp(languages[languageNumber], "no")==0 || strcmp(languages[languageNumber], "ny")==0) 
+  {
+    loadAring();  // Å for Norwegian 
+    WordClockNorwegian();
+  }
   else WordClockEnglish();
 }
 
@@ -3458,7 +3569,7 @@ void PlanetVisibility(byte inner  // inner = 1 for inner planets, all other valu
   Month = month(now());
   Year = year(now());
 
-  jd = get_julian_date(Day, Month, Year, Hour, Minute, Seconds);  // local
+  jd = get_julian_date(Day, Month, Year, Hour, Minute, Seconds);  // local - since year 4713 BC
 
 #ifdef FEATURE_SERIAL_PLANETARY
   Serial.println("JD:" + String(jd, DEC) + "+" + String(jd_frac, DEC));  // jd = 2457761.375000;
@@ -3474,13 +3585,13 @@ void PlanetVisibility(byte inner  // inner = 1 for inner planets, all other valu
   lcd.print(F("   % Magn"));
 
   if (inner == 1) {
-    get_object_position(0, jd, jd_frac);
+    get_object_position(0, jd, jd_frac);    // Mercury
     lcd.setCursor(0, 2);
     lcd.print(F("Mer "));
     LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
 
     lcd.setCursor(0, 3);
-    get_object_position(1, jd, jd_frac);
+    get_object_position(1, jd, jd_frac);    // Venus
     lcd.print(F("Ven "));
     LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
 
@@ -3490,7 +3601,7 @@ void PlanetVisibility(byte inner  // inner = 1 for inner planets, all other valu
       // Moon
       float Phase, PercentPhase;
       lcd.print(F("Lun "));
-      UpdateMoonPosition();
+      UpdateMoonPosition();           // calls K3NG moon2()
       MoonPhase(Phase, PercentPhase);
       LCDPlanetData(moon_elevation, moon_azimuth, PercentPhase / 100., -12.7);
     } else {
@@ -3498,51 +3609,26 @@ void PlanetVisibility(byte inner  // inner = 1 for inner planets, all other valu
       lcd.print(F("Sun "));
 
       /////// Solar elevation //////////////////
-
-      cTime c_time;
-      cLocation c_loc;
-      cSunCoordinates c_sposn;
-      double dElevation;
-      double dhNoon, dmNoon;
-
-      c_time.iYear = year(now());
-      c_time.iMonth = month(now());
-      c_time.iDay = day(now());
-      c_time.dHours = hour(now());
-      c_time.dMinutes = minute(now());
-      c_time.dSeconds = second(now());
-
-      c_loc.dLongitude = lon;
-      c_loc.dLatitude = latitude;
-
-      c_sposn.dZenithAngle = 0;
-      c_sposn.dAzimuth = 0;
-
-      float sun_azimuth = 0;
-      float sun_elevation = 0;
-
-      sunpos(c_time, c_loc, &c_sposn);
-
-      // Convert Zenith angle to elevation
-      sun_elevation = 90. - c_sposn.dZenithAngle;
-      sun_azimuth = c_sposn.dAzimuth;
-
-      LCDPlanetData(round(sun_elevation), round(sun_azimuth), 1., -26.7);
+      double sun_azimuth = 0;
+      double sun_elevation = 0;
+      // solar az, el now:
+      calcHorizontalCoordinates(now(), latitude, lon, sun_azimuth, sun_elevation);
+      LCDPlanetData(round(sun_elevation), round(sun_azimuth), 1., -26.7); // phase=100%, magnitude=26.7 hard-coded
     }
 
   } else  // outer planets
   {
-    get_object_position(3, jd, jd_frac);
+    get_object_position(3, jd, jd_frac);  // Mars
     lcd.setCursor(0, 1);
     lcd.print(F("Mar "));
     LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
 
-    get_object_position(4, jd, jd_frac);
+    get_object_position(4, jd, jd_frac);  // Jupiter
     lcd.setCursor(0, 2);
     lcd.print(F("Jup "));
     LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
 
-    get_object_position(5, jd, jd_frac);
+    get_object_position(5, jd, jd_frac);  // Saturn
     lcd.setCursor(0, 3);
     lcd.print(F("Sat "));
     LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
@@ -3570,8 +3656,10 @@ int mHeb = 0;   // pointer to month name
 
 void ISOHebIslam() {  // ISOdate, Hebrew, Islamic
 
+loadArrowCharacters();
+
 #ifdef FEATURE_DATE_PER_SECOND                                 // for stepping date quickly and check calender function
-  localTime = now() + utcOffset * 60 + dateIteration * 86400;  // fake local time by stepping up to 1 sec/day
+  localTime = now() + utcOffset * 60 + dateIteration * 3600; //86400;  // fake local time by stepping up to 1 sec/day
   dateIteration = dateIteration + 1;
 //  Serial.print(dateIteration); Serial.print(": ");
 //  Serial.println(localTime);
@@ -3586,9 +3674,7 @@ void ISOHebIslam() {  // ISOdate, Hebrew, Islamic
   GregorianDate a(month(localTime), day(localTime), year(localTime));
   LcdDate(a.GetDay(), a.GetMonth(), a.GetYear());
   ////    Serial.print("Absolute date ");Serial.println(a);
-  
-  
-   
+    
   
   lcd.setCursor(0, 1);
   JulianDate Jul(a);
@@ -3610,8 +3696,10 @@ void ISOHebIslam() {  // ISOdate, Hebrew, Islamic
   // alternate between clock and week #
   // alternate between month name and moon info for Islamic & Hebrew calendar  
    if (now() % 20 < 10) {
+
+    localTime = now() + utcOffset * 60; // added 3.2.2024 - less latency in time calculation as routine is entered and at full minute
     lcd.setCursor(11,0);
-    sprintf(textBuffer, "%02d%c%02d%c%02d", hour(localTime), dateTimeFormat[dateFormat].hourSep, minute(localTime), dateTimeFormat[dateFormat].minSep, second(localTime));
+    sprintf(textBuffer, "%02d%c%02d%c%02d ", hour(localTime), dateTimeFormat[dateFormat].hourSep, minute(localTime), dateTimeFormat[dateFormat].minSep, second(localTime));
     lcd.print(textBuffer);
 
     lcd.setCursor(11, 2);
@@ -3626,6 +3714,12 @@ void ISOHebIslam() {  // ISOdate, Hebrew, Islamic
   {
     lcd.setCursor(10, 0); 
     IsoDate ISO(a);
+    // if      (strcmp(languages[languageNumber], "no")==0) lcd.print(F(" Uke    "));
+    // else if (strcmp(languages[languageNumber], "dk")==0) lcd.print(F(" Uge    "));
+    // else if (strcmp(languages[languageNumber], "ny")==0) lcd.print(F(" Veke   "));
+    // else if (strcmp(languages[languageNumber], "se")==0) lcd.print(F(" Vecka  "));
+    // else if (strcmp(languages[languageNumber], "is")==0) lcd.print(F(" Vika   "));
+    // else                                                 
     lcd.print(F(" Week   "));
     lcd.print(ISO.GetWeek());
     
@@ -3734,11 +3828,7 @@ void GPSInfo() {
     //if (noSats<10) lcd.print(" ");
     //lcd.print(noSats);
 
-    // if (totalSats>0) SNRAvg = SNRAvg/totalSats;
-    // else         SNRAvg = 0;               // 16.11.2022
-
-    //#ifdef SNR_GPSInfo  // possible to turn SNR display off
-    // unreliable SNR number (sometimes shows 0 and other times 99 dB) ?
+   
     lcd.print(F(" SNR "));
     PrintFixedWidth(lcd, round(SNRAvg), 2);
     lcd.print(F(" dB"));
@@ -3815,6 +3905,8 @@ void BigNumbers3(byte showUTC) {
   byte imax;
   byte lineno = 0;  // 0,1,2 first (=upper) line for big digits
 
+  loadThreeWideDigits();  // load 8 user-defined characterS if not loaded
+
   if (showUTC == 1) {
     Hour = hour(now());
     Minute = minute(now());
@@ -3889,6 +3981,7 @@ void BigNumbers2(byte showUTC) {
   byte lineno = 0;  // 0,1 first (=upper) line for big digits
   byte start = 0;   // start row for characters: left-justified: 0, ~centered: 1,2
 
+  loadThreeHighDigits2();  // load 8 user-defined characterS if not already loaded
   if (showUTC == 1) {
     Hour = hour(now());
     Minute = minute(now());
@@ -3972,18 +4065,19 @@ void Reminder()  //
   time_t Tsec;
   tmElements_t T;
 
-  byte noOfReminderScreens = 2;      // e.g. 2 means that 4 names + 4 names will be shown, 5 is OK, i.e. all will be shown
+  byte noOfReminderScreens = 5;      // e.g. 2 means that 4 names + 4 names will be shown, 5 is OK, i.e. all will be shown
   byte holdTimeReminderScreen = 10;  // or dwellTimeDemo?
   int ind;
   char yearSymbol;
 
   // check data read from EEPROM into variables lengthPersonData, person in setup()
-  //readPersonEEPROM();   // read data into variables lengthPersonData, person
-  if (lengthPersonData <= 0 || lengthPersonData > MAX_NO_OF_PERSONS) {
+  //readPersonEEPROM();   // read data into variables lengthPersonData, person (already done in setup())
+
+  if (lengthPersonData <= 0 || lengthPersonData > MAX_NO_OF_PERSONS) {  // no data in EEPROM
     lcd.setCursor(0, 0);
-    lcd.print("Reminder()");
+    lcd.print(F("Reminder()"));
     lcd.setCursor(0, 1);
-    lcd.print("EEPROM empty: ");
+    lcd.print(F("EEPROM empty: "));
     lcd.print(EEPROM_OFFSET2);
     return;
   }
@@ -3993,12 +4087,17 @@ void Reminder()  //
   int indexArray[lengthPersonData + 2];
   float Age1970[lengthPersonData + 2];
 
-  if (strcmp(languages[languageNumber], "no") == 0) yearSymbol = char(SCAND_aa_SMALL);  // Scandinavian å
-  else yearSymbol = 'y';                                                                // 'English for 'year'
+  if (strcmp(languages[languageNumber], "no") == 0 || strcmp(languages[languageNumber], "ny") == 0)
+    { 
+      loadAring();  // Å for Norwegian 
+      yearSymbol = char(SCAND_aa_SMALL);  // Scandinavian å
+    }
+  else yearSymbol = 'y';                  // 'English for 'year'
 
+  // read from EEPROM already: lengthPersonData, person.*
   for (ind = 0; ind < lengthPersonData; ind++) {
-    //      Serial.print(ind); Serial.print(": ");Serial.print(person[ind].Year);Serial.print(" ");Serial.print(person[ind].Month);
-    //                         Serial.print(" ");Serial.print(person[ind].Day);Serial.print(" ");Serial.println(person[ind].Name);
+          Serial.print(ind); Serial.print(": ");Serial.print(person[ind].Year);Serial.print(" ");Serial.print(person[ind].Month);
+          Serial.print(" ");Serial.print(person[ind].Day);Serial.print(" ");Serial.println(person[ind].Name);
     Age1970[ind] = max(0.0, 1970.0 - person[ind].Year);  // non-zero if older than 1970
     T.Year = max(person[ind].Year - 1970, 0);            // zero if older than 1970, else difference
     T.Month = person[ind].Month;
@@ -4007,15 +4106,15 @@ void Reminder()  //
     T.Minute = 59;
     T.Second = 59;  // Not 0,0,0 in order to ensure that a birhday today is shown first
 
-    Tsec = makeTime(T);                    //seconds since 1/1/1970
+    Tsec = makeTime(T);                    // seconds since 1/1/1970
     diffSec = now() - Tsec;                // difference in seconds to now
     diffSec = diffSec + utcOffset * 60.0;  // compensate for utcOffset in minutes: local = now() + utcOffset * 60;
 
     diffYearsF[ind] = diffSec / 31557600.0 + Age1970[ind];               // [no of sec / year = 31,557,600]
     timeToBirthday[ind] = 1 - (diffYearsF[ind] - int(diffYearsF[ind]));  // fraction of year
 
-    //      Serial.print(" ");Serial.print(ind);Serial.print(" ");Serial.print(person[ind].Name);
-    //                       Serial.print(", "); Serial.print(diffYearsF[ind]); Serial.print(" "); Serial.println(timeToBirthday[ind],4);
+     //     Serial.print(" ");Serial.print(ind);Serial.print(" ");Serial.print(person[ind].Name);
+     //     Serial.print(", "); Serial.print(diffYearsF[ind]); Serial.print(" "); Serial.println(timeToBirthday[ind],4);
     //      float oneDay = 1/365.; // = 0.00274
     //      if (timeToBirthday[ind] > 1.0 - oneDay) // within a day or so of birthday today - trick to show a birthday first even when on the same day
     //      {
@@ -4038,7 +4137,7 @@ void Reminder()  //
     if (indStart >= lengthPersonData || (indStart + 1) / 4 >= noOfReminderScreens) indStart = 0;  // over the top >= or >?
                                                                                                   //       indStart = min(indStart, lengthPersonData-4); // alternative:fill up so the last screen always is filled
   }
-  //     Serial.print("     indStart: ");Serial.println(indStart);
+    //   Serial.print("     indStart: ");Serial.println(indStart);
   }
   else
   {
@@ -4051,18 +4150,429 @@ void Reminder()  //
       lcd.print(person[indexArray[ind]].Name);
       lcd.print(" ");  // Name
       lcd.setCursor(9, ind - indStart);
-      LcdDate(person[indexArray[ind]].Day, person[indexArray[ind]].Month, 0);  // Birth date: Day, Month
-      lcd.print(F("  "));
-      lcd.setCursor(15, ind - indStart);
-      dtostrf(diffYearsF[indexArray[ind]], 4, 1, textBuffer);  // Age in decimal years
-      lcd.print(textBuffer);
-      lcd.print(yearSymbol);
+      if (secondGPS % holdTimeReminderScreen < holdTimeReminderScreen/2)
+        { 
+          LcdDate(person[indexArray[ind]].Day, person[indexArray[ind]].Month, 0);  // Birth date: Day, Month
+          lcd.print(F("  "));
+          lcd.setCursor(15, ind - indStart);
+          dtostrf(diffYearsF[indexArray[ind]], 4, 1, textBuffer);  
+          // sprintf(today,"%%%d.%df", 4, 1);  // today = temporary storage for format string
+          // sprintf(textBuffer, today, diffYearsF[indexArray[ind]]);  // replacement for dtostrf - no good!
+          lcd.print(textBuffer); lcd.print(yearSymbol);             // Age in decimal years
+        }
+        else // 06.03.2024 
+        {       
+          LcdDate(person[indexArray[ind]].Day, person[indexArray[ind]].Month, person[indexArray[ind]].Year);  // Birth date: Day, Month, year
+          lcd.print(" ");         
+        }
     } else {
       lcd.print(F("                    "));  // blank line when there is no more data to display
     }
   }
   oldMinute = minuteGPS;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+/*****
+Purpose: Menu item
+Finds exact time for equinoxes, solstices (4 per year)
+Verified against https://greenwichmeantime.com/equinox/ OK within 3-6 minutes in 2024
+Can only give time in UTC as local UTC offset varies over the year, and software only has today's value
+
+Argument List: none
+
+Return value: Displays on LCD
+*****/
+
+int displayYear;
+
+void Equinoxes() {
+
+int year1 = year(now());
+int year2 = year1 + 2;
+if (oldMinute == -1 | displayYear < year1) displayYear = year1;
+
+if (now() % 10 == 0) {      // increment every x seconds
+  displayYear = displayYear+1;
+  if (displayYear > year2) displayYear = year1;
+}
+
+EquinoxSolstice(displayYear);
+
+  // float yy = (displayYear-2000.)/1000.0;  // e.g. 0.024 for 2024
+  time_t tt;
+
+  tt = springEquinox*86400;
+  lcd.setCursor(0,0); lcd.print(displayYear); lcd.print(F(" UTC "));
+  lcd.setCursor(9,0); 
+  LcdDate(day(tt), month(tt));
+  sprintf(textBuffer, " %02d%c%02d", hour(tt), dateTimeFormat[dateFormat].hourSep, minute(tt));
+  lcd.print(textBuffer);  //lcd.print(F(" Equinox")); 
+
+  tt = summerSolstice*86400;
+  lcd.setCursor(9,1); //lcd.cursor();
+  LcdDate(day(tt), month(tt));
+
+  sprintf(textBuffer, " %02d%c%02d", hour(tt), dateTimeFormat[dateFormat].hourSep, minute(tt));
+  lcd.print(textBuffer); //lcd.print(F(" Solstice"));
+    
+  tt = autumnEquinox*86400;
+  lcd.setCursor(0,2); lcd.print(F("Equinox "));
+  lcd.setCursor(9,2);
+  LcdDate(day(tt), month(tt));
+  sprintf(textBuffer, " %02d%c%02d", hour(tt), dateTimeFormat[dateFormat].hourSep, minute(tt));
+  lcd.print(textBuffer); 
+
+  tt = winterSolstice*86400;
+  lcd.setCursor(0,3); lcd.print(F("Solstice "));
+  lcd.setCursor(9,3);
+  LcdDate(day(tt), month(tt));
+  sprintf(textBuffer, " %02d%c%02d", hour(tt), dateTimeFormat[dateFormat].hourSep, minute(tt));
+  lcd.print(textBuffer); 
+
+  oldMinute = minuteGPS;
+}
+
+
+/*****
+Purpose: Menu item for showing upcoming solar eclipses events in sorted order
+
+Limitations:  No calculation, only based on a table which initially goes to 2030
+
+Argument List: none
+
+Return value: Displays on LCD
+*****/
+
+// Solar eclipses from https://www.timeanddate.com/eclipse/list.html
+/*
+ 8. apr 2024 Total Solar Eclipse
+ 2. okt 2024 Annular Solar Eclipse
+29. mar 2025 Partial Solar Eclipse
+17. feb 2026 Annular Solar Eclipse
+12. aug 2026 Total Solar Eclipse
+ 6. feb 2027 Annular Solar Eclipse
+ 2. aug 2027 Total Solar Eclipse
+26. jan 2028 Annular Solar Eclipse
+22. jul 2028 Total Solar Eclipse 
+ 1. jun 2030 Annular Solar Eclipse
+25. nov 2030 Total Solar Eclipse
+14. nov 2031 Total Solar Eclipse
+30. mar 2033 Total Solar Eclipse
+20. mar 2034 Total Solar Eclipse
+*/
+
+struct dateEvent
+{
+  int year;
+  int monthDate;
+};
+
+dateEvent solarEclipse[] = {  // don't enter number with 0 i front -> octal interpretation
+  {2024,  408}, {2024, 1002}, {2025, 329}, {2026, 217}, {2026, 812}, 
+  {2027,  206}, {2027,  802}, {2028, 126}, {2028, 722}, {2030, 601}, 
+  {2030, 1125}, {2031, 1114}, {2033, 330}, {2034, 320}};
+// maximum number of solar eclipses (partial, annular, or total) is 5 per year.
+
+void SolarEclipse() {
+
+  int pday, pmonth, yy;
+  byte noSolarEclipses;
+  int i;
+
+  lcd.setCursor(0, 0);
+  lcd.print(F("Solar Eclipses "));
+
+  yy = year(now());
+  noSolarEclipses = sizeof(solarEclipse) / sizeof(solarEclipse[0]);
+  int lineNo = 1;
+
+  lcd.setCursor(2, lineNo); 
+  for (i = 0; i < noSolarEclipses; i++)  // find first year with solar eclipse
+  {
+    if (solarEclipse[i].year >= yy){
+      lcd.print(solarEclipse[i].year),lcd.print(":");
+      yy = solarEclipse[i].year;
+      break;
+   }
+  }
+  int col = 8;
+  for (i = 0; i < noSolarEclipses; i++)
+  {
+    if (solarEclipse[i].year == yy)  // find all eclipses in this year
+    {
+      if (col > 14) {
+          col = 2;
+          lineNo = lineNo + 1;  // start another line if more than 3 eclipses this year (first time in 2028!)
+        }
+      lcd.setCursor(col, lineNo);
+      
+      pmonth = solarEclipse[i].monthDate / 100;
+      pday = solarEclipse[i].monthDate - 100 * pmonth;
+      LcdDate(pday, pmonth);
+      lcd.print(" ");
+      col = col + 6;
+    }
+  }
+  
+  // 2. line (or 3.)
+  yy = yy + 1;  // increment year 
+  lineNo = lineNo + 1;
+  lcd.setCursor(2, lineNo); 
+  for (i = 0; i < noSolarEclipses; i++)
+  {
+    if (solarEclipse[i].year >= yy){
+      lcd.print(solarEclipse[i].year),lcd.print(":");
+      yy = solarEclipse[i].year;
+      break;
+   }
+  }
+  col = 8;
+  for (i = 0; i < noSolarEclipses; i++)
+  {
+    if (solarEclipse[i].year == yy) 
+    {
+      if (col > 14) {
+          col = 2;
+          lineNo = lineNo + 1;  // start another line if more than 3 eclipses this year 
+        }
+      lcd.setCursor(col, lineNo);
+      pmonth = solarEclipse[i].monthDate / 100;
+      pday = solarEclipse[i].monthDate - 100 * pmonth;
+      LcdDate(pday, pmonth);
+      lcd.print(" ");
+      col = col + 6;
+    }
+  }
+
+// last line (if room)
+if (lineNo < 3) {
+  yy = yy + 1;  // increment year 
+  lineNo = lineNo + 1;
+  lcd.setCursor(2, lineNo); 
+  for (i = 0; i < noSolarEclipses; i++)
+  {
+    if (solarEclipse[i].year >= yy){
+      lcd.print(solarEclipse[i].year),lcd.print(":");
+      yy = solarEclipse[i].year;
+      break;
+   }
+  }
+  col = 8;
+  for (i = 0; i < noSolarEclipses; i++)
+  {
+    if (solarEclipse[i].year == yy) 
+    {
+      if (col > 14) {
+          col = 2;
+          lineNo = lineNo + 1;  // start another line if more than 3 eclipses this year 
+        }
+      lcd.setCursor(col, lineNo);
+      pmonth = solarEclipse[i].monthDate / 100;
+      pday = solarEclipse[i].monthDate - 100 * pmonth;
+      LcdDate(pday, pmonth);
+      lcd.print(" ");
+      col = col + 6;
+      }
+    }
+  }
+  if (col < 14)
+  {
+    lcd.setCursor(18,3); lcd.print(F("  ")); // blank out lower right number if needed
+  }
+}
+
+
+
+/*****
+Purpose: Menu item for showing upcoming events in sorted order
+
+Limitations:  Eclipse and Equinox/Solstice in UTC. Makes little difference in Europe,
+              may perhaps miss with up to a day in North America and elsewhere
+
+Argument List: none
+
+Return value: Displays on LCD
+*****/
+
+void NextEvents() {
+
+time_t timeNow; 
+timeNow = now();   // [for testing ... + 86400*270;] 15.11.2031
+//timeNow = 1952517685; // 15.11.2031
+int displayYear = year(timeNow);
+
+int lengthData = 4;   // no of events to sort
+float eventDate[lengthData + 2];  // in compact format: day + 100*month + 100000 for next year. Must be ... + 2 in length
+int indices[lengthData + 2];      // for sorting, near end of function
+
+// *** Solstice & Equinoxes ***
+
+time_t equiSolTime;
+eventDate[0] = 0;
+EquinoxSolstice(displayYear); // first check present year
+
+if (timeNow <= springEquinox*86400)        equiSolTime  = springEquinox*86400;
+else if (timeNow <= summerSolstice*86400)  equiSolTime  = summerSolstice*86400;
+else if (timeNow <= autumnEquinox*86400)   equiSolTime  = autumnEquinox*86400;
+else if (timeNow <= winterSolstice*86400)  equiSolTime  = winterSolstice*86400;
+else  // check next year
+{
+  EquinoxSolstice(displayYear + 1);
+  equiSolTime  = springEquinox*86400;
+  eventDate[0] = 10000; // marks next year
+}
+
+eventDate[0] = eventDate[0] + day(equiSolTime) + 100*month(equiSolTime); // compact date
+
+#ifdef FEATURE_SERIAL_NEXTEVENTS
+  Serial.print(day(timeNow));Serial.print(".");Serial.println(month(timeNow));
+  Serial.print(day(equiSolTime));Serial.print(".");Serial.println(month(equiSolTime));
+  Serial.println(" ");
+#endif
+
+// *** Lunar Eclipse ***
+int pDate[10];  // max 5 per day: packed date = 100*month + day, i.e. 1209 = 9 December
+int eYear[10];
+int pToday; 
+int pday = 0, pmonth = 0;
+eventDate[1] = 0;
+
+pToday = day(timeNow) +  100*month(timeNow);  // packed format
+#ifdef FEATURE_SERIAL_NEXTEVENTS
+  Serial.println(pToday);
+#endif
+
+MoonEclipse(displayYear, pDate, eYear);
+for (byte i = 0; (i < 10 && pDate[i] != 0); i++) {  
+    #ifdef FEATURE_SERIAL_NEXTEVENTS
+      Serial.print(i); Serial.print(": ");Serial.println(pDate[i]);
+    #endif
+    if (eYear[i] == displayYear && pToday <= pDate[i]) { // only handles this year
+      pmonth = pDate[i] / 100;
+      pday = pDate[i] - 100 * pmonth;
+    }
+}
+
+if (pmonth == 0){             // nothing found this year, so check next year
+  MoonEclipse(displayYear+1, pDate, eYear);
+  pmonth = pDate[0] / 100;
+  pday = pDate[0] - 100 * pmonth;
+  eventDate[1] = 10000;  // marks next year
+}
+
+eventDate[1] = eventDate[1] + pday + 100*pmonth;
+
+// *** Easter ***
+eventDate[2] = 0;
+int K, E;
+int PaschalFullMoon, EasterDate, EasterMonth;
+
+// Gregorian (West):
+K = -2;
+E = -10;
+ComputeEasterDate(displayYear, K, E, &PaschalFullMoon, &EasterDate, &EasterMonth);
+if (EasterDate+100*EasterMonth < pToday) { // next year's Easter
+  ComputeEasterDate(displayYear+1, K, E, &PaschalFullMoon, &EasterDate, &EasterMonth);
+  eventDate[2] = 10000;
+}
+
+eventDate[2] = eventDate[2] + EasterDate + 100*EasterMonth;
+
+// *** Solar Eclipse ***
+eventDate[3] = 0;
+byte noSolarEclipses = sizeof(solarEclipse) / sizeof(solarEclipse[0]);
+int i;
+
+for (i = 0; i < noSolarEclipses; i++)  // find first year with solar eclipse
+{
+  if      (solarEclipse[i].year == displayYear && solarEclipse[i].monthDate >= pToday) break;
+  else if (solarEclipse[i].year >  displayYear) break;
+}
+int smonth, sday;
+
+if (i <=noSolarEclipses)
+{
+  #ifdef FEATURE_SERIAL_NEXTEVENTS
+    Serial.print("Solar "); Serial.print(i); Serial.print(" ");Serial.println(displayYear);
+    Serial.print("      "); Serial.print(solarEclipse[i].year);Serial.print(" "); Serial.println(solarEclipse[i].monthDate);
+  #endif
+
+  eventDate[3] = solarEclipse[i].monthDate + (solarEclipse[i].year - displayYear)*10000;
+  smonth = solarEclipse[i].monthDate / 100;
+  sday = solarEclipse[i].monthDate - 100 * smonth;
+}
+
+// lcd.setCursor(0,0); lcd.print(F("Next event:"));
+// lcd.setCursor(15,0); LcdDate(day(timeNow+ utcOffset * 60), month(timeNow+ utcOffset * 60));   // local
+
+// *** Sort ***
+
+for (i=0; i<lengthData; i++) { indices[i] = i; }  // initial order
+
+#ifdef FEATURE_SERIAL_NEXTEVENTS
+  Serial.print("Indices before "); Serial.print(indices[0]); Serial.print(" "); Serial.print(indices[1]); Serial.print(" ");Serial.print(indices[2]);Serial.print(" ");Serial.println(indices[3]);
+  Serial.print("Data "); Serial.print(eventDate[0]); Serial.print(" "); Serial.print(eventDate[1]); Serial.print(" ");Serial.print(eventDate[2]);Serial.print(" ");Serial.println(eventDate[3]);
+#endif
+
+bubbleSort(eventDate, indices, lengthData);
+
+#ifdef FEATURE_SERIAL_NEXTEVENTS
+  Serial.print("Indices after  "); Serial.print(indices[0]); Serial.print(" "); Serial.print(indices[1]); Serial.print(" ");Serial.print(indices[2]);Serial.print(" ");Serial.println(indices[3]);
+#endif
+
+// display
+
+for (i = 0; i < lengthData; i++)
+  {
+    switch (indices[i]) {
+    case 0: // equinox/solstice
+      lcd.setCursor(0,i); 
+      switch (month(equiSolTime)) {
+        case 3:  {lcd.print(F("Equinox      ")); break; }
+        case 6:  {lcd.print(F("Solstice     ")); break; }
+        case 9:  {lcd.print(F("Equinox      ")); break; }
+        case 12: {lcd.print(F("Solstice     "));}
+      }
+      lcd.setCursor(14,i);
+      if (eventDate[i] > 5000) lcd.print("+");  // mark for next year
+      else                     lcd.print(" ");
+      lcd.setCursor(15,i);     LcdDate(day(equiSolTime), month(equiSolTime));
+      break;
+
+    case 1: // Lunar eclipse
+      lcd.setCursor(0,i); lcd.print(F("Lunar Eclipse"));
+      lcd.setCursor(14,i);
+      if (eventDate[i] > 15000)      lcd.print("*");  // mark for 2+ years into future
+      else if (eventDate[i] > 5000)  lcd.print("+");  // mark for next year 
+      else                     lcd.print(" ");
+      lcd.setCursor(15,i);     LcdDate(pday, pmonth);
+      break;
+
+    case 2: // Easter
+      lcd.setCursor(0,i); lcd.print(F("Easter       "));
+      lcd.setCursor(14,i);
+
+      if (eventDate[i] > 5000) lcd.print("+");  // mark for next year 
+      else                     lcd.print(" ");
+
+      lcd.setCursor(15,i);     LcdDate(EasterDate, EasterMonth);
+      break;
+
+    case 3: // Solar eclipse 
+      lcd.setCursor(0,i); lcd.print(F("Solar Eclipse"));
+      lcd.setCursor(14,i);
+      if (eventDate[i] > 15000)      lcd.print("*");  // mark for 2+ years into future
+      else if (eventDate[i] > 5000)  lcd.print("+");  // mark for next year 
+      else                           lcd.print(" ");
+      lcd.setCursor(15,i);           LcdDate(sday, smonth);
+      break;
+    }
+  }
+
+} // NextEvents()
+
+
 
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
