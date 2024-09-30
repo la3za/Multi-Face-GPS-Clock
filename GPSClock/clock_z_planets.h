@@ -59,9 +59,10 @@ float magnitude = 0;
 
 //float lat = 53.5; //GPS Position of Hamburg in deg
 //float lon = 10;
+//59.83; GPS Position of Asker, Norway in deg
+//10.43;
+// lat is now called latitude as variables lon, latitude come from *.ino program from gps data
 
-float lat = 0.0; // 59.83; //GPS Position of Asker, Norway in deg
-float lonPlanet = 0.0;  //10.43;
 boolean full = false; // full output of planeterary output on serial port, otherwise bare minimum (only if EATURE_SERIAL_PLANETARY is set)
 
 
@@ -213,12 +214,20 @@ void calc_vector_subtract(float xe, float xo, float ye, float yo, float ze, floa
 //------------------------------------------------------------------------------------------------------------------
 float calc_siderealTime (float jd, float jd_frac, float lon) { //03:50:00 = 2457761.375
 
-  float T = jd - 2451545;
-  T /= 36525;
-  float UT = jd_frac * 24;
-  float T0 = 6.697374558 + (2400.051336 * T) + (0.000025862 * T * T) + (UT * 1.0027379093);
-  T0 = fmod(T0, 24);
-  float siderial_time = T0 + (lon / 15);
+// https://aa.usno.navy.mil/faq/GAST
+
+  float T = jd - 2451545;                                   // days since 2000, Jan 1, 12h
+  T /= 36525;                                               // no of centuries since 2000
+  float UT = jd_frac * 24;                                  // no of hours elapsed since last Julian midnight
+  float T0 = 6.697374558 + (2400.051336 * T) + (0.000025862 * T * T) + (UT * 1.0027379093);  
+  T0 = fmod(T0, 24);                                        // UTC sidereal time in hours
+  float siderial_time = T0 + (lon / 15);                    // at longitude lon, somewhere else than Greenwich
+  #ifdef FEATURE_SERIAL_PLANETARY
+    Serial.print("calc_siderealTime, T  "); Serial.println(T);
+    Serial.print("calc_siderealTime, UT "); Serial.println(UT);
+    Serial.print("calc_siderealTime, T0 "); Serial.println(T0);
+  #endif
+
   return siderial_time;
 }
 //------------------------------------------------------------------------------------------------------------------
@@ -386,19 +395,23 @@ void get_object_position (int object_number, float jd, float jd_frac) {
   #ifdef FEATURE_SERIAL_PLANETARY 
     Serial.println(F("----------------------------------------------------"));
     ////Serial.println("Object: " + object_name[object_number]);
-    Serial.println("Object: " + object_number);
+    //Serial.println("Object: " + object_number);  // removed 16.09.2024
+    Serial.print("Object: ");
+    Serial.println(object_number);
   #endif
 
   float T = jd - 2451545;
   T += jd_frac;
   T /= 36525;
   #ifdef FEATURE_SERIAL_PLANETARY
-    if (full) Serial.println("T:" + String(T, DEC));
+    Serial.println("T:" + String(T, DEC));
   #endif
 
-  float sidereal_time = calc_siderealTime (jd, jd_frac, lonPlanet);
+  float sidereal_time = calc_siderealTime (jd, jd_frac, lon);  // changed back to lon from lonPlanet 22.09.2024
   #ifdef FEATURE_SERIAL_PLANETARY
-    if (full) Serial.println("ST:" + String(sidereal_time, DEC));
+    Serial.println("ST:" + String(sidereal_time, DEC));
+    Serial.println("lon:" + String(lon, DEC));
+    Serial.println("lat:" + String(latitude, DEC));
   #endif
 
   float semiMajorAxis = object_data[object_number][0] + (T * object_data[object_number][1]); // offset + T * delta
@@ -450,6 +463,11 @@ void get_object_position (int object_number, float jd, float jd_frac) {
   rot_z (argumentPerihelion);
   rot_x (inclination);
   rot_z (longitudeAscendingNode);
+  // #ifdef FEATURE_SERIAL_PLANETARY  // added 16.09.2024:
+  //     Serial.print(F("Object #: "));
+  //     Serial.println(object_number);
+  // #endif
+
   //---------------------------------
   if (object_number == 2) {//object earth
 
@@ -469,7 +487,7 @@ void get_object_position (int object_number, float jd, float jd_frac) {
     rot_x (eclipticAngle);//rotate x > earth ecliptic angle
     calc_vector(x_coord, y_coord, z_coord, "");
     dist_earth_to_sun = dist_earth_to_object;
-    calc_azimuthal_position(ra, dec, lat, sidereal_time);
+    calc_azimuthal_position(ra, dec, latitude, sidereal_time);
   }
   //---------------------------------
   if (object_number != 2) {//all other objects
@@ -482,7 +500,7 @@ void get_object_position (int object_number, float jd, float jd_frac) {
     #endif
     rot_x (eclipticAngle);//rotate x > earth ecliptic angle
     calc_vector(x_coord, y_coord, z_coord, "");
-    calc_azimuthal_position(ra, dec, lat, sidereal_time);
+    calc_azimuthal_position(ra, dec, latitude, sidereal_time);
     calc_magnitude(object_number, dist_earth_to_object);
   }
 }

@@ -8,9 +8,10 @@
 //#define FEATURE_BUTTONS       // two push buttons increase/decrease screen number 
                               // in addition to rotary encoder with push button
 
-// Hardware pins for backlight and rotary encoder, GPS baudrate, LCD display
-
 //#define ARDUINO_SAMD_VARIANT_COMPLIANCE  // tested for Adafreuit METRO Express M0
+
+
+// Hardware pins for backlight and rotary encoder, GPS baudrate, LCD display:
 
 #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE          // default setup for Arduino Mega
 

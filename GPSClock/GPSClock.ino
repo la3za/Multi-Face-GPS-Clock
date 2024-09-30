@@ -1,5 +1,5 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.2.0    09.06.2024";
+const char codeVersion[] = "v2.2.1    30.09.2024";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
 //const char codeVersion[] = "v2.1.1   "__DATE__;
@@ -61,6 +61,9 @@ const char codeVersion[] = "v2.2.0    09.06.2024";
 
 /*
  Revisions:
+ 2.2.1   30.09.2024: 
+                - Bugfix in clock_z_planets.h: now reads GPS position, and not (0.0,0.0) as in v2.2.0 or Oslo as in v2.1.0.
+
  2.2.0   09.06.2024:
                 - NextEvents() - New screen showing Next Equinox/Solstice, Easter, Lunar/Solar Eclipses in sorted order
                 - SolarEclipse() - New screen showing solar eclipses for this year and coming years (table-based -> 2030)
@@ -335,7 +338,7 @@ struct Date_Time
 
 
 #include <TinyGPS++.h>  // http://arduiniana.org/libraries/tinygpsplus/
-#include "clock_z_planets.h"
+
 #include "clock_z_calendar.h"
 
 Timezone tz;  // holds currently selected timezone
@@ -415,6 +418,7 @@ volatile byte pps = 0;  // GPS one-pulse-per-second flag
 */
 TinyGPSPlus gps;  // The TinyGPS++ object
 
+#include "clock_z_planets.h"   // moved from line 318 to here 22.09.2024, must be down here to read longitude correct in clock_z_planets.h
 #include "clock_z_lunarCycle.h"
 
 // Initial values for primary menu parameters - stored in EEPROM
@@ -1241,11 +1245,10 @@ void UTCLocator(  // UTC, locator, # satellites
       lon = longitude_manual;
   #endif
 
-    //char locator[7];
-    Maidenhead(lon, latitude, textBuffer);
-    lcd.setCursor(0, 3);  // last line *********
-    lcd.print(textBuffer);
-    lcd.print(F("       "));
+  Maidenhead(lon, latitude, textBuffer);
+  lcd.setCursor(0, 3);  // last line *********
+  lcd.print(textBuffer);
+  lcd.print(F("       "));
   }
   //  if (gps.satellites.()) { // 16.11.2022
   if (gps.satellites.isUpdated()) {
@@ -3562,79 +3565,92 @@ void PlanetVisibility(byte inner  // inner = 1 for inner planets, all other valu
 
   // Julian day ref noon Universal Time (UT) Monday, 1 January 4713 BC in the Julian calendar:
   //jd = get_julian_date (20, 1, 2017, 17, 0, 0);//UTC
-  Seconds = second(now());
-  Minute = minute(now());
-  Hour = hour(now());
-  Day = day(now());
-  Month = month(now());
-  Year = year(now());
 
-  jd = get_julian_date(Day, Month, Year, Hour, Minute, Seconds);  // local - since year 4713 BC
-
-#ifdef FEATURE_SERIAL_PLANETARY
-  Serial.println("JD:" + String(jd, DEC) + "+" + String(jd_frac, DEC));  // jd = 2457761.375000;
-#endif
-
-  get_object_position(2, jd, jd_frac);  //earth -- must be included always
-
-  lcd.setCursor(0, 0);  // top line *********
-  lcd.print(F("    El"));
-  lcd.write(DEGREE);
-  lcd.print(F(" Az"));
-  lcd.write(DEGREE);
-  lcd.print(F("   % Magn"));
-
-  if (inner == 1) {
-    get_object_position(0, jd, jd_frac);    // Mercury
-    lcd.setCursor(0, 2);
-    lcd.print(F("Mer "));
-    LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
-
-    lcd.setCursor(0, 3);
-    get_object_position(1, jd, jd_frac);    // Venus
-    lcd.print(F("Ven "));
-    LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
-
-    lcd.setCursor(0, 1);
-    if ((now() / 10) % 2 == 0)  // change every 10 seconds
-    {
-      // Moon
-      float Phase, PercentPhase;
-      lcd.print(F("Lun "));
-      UpdateMoonPosition();           // calls K3NG moon2()
-      MoonPhase(Phase, PercentPhase);
-      LCDPlanetData(moon_elevation, moon_azimuth, PercentPhase / 100., -12.7);
-    } else {
-      // Sun
-      lcd.print(F("Sun "));
-
-      /////// Solar elevation //////////////////
-      double sun_azimuth = 0;
-      double sun_elevation = 0;
-      // solar az, el now:
-      calcHorizontalCoordinates(now(), latitude, lon, sun_azimuth, sun_elevation);
-      LCDPlanetData(round(sun_elevation), round(sun_azimuth), 1., -26.7); // phase=100%, magnitude=26.7 hard-coded
-    }
-
-  } else  // outer planets
+  if (gps.location.isValid())  // new 24.09.2024 - avoid giving planet positions for lat, lon = (0.0, 0.0)
   {
-    get_object_position(3, jd, jd_frac);  // Mars
-    lcd.setCursor(0, 1);
-    lcd.print(F("Mar "));
-    LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
 
-    get_object_position(4, jd, jd_frac);  // Jupiter
-    lcd.setCursor(0, 2);
-    lcd.print(F("Jup "));
-    LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+    #ifndef DEBUG_MANUAL_POSITION    // new 24.09.2024 - avoid giving planet positions for lat, lon = (0.0, 0.0)
+      latitude = gps.location.lat();
+      lon = gps.location.lng();
+    #else
+      latitude = latitude_manual;
+      lon = longitude_manual;
+    #endif
+  
+    Seconds = second(now());
+    Minute = minute(now());
+    Hour = hour(now());
+    Day = day(now());
+    Month = month(now());
+    Year = year(now());
 
-    get_object_position(5, jd, jd_frac);  // Saturn
-    lcd.setCursor(0, 3);
-    lcd.print(F("Sat "));
-    LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+    jd = get_julian_date(Day, Month, Year, Hour, Minute, Seconds);  // local - since year 4713 BC
 
-    if (full) get_object_position(6, jd, jd_frac);  // Uranus
-    if (full) get_object_position(7, jd, jd_frac);  // Neptune
+  #ifdef FEATURE_SERIAL_PLANETARY
+    Serial.println("JD:" + String(jd, DEC) + "+" + String(jd_frac, DEC));  // jd = 2457761.375000;
+  #endif
+
+    get_object_position(2, jd, jd_frac);  //earth -- must be included always
+
+    lcd.setCursor(0, 0);  // top line *********
+    lcd.print(F("    El"));
+    lcd.write(DEGREE);
+    lcd.print(F(" Az"));
+    lcd.write(DEGREE);
+    lcd.print(F("   % Magn"));
+
+    if (inner == 1) {
+      get_object_position(0, jd, jd_frac);    // Mercury
+      lcd.setCursor(0, 2);
+      lcd.print(F("Mer "));
+      LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
+
+      lcd.setCursor(0, 3);
+      get_object_position(1, jd, jd_frac);    // Venus
+      lcd.print(F("Ven "));
+      LCDPlanetData(altitudePlanet, azimuthPlanet, phase, magnitude);
+
+      lcd.setCursor(0, 1);
+      if ((now() / 10) % 2 == 0)  // change every 10 seconds
+      {
+        // Moon
+        float Phase, PercentPhase;
+        lcd.print(F("Lun "));
+        UpdateMoonPosition();           // calls K3NG moon2()
+        MoonPhase(Phase, PercentPhase);
+        LCDPlanetData(moon_elevation, moon_azimuth, PercentPhase / 100., -12.7);
+      } else {
+        // Sun
+        lcd.print(F("Sun "));
+
+        /////// Solar elevation //////////////////
+        double sun_azimuth = 0;
+        double sun_elevation = 0;
+        // solar az, el now:
+        calcHorizontalCoordinates(now(), latitude, lon, sun_azimuth, sun_elevation);
+        LCDPlanetData(round(sun_elevation), round(sun_azimuth), 1., -26.7); // phase=100%, magnitude=26.7 hard-coded
+      }
+
+    } else  // outer planets
+    {
+      get_object_position(3, jd, jd_frac);  // Mars
+      lcd.setCursor(0, 1);
+      lcd.print(F("Mar "));
+      LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+
+      get_object_position(4, jd, jd_frac);  // Jupiter
+      lcd.setCursor(0, 2);
+      lcd.print(F("Jup "));
+      LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+
+      get_object_position(5, jd, jd_frac);  // Saturn
+      lcd.setCursor(0, 3);
+      lcd.print(F("Sat "));
+      LCDPlanetData(round(altitudePlanet), round(azimuthPlanet), phase, magnitude);
+
+      if (full) get_object_position(6, jd, jd_frac);  // Uranus
+      if (full) get_object_position(7, jd, jd_frac);  // Neptune
+    }
   }
 }
 
