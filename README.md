@@ -4,7 +4,7 @@ The purpose of this project is to make available as many clock and clock related
 
 Please join the [groups.io discussion group](https://groups.io/g/Multi-Face-GPS-Clock/) for the Multi Face GPS Clock and related projects.
 
-The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clockn.html). It is based on an Arduino Mega taking time and position data from a GPS, and the Arduino 2.2.1 IDE. It supports multiple languages in addition to English (default, and always used for UTC) for day names when local time is shown: Norwegian, German, French and Spanish, and optionally Icelandic, Danish, and Swedish. 
+The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clockn.html). It is based on an Arduino Mega taking time and position data from a GPS, and the latest Arduino IDE (presently 2.3.3). It supports multiple languages in addition to English (default, and always used for UTC) for day names when local time is shown: Norwegian, German, French and Spanish, and optionally Icelandic, Danish, and Swedish. 
 
 The new version 2 software makes setup much easier as most, if not all, parameters now can be entered via the rotary control, and there is minimal need for editing of the software.
 
