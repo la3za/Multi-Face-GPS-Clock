@@ -33,10 +33,10 @@ int doNumDays(int y, int m, int d) {
 // ********************************************************************************** //
 
 void doEoTCalc(double *tv) {
-
-  // equation of time
+  // The Equation of Time can tell us how far ahead or behind the sun will be relative to the stars.
+  //
   double tv1,tv2,tv3;                // total time variation (mins)
-  int tvm,tvs,nd;                       // EoT time mins and seconds, days from Jan 1.
+  int tvm,tvs,nd;                    // EoT time mins and seconds, days from Jan 1.
 
   nd = doNumDays(yearGPS, monthGPS, dayGPS);                          // days from Jan 1 (inc. leap year)
 
@@ -44,10 +44,13 @@ void doEoTCalc(double *tv) {
   Serial.print("Days from Jan 1: "); Serial.println(nd);
   #endif
   
-//// 1. based on "The Equation of Time" by Murray Bourne, 26 Aug 201
-////    see http://www.intmath.com/blog/mathematics/the-equation-of-time-5039
+// 1. based on "The Equation of Time" by Murray Bourne, 26 Aug 2010
+//    see http://www.intmath.com/blog/mathematics/the-equation-of-time-5039
+// Variation due to Earth's tilt = -7.655 sin d
+// Variation due to elliptical orbit = 9.873 sin(2d + 3.588)
+//
     float dd = (2*PI*(float)nd/365.0);
-    tv1 = -7.655 * sin(dd) + 9.873 * sin(2*dd + 3.588); // Effect of Orbit Eccentricity & Effect of Obliquit
+    tv1 = -7.655 * sin(dd) + 9.873 * sin(2*dd + 3.588);
 //
 //// 2. based on http://www.susdesign.com/popups/sunangle/eot.php
 //  float B = 2*PI*((float)nd - 79.0)/365.0;               // B in radians (note should be -81)

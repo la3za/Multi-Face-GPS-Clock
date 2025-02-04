@@ -1,14 +1,20 @@
-// Extensions
+// *** User options *** 
+// The following #defines should normally all be off: 
+//
+//#define NEXTVERSION    // next version experimental feature (if there are any ...)
+//#define TESTSCREENS    // extra screen set for testing recent functions. No need to use it for a normal user
 
-//#define NEXTVERSION   // next version experimental feature
+//#define MORELANGUAGES // More than the default set of languages
 
-#define MORELANGUAGES // More than the default set of languages
+//#define UTC_ENGLISH_DAY_NAME  // use English for day name for UTC display. Only affects ScreenUTCLocator. Default: local language 
 
-//#define TESTSCREEN    // extra screen set for testing recent functions
+//#define OLD_LCD_LIBRARY   // old LiquidCrystal_I2C - shouldn't be any need to use it
 
-// User options
-// this is the default from 27.2.2024 (deemed not important enough to require a separate menu option)
-#define UTCLOCALLANGUAGE  // use local language even for UTC display. Only affects ScreenUTCLocator.
+//#define EXP_TIDE_SIDEREAL  // Turn on/off experimental (unfinished) options - 
+
+#ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE // can be set in clock_hardware.h
+   #define MORELANGUAGES  // More than the default set of languages
+#endif
 
 // 1. Software options
 // 1A. subsets of menus
@@ -17,6 +23,8 @@
 // 1D. time zones
 
 // 2. Minor parameters
+
+/// ***************************************************************
 
 // ************ 1. Software options
 
@@ -51,8 +59,8 @@ Menu_type menuStruct[] =
       ScreenBigNumbers3, ScreenBigNumbers3UTC, 
       #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
          ScreenReminder,
-      #endif   
-      ScreenDemoClock, 
+      #endif 
+      ScreenProgress, ScreenDemoClock, 
       -1}, 
   {"Fav 1    ", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon,  
@@ -67,12 +75,11 @@ Menu_type menuStruct[] =
       #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
          ScreenReminder,
       #endif   
-      ScreenDemoClock, 
+      ScreenProgress, ScreenDemoClock, 
       -1}, // Must end with negative number in order to enable counting of number of entries},
   {"Fav 2    ", 
       ScreenLocalUTCWeek, ScreenLocalSunSimpler, ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter, 
-      ScreenISOHebIslam, ScreenNextEvents, ScreenChemical, ScreenSidereal, ScreenGPSInfo, 
-      ScreenBigNumbers3, ScreenBigNumbers3UTC, ScreenDemoClock,
+      ScreenISOHebIslam, ScreenNextEvents, ScreenProgress, ScreenDemoClock,
       -1}, 
   {"Calendar ", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLunarEclipse, ScreenEasterDates, ScreenISOHebIslam,   
@@ -81,7 +88,7 @@ Menu_type menuStruct[] =
       #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
          ScreenReminder,
       #endif   
-      ScreenDemoClock, 
+      ScreenProgress, ScreenDemoClock, 
       -1},
   {"Clocks   ",
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenBinary, ScreenBinaryHorBCD, ScreenBinaryVertBCD, 
@@ -89,7 +96,7 @@ Menu_type menuStruct[] =
       ScreenHexOctalClock,  ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, ScreenMathClockDivide, 
       ScreenInternalTime, ScreenCodeStatus, ScreenRoman, ScreenMorse, ScreenWordClock, 
       ScreenChemical, ScreenBigNumbers2, ScreenBigNumbers2UTC, ScreenBigNumbers3, ScreenBigNumbers3UTC, 
-      ScreenDemoClock, 
+      ScreenProgress, ScreenDemoClock, 
       -1},
   {"Astro    ",
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon, 
@@ -103,11 +110,11 @@ Menu_type menuStruct[] =
       ScreenMorse, ScreenCodeStatus, ScreenNCDXFBeacons1, ScreenNCDXFBeacons2, ScreenWSPRsequence, 
       ScreenGPSInfo, ScreenDemoClock, 
       -1}
-#ifdef TESTSCREEN
+#ifdef TESTSCREENS
   ,
   {"Test     ", 
-      ScreenLocalUTCWeek, ScreenLocalSunSimpler, ScreenEasterDates, ScreenLunarEclipse,
-      ScreenSolarEclipse, ScreenEquinoxes, ScreenNextEvents, ScreenDemoClock,
+      ScreenLocalUTCWeek, ScreenProgress, ScreenISOHebIslam, ScreenMoonRiseSet,
+      ScreenBigNumbers2, ScreenBigNumbers3UTC, ScreenDemoClock,
       -1}
 #endif 
 };
@@ -140,29 +147,37 @@ Date_Time dateTimeFormat[]=
 // Native language support for names of days of week 
 
 // order here defines languageNumber: 0, 1, 2, 3, ...        
-char languages[][8] = {"en", "es", "fr", "de", "no", "se", "dk", "is"
-#ifndef MORELANGUAGES
-  };
+char languages[][12] = {"en ", "es ", "fr ", "de ", "nb ", "sv ", "da ", "is ", 
+#ifdef MORELANGUAGES
+  "fo ","non", // Faroese, Old Norse, https://en.wikipedia.org/wiki/Old_Norse
+#endif
+  "nn ", "nl ",
+#ifdef MORELANGUAGES
+   "ar "};  //  Arabic (lebanese)
 #else
-  , "ny", "nl", "lb"};  
+  }; 
 #endif
 
 // Order in myDays must match languages[][] above
 const char myDays[][7][12] PROGMEM = {
-            {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"},     // English, en
-            {"Domingo", "Lunes", "Martes", "MiXrcoles", "Jueve", "Viernes", "SXbado"},          // Spanish, es
-            {"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"},          // French, fr
-            {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"},  // German, de  
-            {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},           // Norwegian, no                  
-            {"SXndag", "MXndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},            // Swedish, se  
-            {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},           // Danish, dk  = Norwegian 
+            {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"},          // English, en
+            {"Domingo", "Lunes", "Martes", "MiXrcoles", "Jueve", "Viernes", "SXbado"},               // Spanish, es
+            {"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"},               // French, fr
+            {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"},       // German, de  
+            {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},                // Norsk Bokmål (Norwegian), nb                  
+            {"SXndag", "MXndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},                 // Swedish, sv  
+            {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},                // Danish, da  = Norwegian 
             {"Sunnudagur", "MXnudagur", "XriXjudagur", "MiXvikudag", "Fimmtudagur", "FXstudagur", "Laugardagur"}, // Icelandic, is
-#ifndef MORELANGUAGES
-            };
+#ifdef MORELANGUAGES
+            {"Sunnudagur","Mxnadagur","Txsdagur","Mikudagur", "Hxsdagur", "FrXggjadag.", "Leygardagur"}, // Faeroe Islands. fo
+            {"Sunnudagr", "MXnudagr", "Tysdagr", "Oxinsdagr", "Xxrsdagr", "Frjxdagr", "Laugardagr"}, // Old Norse, non 10.10.2024
+#endif
+            {"SXndag", "MXndag", "Tysdag", "Onsdag", "Torsdag", "Fredag", "Laurdag"},                // Nynorsk (Norwegian), nn 
+            {"zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"},        // Dutch, nl
+#ifdef MORELANGUAGES
+            {"aHad",   "itnein", "talaata", "arba3aa", "khamis", "jum3a", "sabt"}};               // Lebanese (Levantine Arabic), ar
 #else        
-            {"SXndag", "MXndag", "Tysdag", "Onsdag", "Torsdag", "Fredag", "Laurdag"},             // Nynorsk, Norwegian, ny 
-            {"zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"},     // Dutch, nl
-            {"aHad",   "itnein", "talaata", "arba3aa", "khamis", "jum3a", "sabt"}};               // Lebanese (Levantine Arabic), lb
+            };
 #endif
 
 

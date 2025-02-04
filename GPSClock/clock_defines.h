@@ -69,5 +69,10 @@
 #define ScreenSolarEclipse      46
 #define ScreenNextEvents        47
 
+// new in v2.3.0 ?
+#define ScreenProgress          48
+
 // New in v1.3.0:
-#define ScreenDemoClock         48  // must be the last one
+#define ScreenDemoClock         49  // must be the last one
+
+

@@ -66,9 +66,13 @@ bubbleSort
 
 EquinoxSolstice
 
+calculateDayOfYear(
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
-void CodeStatus(void); // forward declaration
+void CodeStatus(void);        // forward declaration
+void Progress(void);          // forward declaration
+void DemoClock(byte inDemo);  // forward declaration
 
 void EEPROMMyupdate(int address, byte val, byte commit) // replaces EEPROM.update as it won't work for Metro
 { 
@@ -601,9 +605,9 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
   { 
         nativeDayLong(localTime);
         // 17.05.2023:
-        if     (strcmp(languages[languageNumber],"de") == 0)  
+        if     (strcmp(languages[languageNumber],"de ") == 0)  
                 sprintf(textBuffer,"%2.2s",today);  // 2 letters for day name in German
-        else if (strcmp(languages[languageNumber],"nl") == 0) 
+        else if (strcmp(languages[languageNumber],"nl ") == 0) 
                 sprintf(textBuffer,"%2.2s.",today);  // 2 letters + dot Dutch 
         else    sprintf(textBuffer,"%3.3s",today);  // else 3 letters
         lcd.print(textBuffer);
@@ -647,7 +651,7 @@ void LcdSolarRiseSet(
   
   #ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function   
     // check June when sun hardly sets
-    monthGPS = 6;
+    //monthGPS = 6;
     dayGPS =  dateIteration;
     dateIteration = dateIteration + 1;
   #endif
@@ -655,15 +659,18 @@ void LcdSolarRiseSet(
   if (RiseSetDefinition == 'A')     // astronomical: -18 deg
   // "During astronomical twilight, most celestial objects can be observed in the sky. However, the atmosphere still scatters and 
   // refracts a small amount of sunlight, and that may make it difficult for astronomers to view the faintest objects."
+  // Astronomisk tussmørke
         calcAstronomicalDawnDusk(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);
         
   else if (RiseSetDefinition == 'N') // Nautical:     -12 deg
   // "nautical twilight, dates back to the time when sailors used the stars to navigate the seas. 
   // During this time, most stars can be easily seen with naked eyes, and the horizon is usually also visible in clear weather conditions."
+  // Nautisk tussmørke
         calcNauticalDawnDusk(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);
         
   else if (RiseSetDefinition == 'C') // Civil:        - 6 deg 
   // "enough natural sunlight during this period that artificial light may not be required to carry out outdoor activities."
+  // Alminnelig tussmørke	
         calcCivilDawnDusk(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);
         
   else  
@@ -741,7 +748,7 @@ void LcdSolarRiseSet(
   //    'A': -
         lcd.setCursor(18, lineno);
         lcd.print(" ");
-        lcd.print(RiseSetDefinition); // show C, N, A to the very right
+        lcd.print(RiseSetDefinition); // show C, N, A to the very right 
   }
 
   /////// Solar elevation //////////////////
@@ -1222,10 +1229,10 @@ const char  ElementNavn[][13] PROGMEM = {
 void LCDChemicalElementName(int ElementNo) {
 
   if (ElementNo >= 1 && ElementNo <= 59) {
-    if (strcmp(languages[languageNumber],"no")==0 ||strcmp(languages[languageNumber],"ny")==0) 
+    if (strcmp(languages[languageNumber],"nb ")==0 ||strcmp(languages[languageNumber],"nn ")==0) 
       if (ElementNo == 47) 
       {
-        strcpy(textBuffer,"Solv      "); textBuffer[1] = char(NO_DK_oe_SMALL); // sølv
+        strcpy(textBuffer,"Solv      "); textBuffer[1] = char(NO_DA_oe_SMALL); // sølv
       }        
       else strncpy_P(textBuffer, ElementNavn[ElementNo - 1], 12);    // Norwegian
       
@@ -1357,7 +1364,7 @@ void RotarySecondarySetup(){ // June 2023
   int toggleInternRotary = 0;
 
   lcd.setCursor(0,2);
-  lcd.print(secondaryMenuNumber);lcd.print(" ");
+  //lcd.print(secondaryMenuNumber);lcd.print(" "); // removed 22.11.2024
 
   #ifdef FEATURE_SERIAL_MENU
       Serial.print(F("2ndary # ")); Serial.println(secondaryMenuNumber);
@@ -1365,7 +1372,7 @@ void RotarySecondarySetup(){ // June 2023
   
   switch (secondaryMenuNumber) {
 
-case 0: // 00000000 GPS baud rate //////////////
+case 0: // GPS baud rate //////////////
  {
   baudRateNumber = EEPROM.read(EEPROM_OFFSET1+5); 
   #ifdef FEATURE_SERIAL_MENU
@@ -1418,13 +1425,54 @@ case 0: // 00000000 GPS baud rate //////////////
        // resetFunc();  // call reset if value has changed 
      }   
  
-  CodeStatus();
+  CodeStatus();  // show relevant screen to remind operator what parameter was changed
   delay(1500);
   lcd.clear();
   break;
 } // case 0 // baudrate
 
- case 1: // 111111 no of seconds per screen as DemoClock cycles through all screen //////////////
+ case 1: //  toggle using_PPS on / off //////////////
+  {
+    using_PPS = EEPROM.read(EEPROM_OFFSET1+9);
+    lcd.setCursor(0,2); lcd.print(F("PPS Interrupt: ")); lcd.print(using_PPS);
+    startTime = millis();
+    while (toggleInternRotary == 0)
+    { 
+    // During each loop, check the encoder to see if it has been changed.
+      volatile unsigned char rotaryResult = r.process();   
+      if (rotaryResult) {
+      if (rotaryResult == r.counterClockwise()) {              // decrease  value
+          using_PPS = !using_PPS;
+        }
+        else if (rotaryResult == r.clockwise()){               // increase  value
+          using_PPS = !using_PPS;
+        }
+      lcd.setCursor(0,2); lcd.print(F("PPS Interrupt: ")); lcd.print(using_PPS);
+      startTime = millis();  // reset counter if rotary is moved
+      }
+
+      if (millis() - startTime > menuTimeOut) // check for time-out and return
+          {
+            lcd.clear();
+            return;  // time-out
+          }
+
+      if (r.buttonPressedReleased(25)) {            // 25ms = debounce_delay
+          toggleInternRotary = toggleInternRotary + 1; // internal variable
+          lcd.clear();
+      }   
+    } // while
+
+      EEPROMMyupdate(EEPROM_OFFSET1+9, using_PPS, 1);
+
+    CodeStatus();  // show relevant screen to remind operator what parameter was changed
+    delay(1500);
+    lcd.clear();
+    break;
+  } // case 1: using_PPS 1 or 0
+
+
+ case 2: // no of seconds per screen as DemoClock cycles through all screen //////////////
  {
   dwellTimeDemo = EEPROM.read(EEPROM_OFFSET1+7);  
   lcd.setCursor(0,2); PrintFixedWidth(lcd, dwellTimeDemo, 3); lcd.print(F(" sec per screen"));
@@ -1435,10 +1483,10 @@ case 0: // 00000000 GPS baud rate //////////////
     volatile unsigned char rotaryResult = r.process();   
     if (rotaryResult) {
     if (rotaryResult == r.counterClockwise()) {              // decrease  value
-        dwellTimeDemo = max(dwellTimeDemo - 1,  4);
+        dwellTimeDemo = max(dwellTimeDemo - 1,  2);          // minimum time hardcoded here = 2 sec
       }
       else if (rotaryResult == r.clockwise()){               // increase  value
-        dwellTimeDemo = dwellTimeDemo + 1; dwellTimeDemo = min(dwellTimeDemo, 60);
+        dwellTimeDemo = dwellTimeDemo + 1; dwellTimeDemo = min(dwellTimeDemo, 60); // maximum time hardcoded = 60 sec
       }
     lcd.setCursor(0,2); PrintFixedWidth(lcd, dwellTimeDemo, 3); lcd.print(F(" sec per screen"));
     startTime = millis();  // reset counter if rotary is moved
@@ -1457,12 +1505,15 @@ case 0: // 00000000 GPS baud rate //////////////
   } // while
   
   EEPROMMyupdate(EEPROM_OFFSET1+7, dwellTimeDemo, 1);
+  DemoClock(1); // show relevant screen to remind operator what parameter was changed 
+  delay(1500);
+
   lcd.clear();
   break;
- } // case 1: dwellTimeDemo 
+ } // case 2: dwellTimeDemo 
 
 
-case 2: // 22222 demo step type as DemoClock cycles through all screen //////////////
+case 3: // demo step type as DemoClock cycles through all screen //////////////
  {
   demoStepType = EEPROM.read(EEPROM_OFFSET1+10);  
   lcd.setCursor(0,2); lcd.print(F("Demo step:")); lcd.print(F("       "));
@@ -1497,18 +1548,15 @@ case 2: // 22222 demo step type as DemoClock cycles through all screen /////////
   } // while
   
   EEPROMMyupdate(EEPROM_OFFSET1+10, demoStepType, 1);
+  DemoClock(1);  // show relevant screen to remind operator what parameter was changed
+  delay(1500);
+  
   lcd.clear();
   break;
- } // case 2: demoStepType 
-
-
-
-
-
-
+ } // case 3: demoStepType 
 
  
- case 3: // 33333 time for normal clock to be on per minute in most fancy clock displays ////////////////// 
+ case 4: // time for normal clock to be on per minute in most fancy clock displays ////////////////// 
  {
   secondsClockHelp = EEPROM.read(EEPROM_OFFSET1+6);  
   lcd.setCursor(0,2); PrintFixedWidth(lcd, secondsClockHelp, 3); lcd.print(F(" sec per min"));
@@ -1543,9 +1591,9 @@ case 2: // 22222 demo step type as DemoClock cycles through all screen /////////
   EEPROMMyupdate(EEPROM_OFFSET1+6, secondsClockHelp, 1);
   lcd.clear();
   break;
- } // case 3: secondsClockHelp 
+ } // case 4: secondsClockHelp 
 
- case 4: // 444444 no of seconds per math quiz //////////////
+ case 5: // no of seconds per math quiz //////////////
  {
   mathSecondPeriod = EEPROM.read(EEPROM_OFFSET1+8);  
   lcd.setCursor(0,2); PrintFixedWidth(lcd, mathSecondPeriod, 3); lcd.print(F(" sec per quiz  "));
@@ -1582,45 +1630,50 @@ case 2: // 22222 demo step type as DemoClock cycles through all screen /////////
   break;
  } // case 5: mathSecondPeriod
 
-  case 5: // 55555 toggle using_PPS on / off //////////////
-  {
-    using_PPS = EEPROM.read(EEPROM_OFFSET1+9);
-    lcd.setCursor(0,2); lcd.print(F("PPS Interrupt: ")); lcd.print(using_PPS);
-    startTime = millis();
-    while (toggleInternRotary == 0)
-    { 
-    // During each loop, check the encoder to see if it has been changed.
-      volatile unsigned char rotaryResult = r.process();   
-      if (rotaryResult) {
-      if (rotaryResult == r.counterClockwise()) {              // decrease  value
-          using_PPS = !using_PPS;
-        }
-        else if (rotaryResult == r.clockwise()){               // increase  value
-          using_PPS = !using_PPS;
-        }
-      lcd.setCursor(0,2); lcd.print(F("PPS Interrupt: ")); lcd.print(using_PPS);
-      startTime = millis();  // reset counter if rotary is moved
+case 6: // case 6: 1st day of week //////////////
+ {
+  firstDayWeek = EEPROM.read(EEPROM_OFFSET1 + 11);  
+  lcd.setCursor(3,2); //PrintFixedWidth(lcd, firstDayWeek, 3);
+  dayName(firstDayWeek-1); lcd.print(today);lcd.print(F("    "));
+  startTime = millis();
+  while (toggleInternRotary == 0)
+  { 
+   // During each loop, check the encoder to see if it has been changed.
+    volatile unsigned char rotaryResult = r.process();   
+    if (rotaryResult) {
+    if (rotaryResult == r.counterClockwise()) {              // decrease  value
+        firstDayWeek = firstDayWeek-1;  
+        if (firstDayWeek < 1) firstDayWeek += 7; 
       }
+      else if (rotaryResult == r.clockwise()){               // increase  value
+        firstDayWeek = 1 + (firstDayWeek-1 + 1) % 7; 
+      }
+    lcd.setCursor(3,2); //PrintFixedWidth(lcd, firstDayWeek, 3); 
+    dayName(firstDayWeek-1);  lcd.print(today);lcd.print(F("    "));
+    
+    startTime = millis();  // reset counter if rotary is moved
+    }
 
-      if (millis() - startTime > menuTimeOut) // check for time-out and return
-          {
-            lcd.clear();
-            return;  // time-out
-          }
-
-      if (r.buttonPressedReleased(25)) {            // 25ms = debounce_delay
-          toggleInternRotary = toggleInternRotary + 1; // internal variable
+    if (millis() - startTime > menuTimeOut) // check for time-out and return
+        {
           lcd.clear();
-      }   
-    } // while
+          return;  // time-out
+        }
 
-      EEPROMMyupdate(EEPROM_OFFSET1+9, using_PPS, 1);
+    if (r.buttonPressedReleased(25)) {            // 25ms = debounce_delay
+        toggleInternRotary = toggleInternRotary + 1; // internal variable
+        lcd.clear();
+    }   
+  } // while
+  
+  EEPROMMyupdate(EEPROM_OFFSET1 + 11, firstDayWeek, 1);
+  Progress();  // show relevant screen to remind operator what parameter was changed
+  delay(1500);
+  
+  lcd.clear();
+  break;
+ } // case 6: 1st day of week
 
-    CodeStatus();
-    delay(1500);
-    lcd.clear();
-    break;
-  } // case 5: using_PPS 1 or 0
 
  default:  
       lcd.clear();
@@ -1971,7 +2024,7 @@ case 3: // 333333333 time zone /////////////////////////////////////////
  
 case 5: // 55555555 Secondary menu //////////////
  {
-  int noOfMenuIn = 6;       // no of secondary menu items
+  int noOfMenuIn = 7;       // no of secondary menu items 7: 18.11.2024
   lcd.setCursor(0,1); lcd.print(F("a. GPS baudrate >    "));
   
   startTime = millis();
@@ -1992,11 +2045,18 @@ case 5: // 55555555 Secondary menu //////////////
       lcd.setCursor(0,1);
       switch (secondaryMenuNumber) { 
       case 0: lcd.print(F("a. GPS baudrate >   ")); break;
-      case 1: lcd.print(F("b. Dwell time demo >")); break;
-      case 2: lcd.print(F("c. Demo step type > ")); break;
-      case 3: lcd.print(F("d. FancyClock help >")); break;
-      case 4: lcd.print(F("e. Time, math quiz >")); break;
-      case 5: lcd.print(F("f. GPS PPS >        ")); break;
+      case 1: lcd.print(F("b. GPS PPS >        ")); break;  // moved up from f.) 09.11.2024
+      case 2: lcd.print(F("c. Demo dwell time >")); break;
+      case 3: lcd.print(F("d. Demo step type > ")); break;
+      case 4: lcd.print(F("e. FancyClock help >")); break;
+      case 5: lcd.print(F("f. Time, math quiz >")); break;
+      case 6: lcd.print(F("g. 1st day of week >")); break;
+      // if ((menuOrder[ScreenProgress] > 0) && (menuOrder[ScreenProgress] <= lengthOfMenuIn))   // this screen is in the set of screens selected
+      // {
+      //   lcd.print(F("g. 1st day, scr ")); lcd.print(menuOrder[ScreenProgress]); lcd.print(F(" >"));
+      // }
+      //   else lcd.print(F("g. 1st day         >"));
+      // break;
       }
       startTime = millis();  // reset counter if rotary is moved
     } 
@@ -2761,9 +2821,11 @@ byte filled;
 byte empty;
 
 //////////////////////////////////////////////////////////
-void loadGapLessCharacters7()
+void loadGapLessCharacters7A()
 {
-  if (LCDchar0_3 != LCDGAPLESS)
+  // same as loadGapLessCharacters7(), except initial test whether loaded previously
+
+  if (LCDchar0_3 != LCDGAPLESS || LCDchar4_5 != LCDGAPLESS || LCDchar6_7 != LCDGAPLESS) // more conditions 31.10.2024
   {
     memcpy_P(buffer,g70, 8);
     lcd.createChar((byte)0, buffer);
@@ -2793,9 +2855,6 @@ void loadGapLessCharacters7()
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-#define NCOLS 20
-#define NROWS 4
-
 
 void gapLessBar(unsigned nr, unsigned total, unsigned firstPos, unsigned lastPos, unsigned line)
 // https://robodoupe.cz/2015/progress-bar-pro-arduino-a-lcd-displej/
@@ -2810,25 +2869,53 @@ void gapLessBar(unsigned nr, unsigned total, unsigned firstPos, unsigned lastPos
 
     int Nseg = lastPos - firstPos +1 ;  // no of positions to use on LCD (first, ..., last)
 
-    float noOfSubSegments = 3.0; // no of subsegments used per character
+    float noOfSubSegments = 3.0; // no of subsegments used per character, out of a total of 5, i.e. 2 gaps
     float segmentNoReal = (float(nr)/float(total) )* (Nseg-1.0/noOfSubSegments); // 1/segmentNoReal 19.12.2023
     int segmentNoInt    = int(segmentNoReal);
-    byte subSegmentNo   = byte(noOfSubSegments *(segmentNoReal-segmentNoInt));
+    byte subSegmentNo   = min((int)noOfSubSegments-1,(byte)round(noOfSubSegments *(segmentNoReal-segmentNoInt)));  // added min, round 2.11.2024 
+
+    int startPos;
+
+    /*
+    Example: 
+    total = 111, firstPos = 0, lastPos = 19 => Nseg = 20
+    
+    nr =   0 => segmentNoReal= 0.0 , segmentNoInt= 0, subSegmentNo=0.
+    nr =   1 => segmentNoReal= 0.18, segmentNoInt= 0, subSegmentNo=0.53 -> 0
+    nr =   2 => segmentNoReal= 0.35, segmentNoInt= 0, subSegmentNo=1.06 -> 1
+    nr =   3 => segmentNoReal= 0.53, segmentNoInt= 0, subSegmentNo=1.59 -> 1
+    nr =   4 => segmentNoReal= 0.71, segmentNoInt= 0, subSegmentNo=2.13 -> 2
+    nr =   5 => segmentNoReal= 0.89, segmentNoInt= 0, subSegmentNo=2.65 -> 2
+
+    nr =   6 => segmentNoReal= 1.06, segmentNoInt= 1, subSegmentNo=0.19 -> 0
+
+    nr = 111 => segmentNoReal=19.67, segmentNoInt=19, subSegmentNo=2
+
+    */
 
     // draw on LCD
 
     // 1: left-hand symbol
     lcd.setCursor(firstPos, line);
-    if (segmentNoInt == 0) lcd.write(byte(0)); // initial left-hand symbol, |::
-    else                   lcd.write(filled);  // filled,                   |||
-    
-    // 2: upper and lower frame :::
-    {  
-    for (int j = firstPos + segmentNoInt; j < lastPos; j++) // 
-      {
-        lcd.setCursor(j,line);lcd.write(empty);  // :::
-      }
+    if (segmentNoInt == 0) 
+    {
+        lcd.write(byte(0)); // initial left-hand symbol, |::
+        startPos = firstPos + segmentNoInt;
     }
+    else 
+    {
+        lcd.write(filled);  // filled,                   |||
+        startPos = firstPos + segmentNoInt + 1;   // +1 added - removes flickering, 06.10.1024
+    }
+    
+    // 2: upper and lower frame, after actual segment :::
+     {  
+
+     for (int j = startPos ; j < lastPos; j++) // 8.10.2024:  
+       {
+         lcd.setCursor(j,line);lcd.write(empty);  // :::
+       }
+     }
  
     // 3: draw 0 ... Nseg completely filled segments
 
@@ -2857,12 +2944,12 @@ void gapLessBar(unsigned nr, unsigned total, unsigned firstPos, unsigned lastPos
     {
       lcd.setCursor(firstPos + segmentNoInt, line);                        
       lcd.write(subSegmentNo); // 0, 1, 2 =|::, ||:, |||
-      if (segmentNoInt == Nseg-2) lcd.write(4);           // added 19.12.2023 - only important when counting down
+      if (segmentNoInt == Nseg-2) lcd.write(4);           // added 19.12.2023 - only important when counting down. = end-character
     }
     else if (segmentNoInt == Nseg-1)
     {  // 4 = ::|, 5 = |:|, filled = |||
       lcd.setCursor(firstPos + segmentNoInt, line);
-      if (subSegmentNo == 0) lcd.write(5);      // 
+      if (subSegmentNo == 0) lcd.write(5);      // |__|
       if (subSegmentNo == 1) lcd.write(filled); // 
       if (subSegmentNo == 2) lcd.write(filled); // |||
      }
@@ -2879,8 +2966,8 @@ void gapLessBar(unsigned nr, unsigned total, unsigned firstPos, unsigned lastPos
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define MAX_NO_OF_PERSONS 17  // for Reminder()
-#define LENGTH_NAME     10  // min 9 + 1, was 11
+#define MAX_NO_OF_PERSONS 18  // for Reminder() - best if equal to or larger than size of data set in EEPROM
+#define LENGTH_NAME       10  // min 9 + 1, was 11
 
 typedef struct
   {
@@ -2892,7 +2979,8 @@ typedef struct
 
 person_type person[MAX_NO_OF_PERSONS];
 byte lengthPersonData;
-byte indStart = 0;  // must be outside of Reminder()
+byte indStart = 0;          // must be outside of Reminder()
+uint8_t secondInternal = 0; // must be outside of Reminder()
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 void readPersonEEPROM()
@@ -2902,9 +2990,11 @@ void readPersonEEPROM()
   lengthPersonData = EEPROM.read(EEPROM_OFFSET2);      // position 0,  length of struct 
   #ifdef FEATURE_SERIAL_EEPROM
       Serial.print("Number of records: ");Serial.println(lengthPersonData);
-  #endif    
+  #endif 
 
-  for (int i=0; i<lengthPersonData; ++i)
+  lengthPersonData = min(MAX_NO_OF_PERSONS,lengthPersonData); // 25.12.2024, limit no of records to what fits into struct
+
+  for (int i=0; i < lengthPersonData; ++i)
   {
     addrOffset = EEPROM_OFFSET2 + 1 + i*20;
     String Nan = readStringFromEEPROM(addrOffset);      // positions 1, ... , 13
@@ -2976,5 +3066,238 @@ void EquinoxSolstice(int Year)
 }
 
 /////////////////////////////////////////////////////////////////
+// From jrleeman/toDayOfYear.ino, https://gist.github.com/jrleeman/3b7c10712112e49d8607
+
+int calculateDayOfYear(int day, int month, int year) {
+  
+  // Given a day, month, and year (4 digit), returns 
+  // the day of year. Errors return 999.
+  
+  int daysInMonth[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+  
+  // Verify we got a 4-digit year
+  if (year < 1000) {
+    return 999;
+  }
+  
+  // Check if it is a leap year, this is confusing business
+  // See: https://support.microsoft.com/en-us/kb/214019
+  if (year%4  == 0) {
+    if (year%100 != 0) {
+      daysInMonth[1] = 29;
+    }
+    else {
+      if (year%400 == 0) {
+        daysInMonth[1] = 29;
+      }
+    }
+   }
+
+  // Make sure we are on a valid day of the month
+  if (day < 1) 
+  {
+    return 999;
+  } else if (day > daysInMonth[month-1]) {
+    return 999;
+  }
+  
+  int doy = 0;
+  for (int i = 0; i < month - 1; i++) {
+    doy += daysInMonth[i];
+  }
+  
+  doy += day;
+  return doy;
+}
+
+/////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+const byte zeroBar[8] PROGMEM = {
+  B11111,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B11111
+};
+const byte oneBar[8] PROGMEM = {
+  B11111,
+  B00000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B00000,
+  B11111
+};
+
+const byte twoBar[8] PROGMEM = {
+  B11111,
+  B00000,
+  B11000,
+  B11000,
+  B11000,
+  B11000,
+  B00000,
+  B11111
+};
+
+const byte threeBar[8] PROGMEM = {
+  B11111,
+  B00000,
+  B11100,
+  B11100,
+  B11100,
+  B11100,
+  B00000,
+  B11111
+};
+
+const byte fourBar[8] PROGMEM = {
+  B11111,
+  B00000,
+  B11110,
+  B11110,
+  B11110,
+  B11110,
+  B00000,
+  B11111
+};
+
+const byte fiveBar[8] PROGMEM = {
+  B11111,
+  B00000,
+  B11111,
+  B11111,
+  B11111,
+  B11111,
+  B00000,
+  B11111
+};
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+void framedProgressBar(int nr, int total, int firstPos, int lastPos, int line)
+
+// framed progress bar
+// data is displayed in columns firstPos+1 ... lastPos-1,
+// and frame ends on firstPos, lastPos
+
+{
+  firstPos = max(firstPos, 0);        // 1...NCOLS-1, first position with data
+  lastPos = min(lastPos, NCOLS - 1);  // ... NCOLS-2, last position with data
+  line = max(line, 0);
+  line = min(line, NROWS);
+
+  int Nseg = lastPos - firstPos - 1;  // no of positions to use on LCD (first, last = frame)
+
+  float segmentNoReal = Nseg * float(nr) / float(total);  //
+  int segmentNoInt = int(segmentNoReal);
+  byte subSegmentNo = min(4,(int)round(5 * (segmentNoReal - segmentNoInt))); // added min, round 2.11.2024
+
+  // draw on LCD
+
+  // First: left-hand symbol
+  lcd.setCursor(firstPos, line);
+  lcd.write(byte(6));  // initial symbol
+
+  // Second: upper and lower frame
+  for (int j = firstPos + 1; j < lastPos; j++) {
+    lcd.setCursor(j, line);
+    lcd.write(byte(empty));  // over- and underbar - or- empty
+  }
+
+  // Third: draw closing, right-hand symbol
+  lcd.setCursor(lastPos, line);
+  lcd.write(byte(7));  // final   symbol
+
+  // Fourth draw 0 ... Nseg completely filled segments
+  for (int j = firstPos + 1; j <= firstPos + segmentNoInt; j++) {
+    lcd.setCursor(j, line);
+    lcd.write(filled);
+  }
+
+  // Third draw sub segment
+  if (segmentNoInt != Nseg)  // nothing if final segment has been filled
+  {
+    lcd.setCursor(firstPos + 1 + segmentNoInt, line);
+    if (subSegmentNo == 0) lcd.write(empty);
+    else lcd.write(subSegmentNo);  // 1...4
+  }
+
+
+// debug info on screen
+#ifdef DEBUG
+  if (line < NROWS) {
+    lcd.setCursor(6, line + 1);
+    lcd.print(segmentNoReal);
+    lcd.print("    ");
+    lcd.setCursor(12, line + 1);
+    lcd.print(segmentNoInt);
+    lcd.print(" ");
+    lcd.print(subSegmentNo);
+    lcd.print("      ");
+  }
+#endif
+}
+////////////
+/////////////
+
+
+// beginning symbol, curved (xxxx)
+// Bar 5:
+const byte beg1[8] PROGMEM = {
+  B00001,
+  B00010,
+  B00010,
+  B00010,
+  B00010,
+  B00010,
+  B00010,
+  B00001
+};
+// end symbol
+const byte end1[8] PROGMEM = {
+  B10000,
+  B01000,
+  B01000,
+  B01000,
+  B01000,
+  B01000,
+  B01000,
+  B10000
+};
+
+void loadCurvedFramedBarCharactersA() {  // Bar 5, ( xxxx )
+  empty = 0;
+  filled = 5;
+  if (LCDchar0_3 != LCDFRAMEDBARS || LCDchar4_5 != LCDFRAMEDBARS || LCDchar6_7 != LCDFRAMEDBARS) 
+ {
+    memcpy_P(buffer,zeroBar, 8);
+    lcd.createChar(empty, buffer);
+    memcpy_P(buffer,oneBar, 8);
+    lcd.createChar(1, buffer);
+    memcpy_P(buffer,twoBar, 8);
+    lcd.createChar(2, buffer);
+    memcpy_P(buffer,threeBar, 8);
+    lcd.createChar(3, buffer);
+    memcpy_P(buffer,fourBar, 8);
+    lcd.createChar(4, buffer);
+    memcpy_P(buffer,fiveBar, 8);
+    lcd.createChar(filled, buffer);
+
+    memcpy_P(buffer,beg1, 8);
+    lcd.createChar(6, buffer);
+    memcpy_P(buffer,end1, 8);
+    lcd.createChar(7, buffer);
+
+    LCDchar0_3 = LCDFRAMEDBARS; 
+    LCDchar4_5 = LCDFRAMEDBARS;
+    LCDchar6_7 = LCDFRAMEDBARS;
+ }
+}
 
  /// THE END ///

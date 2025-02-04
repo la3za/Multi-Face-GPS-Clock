@@ -1,7 +1,3 @@
-// turn on/off experimental options
-//#define EXP_TIDE_SIDEREAL  // Experimental option - unfinished
-
-
 // Debugging options 
 // Serial port output on/off:
 
@@ -19,8 +15,10 @@
 //#define FEATURE_SERIAL_LOAD_CHARACTERS  // check loading of new custom characters to LCD
 //#define FEATURE_SERIAL_NEXTEVENTS  // debug NextEvent()
 
+// LocalUTC(), WordClockNorwegian(), LcdSolarRiseSet(), ISOHebIslam():
+//#define FEATURE_DATE_PER_SECOND   // for stepping date/hour/min (86400/3600/60 sec step) quickly and check calender function (local time only)
+#define SPEED_UP_FACTOR 60.0 //3600, 86400;  // muliplied by date and added to time (seconds)
 
-//#define FEATURE_DATE_PER_SECOND   // for stepping date/hour (86400 / 3600 sec step) quickly and check calender function (local time only)
 //#define FEATURE_DAY_PER_SECOND    // for stepping through day names quickly
 
 //#define FEATURE_INTERRUPTTEST   // debugging interrupt on Metro Express     

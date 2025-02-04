@@ -1,6 +1,7 @@
 // Routines that define letters and language dependent routines
 
 /*
+dayName
 nativeDayLong
 loadNativeCharacters
 WordClockNorwegian
@@ -8,11 +9,11 @@ WordClockNorwegian
 
 // user defined characters, #1-4 are already used in main code (for arrows etc), so numbers start with 5:
 
-#define SE_DE_oe_SMALL   239  // ö, already exists in LCD memory
+#define SV_DE_oe_SMALL   239  // ö, already exists in LCD memory
 
 // The following def's must match those of LCDchar0_3 etc in *.ino file:
 #define IS_eth_SMALL     4    // ð 
-#define NO_DK_oe_SMALL   5    // ø
+#define NO_DA_oe_SMALL   5    // ø
 #define IS_THORN_CAPITAL 5    // þ  
 #define ES_e_ACCENT      5    // é  
 #define ES_IS_a_ACCENT   6    // á
@@ -20,142 +21,218 @@ WordClockNorwegian
 #define SCAND_aa_SMALL   6    // å
 #define SCAND_AA_CAPITAL 7    // Å
 
+#define NORSE_o_ACCENT   7    // ó, 10.10.2024
+//#define NORSE_O_ACCENT   7    // Ó, 13.10.2024
+
+#define FO_i_ACCENT 4    // í, 29.10.2024
+#define FO_y_ACCENT 5    // ý, 29.10.2024
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void dayName(int dayAddr)   // return day name in correct language in "today", given dayAddr=1...7 (Sunday ... Saturday)
+{
+    memcpy_P(today,myDays[languageNumber][dayAddr], 12);    // put today's day / language into "today"
+ 
+// fix odd letters requiring special characters depending on language chosen:
+
+    if (strcmp(languages[languageNumber],"nb ") == 0 || strcmp(languages[languageNumber],"da ") == 0
+     || strcmp(languages[languageNumber],"nn ") == 0)  
+      if (dayAddr==0) today[1] = char(NO_DA_oe_SMALL); // Søndag - Norwegian, Danish, Nynorsk
+
+    if (strcmp(languages[languageNumber],"nb ") == 0 || strcmp(languages[languageNumber],"da ") == 0)
+      if (dayAddr==6) today[1] = char(NO_DA_oe_SMALL); // Lørdag - Norwegian, Danish
+
+    if (strcmp(languages[languageNumber],"es ") == 0)
+    {
+      if (dayAddr==3) today[2] = char(ES_e_ACCENT);    // Miércoles - Spanish
+      if (dayAddr==6) today[1] = char(ES_IS_a_ACCENT); // Sábado - Spanish
+    }
+
+    if (strcmp(languages[languageNumber],"sv ") == 0)
+      if (dayAddr==0 || dayAddr==6) today[1] = char(SV_DE_oe_SMALL); // Söndag, Lördag - Swedish
+
+    if (strcmp(languages[languageNumber],"sv ") == 0 || strcmp(languages[languageNumber],"nn ") == 0)
+      if (dayAddr==1)               today[1] = char(SCAND_aa_SMALL); // Måndag - Swedish, Nynorsk
+
+    if (strcmp(languages[languageNumber],"is ") == 0)
+    {
+      if (dayAddr==1) today[1] = char(ES_IS_a_ACCENT);   // Mánudagur - Icelandic
+      if (dayAddr==2)                                    // þriðjudagur - Icelandic
+      {
+          today[0] = char(IS_THORN_CAPITAL); 
+          today[3] = char(IS_eth_SMALL);     
+      }
+      if (dayAddr==3) today[2] = char(IS_eth_SMALL);     // Miðvikudagur - Icelandic
+      if (dayAddr==5) today[1] = char(SV_DE_oe_SMALL);   // Föstudagu - Icelandic
+    }
+
+    if (strcmp(languages[languageNumber],"non") == 0) // Old Norse, 10.10.2024
+    {
+      if (dayAddr==1) today[1] = char(ES_IS_a_ACCENT);   // Mánudagr - Old Norse 
+      if (dayAddr==3) 
+      {
+       // today[0] = char(NORSE_O_ACCENT);   // Óðinsdagr - If not capital Ó, then O or ó must do
+        today[1] = char(IS_eth_SMALL);     // Óðinsdagr - Old Norse 
+      }
+      if (dayAddr==4)                         // Þórsdagr - Old Norse 
+      {
+        today[0] = char(IS_THORN_CAPITAL); 
+        today[1] = char(NORSE_o_ACCENT); 
+      }
+      if (dayAddr==5) today[3] = char(ES_IS_a_ACCENT);   // Frjádagr - Old Norse 
+    }
+
+    if (strcmp(languages[languageNumber],"fo ") == 0) // Faroese, 29.10.2024
+    {
+      if (dayAddr==1) today[1] = char(ES_IS_a_ACCENT);  // Mánudagur - Faroese
+      if (dayAddr==2) today[1] = char(FO_y_ACCENT);     // Týsdagur - Faroese
+      if (dayAddr==4) today[1] = char(NORSE_o_ACCENT);  // Hósdagur - Faroese
+      if (dayAddr==5) today[2] = char(FO_i_ACCENT);     // Fríggjadagur - Faroese
+    }
+}
+
 /////////////////////////////////////////////////////////////////////////
 
-void nativeDayLong(float unixTime) {      // unix time in sec, output through global char array today
+void nativeDayLong(time_t unixTime) {  // unix time in sec, output through global char array today. Was float, now time_t. Fix 12.10.2024
  //  Full weekday name in native (= non-English language)
  //  Max 12 characters in name
-int dayAddr = weekday(unixTime) - 1; // day of the week (1-7), Sunday is day 1
+ //  
+
+int dayAddr = weekday(unixTime) - 1; // weekday() = day of the week (1-7), Sunday is day 1
 
 #ifdef FEATURE_DAY_PER_SECOND     //    fake the day -- for testing only
           dayAddr = second(localTime/2)%7; // change every 2 seconds
 #endif
 
-    memcpy_P(today,myDays[languageNumber][dayAddr], 12);    // put today's day / language into "today"
- 
-// fix odd letters requiring special characters depending on language chosen:
-
-    if (strcmp(languages[languageNumber],"no") == 0 || strcmp(languages[languageNumber],"dk") == 0
-     || strcmp(languages[languageNumber],"ny") == 0)  
-      if (dayAddr==0) today[1] = char(NO_DK_oe_SMALL); // Søndag - Norwegian, Danish, nynorsk
-
-    if (strcmp(languages[languageNumber],"no") == 0 || strcmp(languages[languageNumber],"dk") == 0)
-      if (dayAddr==6) today[1] = char(NO_DK_oe_SMALL); // Lørdag - Norwegian, Danish
-
-    if (strcmp(languages[languageNumber],"es") == 0)
-    {
-      if (dayAddr==3) today[2] = char(ES_e_ACCENT);    // Miércoles
-      if (dayAddr==6) today[1] = char(ES_IS_a_ACCENT); // Sábado
-    }
-
-    if (strcmp(languages[languageNumber],"se") == 0)
-      if (dayAddr==0 || dayAddr==6) today[1] = char(SE_DE_oe_SMALL); // Söndag, Lördag
-
-    if (strcmp(languages[languageNumber],"se") == 0 || strcmp(languages[languageNumber],"ny") == 0)
-      if (dayAddr==1)               today[1] = char(SCAND_aa_SMALL); // Måndag
-
-    if (strcmp(languages[languageNumber],"is") == 0)
-    {
-      if (dayAddr==1) today[1] = char(ES_IS_a_ACCENT);   // Mánudagur  
-      if (dayAddr==2)
-      {
-          today[0] = char(IS_THORN_CAPITAL); // þriðjudagur
-          today[3] = char(IS_eth_SMALL);     // þriðjudagur
-      }
-      if (dayAddr==3) today[2] = char(IS_eth_SMALL);     // Miðvikudagur
-      if (dayAddr==5) today[1] = char(SE_DE_oe_SMALL);   // Föstudagu
-    }
-
+dayName(dayAddr);
 }
+
 ///////////////////////////////////////////////
 
 const byte OE_small[8]   PROGMEM = {B00000, B00001, B01110, B10101, B10101, B01110, B10000, B00000}; // ø, for søndag, lørdag
 const byte a_accent[8]   PROGMEM = {B00010, B00100, B01110, B00001, B01111, B10001, B01111, B00000};
-const byte AA_small[8]   PROGMEM = {B00100, B00000, B01110, B00001, B01111, B10001, B01111, B00000}; 
+const byte o_accent[8]   PROGMEM = {B00010, B00100, B01110, B10001, B10001, B10001, B01110, B00000}; // ó, old norse, 10.10.2024
+const byte O_accent[8]   PROGMEM = {B00010, B01110, B10001, B10001, B10001, B10001, B01110, B00000}; // Ó, old norse, 10.10.2024
 const byte e_accent[8]   PROGMEM = {B00010, B00100, B01110, B10001, B11111, B10000, B01110, B00000};
-//const byte AA_capital[8] PROGMEM = {B00100, B00000, B01110, B10001, B11111, B10001, B10001, B00000};
-const byte AA_capital[8] PROGMEM = 
-{B00100, 
- B01010, 
- B00100,
- B01010, 
- B10001, 
- B11111, 
- B10001, 
- B00000};  // like European/English LCD 4x20 9.4.2024
+//const byte AA_capital[8] PROGMEM = {B00100, B00000, B01110, B10001, B11111, B10001, B10001, B00000}; // not so nice-looking
+const byte AA_capital[8] PROGMEM = {B00100, B01010, B00100, B01010, B10001, B11111, B10001, B00000};  // like European/English LCD 4x20 9.4.2024
+
+const byte AA_small[8]   PROGMEM = {B00100, B00000, B01110, B00001, B01111, B10001, B01111, B00000}; // Scandinavian
 const byte Thorn[8]      PROGMEM = {B01000, B01110, B01001, B01001, B01110, B01000, B01000, B00000}; // Icelandic
 const byte eth[8]        PROGMEM = {B01000, B00100, B01110, B10001, B10001, B10001, B01110, B00000}; // Icelandic
+const byte y_accent[8]   PROGMEM = {B00010, B00100, B10001, B10001, B01111, B00001, B01110, B00000}; // Faroese 
+const byte i_accent[8]   PROGMEM = {B00100, B01000, B01100, B00100, B00100, B00100, B01110, B00000}; // Faroese Fríggjadagur
 //const byte Cedila[8]     PROGMEM = {B00000, B01110, B10000, B10001, B01110, B00100, B01100, B00000}; // for Portugese
 ///////////////////////////////////////////////
 
 void loadNativeCharacters(int8_t languageNumber)
 {
 //  LCD display definitions of special native characters for languages
-//  03.03.2024: Using PROGMEM, simplified to only 2 rather than 4 options
-//              Only loads the chosen language's character set, no longer for a group of languages
+//  03.03.2024: Using PROGMEM, only loads the chosen language's character set, no longer for a group of languages
 
-//  Norwegian/Danish letters used in native day names and in WordClock, ø: "lørdag, søndag", and Chemical Elements "sølv"
+//  Norwegian/Danish letters are also used in WordClock, ø: "lørdag, søndag", and Chemical Elements "sølv"
 //  https://forum.arduino.cc/t/error-lcd-16x2/211977/6
 
-boolean loadedCharacterSet = false;
-
-if (LCDchar4_5 != LCDNATIVE || languageNumber != presentLanguageNumber)
-{
-    if (strcmp(languages[languageNumber],"no") == 0 || strcmp(languages[languageNumber],"dk") == 0 
-    || strcmp(languages[languageNumber],"ny") == 0)
+if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != presentLanguageNumber)  // LCDchar6_7 also 5.11.2024
+ {
+    if (strcmp(languages[languageNumber],"nb ") == 0 || strcmp(languages[languageNumber],"da ") == 0 
+                                                     || strcmp(languages[languageNumber],"nn ") == 0)
     {
         memcpy_P(buffer,OE_small, 8);
-        lcd.createChar(NO_DK_oe_SMALL, buffer);       // ø: "Lørdag", "Søndag"
-        loadedCharacterSet = true;
+        lcd.createChar(NO_DA_oe_SMALL, buffer);       // ø: "Lørdag", "Søndag"
     }
 
-    if (strcmp(languages[languageNumber],"es") == 0 || strcmp(languages[languageNumber],"is") == 0)
+    if (strcmp(languages[languageNumber],"es ") == 0 || strcmp(languages[languageNumber],"is ") == 0 
+     || strcmp(languages[languageNumber],"non") == 0 || strcmp(languages[languageNumber],"fo ") == 0)
     {
         memcpy_P(buffer,a_accent, 8);
         lcd.createChar(ES_IS_a_ACCENT, buffer);       // á: "Sábado"
-        loadedCharacterSet = true;
+        LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5 - 30.11.2024
     }
 
-    if (strcmp(languages[languageNumber],"se") == 0 || strcmp(languages[languageNumber],"ny") == 0)
+    if (strcmp(languages[languageNumber],"sv ") == 0 || strcmp(languages[languageNumber],"nn ") == 0)
     {
         // ö exists as char(B11101111) = char(239), no need to create it separately, ä, ü, ñ also
         memcpy_P(buffer,AA_small, 8);
         lcd.createChar(SCAND_aa_SMALL, buffer);       //  å: "måndag", Swedish/nynorsk
-        loadedCharacterSet = true;
+        LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5 - 30.11.2024
     }
 
-    if (strcmp(languages[languageNumber],"es") == 0)
+    if (strcmp(languages[languageNumber],"es ") == 0)
     {
         memcpy_P(buffer,e_accent, 8);                 // é, "Miércoles"
         lcd.createChar(ES_e_ACCENT, buffer);
-        loadedCharacterSet = true;
     }
 
-    if (strcmp(languages[languageNumber],"is") == 0)
+    if (strcmp(languages[languageNumber],"is ") == 0 || strcmp(languages[languageNumber],"non") == 0)
     {
-    //  Icelandic, á, ð, Þ
+    //  Icelandic, á, ð, Þ, also Old Norse
     //  https://einhugur.com/blog/index.php/xojo-gpio/hd44780-based-lcd-display/
-    //  ö exists as char(B11101111) = char(239), no need to create it separately 
         memcpy_P(buffer,Thorn, 8);
         lcd.createChar(IS_THORN_CAPITAL, buffer);
         memcpy_P(buffer,eth, 8);
         lcd.createChar(IS_eth_SMALL, buffer);
-        LCDchar6_7 = LCDNATIVE; // sine it fills more than locations 4 and 5
-        loadedCharacterSet = true;
+  //      LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5
     }
+    if (strcmp(languages[languageNumber],"non") == 0 || strcmp(languages[languageNumber],"fo ") == 0)  // Old Norse, 10.10.2024; Faroese 29.10.2024
+    {   
+        //if (day == Wednesday ... hard to find a suitable variable for weekday which also knows if it is local time or UTC
+        //     memcpy_P(buffer,O_accent, 8);
+        memcpy_P(buffer,o_accent, 8);
+        lcd.createChar(NORSE_o_ACCENT, buffer);
+        LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5 - 30.11.2024
+    }   
+
+    if (strcmp(languages[languageNumber],"fo ") == 0)  // Faroese 29.10.2024 
+    {
+        memcpy_P(buffer,y_accent, 8);
+        lcd.createChar(FO_y_ACCENT, buffer);
+
+        memcpy_P(buffer,i_accent, 8);
+        lcd.createChar(FO_i_ACCENT, buffer);
+       // LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5   
+    }
+
     LCDchar4_5 = LCDNATIVE;
+    presentLanguageNumber = languageNumber;
 
     //   lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
         #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
-            if (loadedCharacterSet) 
-            {
               Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
               Serial.print(" ");Serial.println(languages[languageNumber]);
-            }
         #endif
-        presentLanguageNumber = languageNumber;
+ }
 }
-}
+
+//////////////////////////
+
+#ifdef MORELANGUAGES // unfinished ... dayAddr not declared
+void loadNorseO(int8_t languageNumber)      // make sure correct Ó (Ódinsdagr) and ó (Thórsdagr) is loaded depending on day
+{
+    int dayAddr; // faked in order for code to compile - needs to come from outside
+    // special case for Old Norse as not enough room for both Ó (Ódinsdagr) and ó (Thórsdagr))
+        if (strcmp(languages[languageNumber],"non") == 0)
+          //      Serial.println(dayAddr);
+        {
+        // if (weekday(localTime) == 4)        // Wednesday: Ó 
+        if (dayAddr == 3)        // Wednesday: Ó 
+            {
+              //  Serial.println("Wednesday OOOO");
+                // memcpy_P(buffer, O_accent, 8);
+                // lcd.createChar(NORSE_O_ACCENT, buffer);
+            }
+        // else if (weekday(localTime) == 5)  // Thursday: ó 
+        else if (dayAddr == 4)  // Thursday: ó 
+            {
+              //  Serial.println("Thursday  oooo");
+                memcpy_P(buffer, o_accent, 8);
+                lcd.createChar(NORSE_o_ACCENT, buffer);
+            }
+        }
+    }
+#endif
+   
 
 //////////////////////////
 void loadAring()   // for use with WordClockNorwegian()
@@ -191,7 +268,7 @@ void WordClockNorwegian()
   char textbuf[21];
 
 // replace some characters - the X's - with native Norwegian ones:
-  WordTens[4][2] = (char)NO_DK_oe_SMALL;          // Førti, 'ø' also used in "lørdag", "søndag"
+  WordTens[4][2] = (char)NO_DA_oe_SMALL;          // Førti, 'ø' also used in "lørdag", "søndag"
   WordOnes[8][0] = (char)SCAND_aa_SMALL;          // åtte,  'å'
   CapiOnes[8][0] = (char)SCAND_AA_CAPITAL;        // Åtte,  'Å'
 
@@ -203,7 +280,7 @@ void WordClockNorwegian()
  
   //  get local time
   #ifdef FEATURE_DATE_PER_SECOND                                 // for stepping date quickly and check calender function
-    localTime = now() + utcOffset * 60 + dateIteration * 3600; //86400;  // fake local time by stepping up to 1 sec/day
+    localTime = now() + utcOffset * 60 + dateIteration * SPEED_UP_FACTOR;  // fake local time by stepping up to 1 sec/day
     dateIteration = dateIteration + 1;
   #else 
     localTime = now() + utcOffset * 60;  // the default!
