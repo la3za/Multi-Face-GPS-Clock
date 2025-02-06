@@ -1,5 +1,5 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.2.2    04.02.2025";
+const char codeVersion[] = "v2.3.0    04.02.2025";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
 // const char codeVersion[] = "v2.1.1   "__DATE__;
@@ -61,7 +61,7 @@ const char codeVersion[] = "v2.2.2    04.02.2025";
 
 /*
  Revisions:
- 2.2.2   04.02.2025:
+ 2.3.0   04.02.2025 (incorrectly called 2.2.2)
                 - Replaced legacy library, NewLiquidCrystal_lib, <LiquidCrystal_I2C.h> with standard library <hd44780.h>  
                 - Progress screen showing progress bar for day of week (1-7), and for day/month of year (1-12)
                 -- Secondary menu entry for setting first day of week for Progress screen, for day of week, item g.
