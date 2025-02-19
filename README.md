@@ -8,7 +8,9 @@ The clock is inspired by the [Clock Kit from QRPLabs](https://qrp-labs.com/clock
 
 The new version 2 software makes setup much easier as most, if not all, parameters now can be entered via the rotary control, and there is minimal need for editing of the software.
 
-Below the clock shows local time and UTC time. ![Image](Images/GPSClock-00-EU.jpg)
+Below the clock shows local time and UTC time: 
+
+<img src="Images/GPSClock-00-EU.jpg" width="50%">
 
 ## YouTube videos
 * Here's a YouTube video showing all the 24 screens in the Favorites subset of clock faces, using the Demo mode with 10 seconds per screen: https://youtu.be/AJEWBOJmE1E
@@ -61,11 +63,17 @@ See [wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for more details 
 
 Mitch, W4OA, made a nice 3D case for the clock. His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/Builds/W4OA):
 
-![Image](Builds/W4OA/Multi_Face_GPS_Clock_W4OA.jpg)
+<img src="Builds/W4OA/Multi_Face_GPS_Clock_W4OA.jpg" width="50%">
 
-Here is the breadboard of Michael, DK7UX, with GPS from QRPLabs QLG1 or QLG2. It shows how simple the hardware is:
+The 3D-printed case of John, AA7US:
 
-![Image](Builds/DK7UX.jpg)
+<img src="Builds/AA7US/AA7US_IMG_5007.JPG" width="50%">
+
+<img src="Builds/AA7US/AA7US_IMG_5011.JPG" width="50%">
+
+The breadboard of Michael, DK7UX, with GPS from QRPLabs QLG1 or QLG2. It shows how simple the hardware is:
+
+<img src="Builds/DK7UX.jpg" width="50%">
 
 Please get in touch if you want to display your implementation here!
 
