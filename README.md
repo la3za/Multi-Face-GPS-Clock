@@ -61,11 +61,11 @@ See [wiki](https://github.com/la3za/Multi-Face-GPS-Clock/wiki) for more details 
 
 ## Other users
 
-Mitch, W4OA, made a nice 3D case for the clock. His design and his STL-files can be found in the [W4OA directory](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/Builds/W4OA):
+Mitch, W4OA, made a nice 3D case for the clock. Click for [build notes](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/Builds/W4OA/Multi_Face_GPS_Clock.pdf). STL-files can be found in the [W4OA directory](https://github.com/la3za/W4OA_Multi-Face-GPS-Clock/tree/master/Builds/W4OA):
 
 <img src="Builds/W4OA/Multi_Face_GPS_Clock_W4OA.jpg" width="50%">
 
-The 3D-printed case of John, AA7US:
+The 3D-printed case of John, AA7US. Click for [build notes](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/Builds/AA7US/AA7US-Multi-Face-GPS-Clock-Enclosure-Build-Notes.pdf). STL-files can be found in the [AA7US directory](https://github.com/la3za/Multi-Face-GPS-Clock/tree/master/Builds/AA7US):
 
 <img src="Builds/AA7US/AA7US_IMG_5007.JPG" width="50%">
 
