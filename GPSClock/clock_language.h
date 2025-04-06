@@ -21,11 +21,13 @@ WordClockNorwegian
 #define SCAND_aa_SMALL   6    // å
 #define SCAND_AA_CAPITAL 7    // Å
 
-#define NORSE_o_ACCENT   7    // ó, 10.10.2024
+#define NORSE_o_ACCENT   7    // ó, 10.10.2024, also Faroese
 //#define NORSE_O_ACCENT   7    // Ó, 13.10.2024
 
-#define FO_i_ACCENT 4    // í, 29.10.2024
-#define FO_y_ACCENT 5    // ý, 29.10.2024
+#define FO_i_ACCENT      4    // í, 29.10.2024
+#define FO_y_ACCENT      5    // ý, 29.10.2024
+
+#define AM_PM            7    // for 12 hr clock 31.03.2025 
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,14 +118,21 @@ const byte o_accent[8]   PROGMEM = {B00010, B00100, B01110, B10001, B10001, B100
 const byte O_accent[8]   PROGMEM = {B00010, B01110, B10001, B10001, B10001, B10001, B01110, B00000}; // Ó, old norse, 10.10.2024
 const byte e_accent[8]   PROGMEM = {B00010, B00100, B01110, B10001, B11111, B10000, B01110, B00000};
 //const byte AA_capital[8] PROGMEM = {B00100, B00000, B01110, B10001, B11111, B10001, B10001, B00000}; // not so nice-looking
-const byte AA_capital[8] PROGMEM = {B00100, B01010, B00100, B01010, B10001, B11111, B10001, B00000};  // like European/English LCD 4x20 9.4.2024
+const byte AA_capital[8] PROGMEM = {B00100, B01010, B00100, B01010, B10001, B11111, B10001, B00000};  // Å, like European/English LCD 9.4.2024
 
-const byte AA_small[8]   PROGMEM = {B00100, B00000, B01110, B00001, B01111, B10001, B01111, B00000}; // Scandinavian
+const byte AA_small[8]   PROGMEM = {B00100, B00000, B01110, B00001, B01111, B10001, B01111, B00000}; // Scandinavian å, small ring
+//const byte AA_small[8]   PROGMEM = {B00100, B01010, B00100, B01110, B00001, B01111, B10001, B01111}; // Scandinavian å, too low, like European/English LCD
 const byte Thorn[8]      PROGMEM = {B01000, B01110, B01001, B01001, B01110, B01000, B01000, B00000}; // Icelandic
 const byte eth[8]        PROGMEM = {B01000, B00100, B01110, B10001, B10001, B10001, B01110, B00000}; // Icelandic
 const byte y_accent[8]   PROGMEM = {B00010, B00100, B10001, B10001, B01111, B00001, B01110, B00000}; // Faroese 
 const byte i_accent[8]   PROGMEM = {B00100, B01000, B01100, B00100, B00100, B00100, B01110, B00000}; // Faroese Fríggjadagur
 //const byte Cedila[8]     PROGMEM = {B00000, B01110, B10000, B10001, B01110, B00100, B01100, B00000}; // for Portugese
+
+//const byte am[8]         PROGMEM = {B01100, B10010, B11110, B10010, B00000, B11011, B10101, B10001};  // AM for 12 hr clock in a single one character
+//const byte pm[8]         PROGMEM = {B11100, B10010, B11100, B10000, B00000, B11011, B10101, B10001};  // PM for 12 hr clock in a single character
+
+const byte am[8]         PROGMEM = {B00110, B01001, B01111, B01001, B00000, B11011, B10101, B10001};  // AM for 12 hr clock in a single one character
+const byte pm[8]         PROGMEM = {B01110, B01001, B01110, B01000, B00000, B11011, B10101, B10001};  // PM for 12 hr clock in a single character
 ///////////////////////////////////////////////
 
 void loadNativeCharacters(int8_t languageNumber)
@@ -134,14 +143,24 @@ void loadNativeCharacters(int8_t languageNumber)
 //  Norwegian/Danish letters are also used in WordClock, ø: "lørdag, søndag", and Chemical Elements "sølv"
 //  https://forum.arduino.cc/t/error-lcd-16x2/211977/6
 
-if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != presentLanguageNumber)  // LCDchar6_7 also 5.11.2024
+ if (LCDchar4_5 != LCDNATIVE  || languageNumber != presentLanguageNumber)  //
  {
     if (strcmp(languages[languageNumber],"nb ") == 0 || strcmp(languages[languageNumber],"da ") == 0 
                                                      || strcmp(languages[languageNumber],"nn ") == 0)
     {
         memcpy_P(buffer,OE_small, 8);
-        lcd.createChar(NO_DA_oe_SMALL, buffer);       // ø: "Lørdag", "Søndag"
+        lcd.createChar(NO_DA_oe_SMALL, buffer);       // ø: "Lørdag", "Søndag"   
+        LCDchar4_5 = LCDNATIVE;
+        presentLanguageNumber = languageNumber;
+        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+              Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+              Serial.print(" ");Serial.println(languages[languageNumber]);
+        #endif
     }
+ }
+
+ if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != presentLanguageNumber)  // LCDchar6_7 also 5.11.2024
+ {
 
     if (strcmp(languages[languageNumber],"es ") == 0 || strcmp(languages[languageNumber],"is ") == 0 
      || strcmp(languages[languageNumber],"non") == 0 || strcmp(languages[languageNumber],"fo ") == 0)
@@ -149,6 +168,10 @@ if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != pres
         memcpy_P(buffer,a_accent, 8);
         lcd.createChar(ES_IS_a_ACCENT, buffer);       // á: "Sábado"
         LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5 - 30.11.2024
+        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+          Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+          Serial.print(" ");Serial.println(languages[languageNumber]);
+        #endif 
     }
 
     if (strcmp(languages[languageNumber],"sv ") == 0 || strcmp(languages[languageNumber],"nn ") == 0)
@@ -157,12 +180,20 @@ if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != pres
         memcpy_P(buffer,AA_small, 8);
         lcd.createChar(SCAND_aa_SMALL, buffer);       //  å: "måndag", Swedish/nynorsk
         LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5 - 30.11.2024
+        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+          Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+          Serial.print(" ");Serial.println(languages[languageNumber]);
+        #endif         
     }
 
     if (strcmp(languages[languageNumber],"es ") == 0)
     {
         memcpy_P(buffer,e_accent, 8);                 // é, "Miércoles"
         lcd.createChar(ES_e_ACCENT, buffer);
+        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+          Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+          Serial.print(" ");Serial.println(languages[languageNumber]);
+        #endif         
     }
 
     if (strcmp(languages[languageNumber],"is ") == 0 || strcmp(languages[languageNumber],"non") == 0)
@@ -174,6 +205,10 @@ if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != pres
         memcpy_P(buffer,eth, 8);
         lcd.createChar(IS_eth_SMALL, buffer);
   //      LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5
+        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+          Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+          Serial.print(" ");Serial.println(languages[languageNumber]);
+        #endif 
     }
     if (strcmp(languages[languageNumber],"non") == 0 || strcmp(languages[languageNumber],"fo ") == 0)  // Old Norse, 10.10.2024; Faroese 29.10.2024
     {   
@@ -182,6 +217,10 @@ if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != pres
         memcpy_P(buffer,o_accent, 8);
         lcd.createChar(NORSE_o_ACCENT, buffer);
         LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5 - 30.11.2024
+        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+          Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+          Serial.print(" ");Serial.println(languages[languageNumber]);
+        #endif 
     }   
 
     if (strcmp(languages[languageNumber],"fo ") == 0)  // Faroese 29.10.2024 
@@ -191,17 +230,16 @@ if (LCDchar4_5 != LCDNATIVE || LCDchar6_7 != LCDNATIVE || languageNumber != pres
 
         memcpy_P(buffer,i_accent, 8);
         lcd.createChar(FO_i_ACCENT, buffer);
-       // LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5   
+       // LCDchar6_7 = LCDNATIVE; // since it fills more than locations 4 and 5  
+       #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+          Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
+          Serial.print(" ");Serial.println(languages[languageNumber]);
+       #endif 
     }
 
     LCDchar4_5 = LCDNATIVE;
     presentLanguageNumber = languageNumber;
 
-    //   lcd.clear();  // in order to set the LCD back to the proper memory mode after custom characters have been created
-        #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
-              Serial.print(F("loadNativeCharacters: ")); Serial.print(languageNumber); 
-              Serial.print(" ");Serial.println(languages[languageNumber]);
-        #endif
  }
 }
 
@@ -265,7 +303,7 @@ void WordClockNorwegian()
   char WordTens[6][7]  = {{"  Null"}, {"    Ti"}, {"  Tjue"}, {"Tretti"}, {" FXrti"}, {" Femti"}}; 
   char Teens[10][8]    = {{"       "},{"Elleve "},{"Tolv   "},{"Tretten"}, {"Fjorten"}, {"Femten "}, {"Seksten"}, {"Sytten "}, {"Atten  "}, {"Nitten "}};
   int ones, tens;
-  char textbuf[21];
+ // char textbuf[21];
 
 // replace some characters - the X's - with native Norwegian ones:
   WordTens[4][2] = (char)NO_DA_oe_SMALL;          // Førti, 'ø' also used in "lørdag", "søndag"
@@ -285,8 +323,8 @@ void WordClockNorwegian()
   #else 
     localTime = now() + utcOffset * 60;  // the default!
   #endif
-
-  Hour = hour(localTime);
+  if (Twelve24Local > 12) Hour = hour(localTime);
+  else                    Hour = hourFormat12(localTime);
   Minute = minute(localTime);
   Seconds = second(localTime);
 
@@ -339,8 +377,14 @@ void WordClockNorwegian()
     else lcd.print(WordOnes[ones]);
   }
   
-   lcd.setCursor(0, 3);lcd.print(F("        "));
-   lcd.setCursor(18, 3); lcd.print(F("  ")); // blank out number in lower right-hand corner 
+  lcd.setCursor(0, 3);lcd.print(F("        "));
+   
+  if (Twelve24Local <= 12) {
+    lcd.setCursor(18, 0);
+    if (isAM(localTime))      lcd.print(F("AM"));
+    else if (isPM(localTime)) lcd.print(F("PM"));
+  }
+  lcd.setCursor(18, 3); lcd.print(F("  ")); // blank out number in lower right-hand corner 
 }
 
 // THE END /////

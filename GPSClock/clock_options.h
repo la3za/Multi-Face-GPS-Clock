@@ -1,7 +1,9 @@
 // *** User options *** 
 // The following #defines should normally all be off: 
 //
-//#define NEXTVERSION    // next version experimental feature (if there are any ...)
+//#define GNSS  // = Global navigation satellite system (GNSS) = GPS + GLONASS + Beidou + Galileo. Not just GPS - Affects GPSInfo()
+
+// #define NEXTVERSION   // next version experimental feature (if there are any ...)
 //#define TESTSCREENS    // extra screen set for testing recent functions. No need to use it for a normal user
 
 //#define MORELANGUAGES // More than the default set of languages
@@ -60,7 +62,7 @@ Menu_type menuStruct[] =
       #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
          ScreenReminder,
       #endif 
-      ScreenProgress, ScreenDemoClock, 
+      ScreenProgress, ScreenLocalMonth, ScreenFactorization, ScreenDemoClock, 
       -1}, 
   {"Fav 1    ", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon,  
@@ -75,7 +77,7 @@ Menu_type menuStruct[] =
       #ifndef ARDUINO_SAMD_VARIANT_COMPLIANCE
          ScreenReminder,
       #endif   
-      ScreenProgress, ScreenDemoClock, 
+      ScreenProgress, ScreenLocalMonth, ScreenFactorization, ScreenDemoClock, 
       -1}, // Must end with negative number in order to enable counting of number of entries},
   {"Fav 2    ", 
       ScreenLocalUTCWeek, ScreenLocalSunSimpler, ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter, 
@@ -113,8 +115,7 @@ Menu_type menuStruct[] =
 #ifdef TESTSCREENS
   ,
   {"Test     ", 
-      ScreenLocalUTCWeek, ScreenProgress, ScreenISOHebIslam, ScreenMoonRiseSet,
-      ScreenBigNumbers2, ScreenBigNumbers3UTC, ScreenDemoClock,
+      ScreenLocalUTCWeek, ScreenGPSInfo, ScreenFactorization, ScreenProgress, ScreenDemoClock,
       -1}
 #endif 
 };
@@ -160,22 +161,22 @@ char languages[][12] = {"en ", "es ", "fr ", "de ", "nb ", "sv ", "da ", "is ",
 
 // Order in myDays must match languages[][] above
 const char myDays[][7][12] PROGMEM = {
-            {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"},          // English, en
-            {"Domingo", "Lunes", "Martes", "MiXrcoles", "Jueve", "Viernes", "SXbado"},               // Spanish, es
-            {"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"},               // French, fr
-            {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"},       // German, de  
-            {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},                // Norsk Bokmål (Norwegian), nb                  
-            {"SXndag", "MXndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},                 // Swedish, sv  
-            {"SXndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "LXrdag"},                // Danish, da  = Norwegian 
-            {"Sunnudagur", "MXnudagur", "XriXjudagur", "MiXvikudag", "Fimmtudagur", "FXstudagur", "Laugardagur"}, // Icelandic, is
+            {"Sunday",     "Monday",    "Tuesday",     "Wednesday",  "Thursday",    "Friday",      "Saturday"},     // English, en. Max 9 chars, 0 special
+            {"Domingo",    "Lunes",     "Martes",      "MiXrcoles",  "Jueve",       "Viernes",     "SXbado"},       // Spanish, es. Max 9 chars, 2 special
+            {"dimanche",   "lundi",     "mardi",       "mercredi",   "jeudi",       "vendredi",    "samedi"},       // French, fr. Max 8 chars, 0 specila
+            {"Sonntag",    "Montag",    "Dienstag",    "Mittwoch",   "Donnerstag",  "Freitag",     "Samstag"},      // German, de. Max 10 chars  , 0 special
+            {"SXndag",     "Mandag",    "Tirsdag",     "Onsdag",     "Torsdag",     "Fredag",      "LXrdag"},       // Norsk Bokmål, nb. Max 7 chars, 1 special                 
+            {"SXndag",     "MXndag",    "Tisdag",      "Onsdag",     "Torsdag",     "Fredag",      "LXrdag"},       // Swedish, sv. Max 7, 2 special  
+            {"SXndag",     "Mandag",    "Tirsdag",     "Onsdag",     "Torsdag",     "Fredag",      "LXrdag"},       // Danish, da  = Norwegian. Max 7, 1 special 
+            {"Sunnudagur", "MXnudagur", "XriXjudagur", "MiXvikudag", "Fimmtudagur", "FXstudagur",  "Laugardagur"},  // Icelandic, is. Max 11, 3 special
 #ifdef MORELANGUAGES
-            {"Sunnudagur","Mxnadagur","Txsdagur","Mikudagur", "Hxsdagur", "FrXggjadag.", "Leygardagur"}, // Faeroe Islands. fo
-            {"Sunnudagr", "MXnudagr", "Tysdagr", "Oxinsdagr", "Xxrsdagr", "Frjxdagr", "Laugardagr"}, // Old Norse, non 10.10.2024
+            {"Sunnudagur", "Mxnadagur", "Txsdagur",    "Mikudagur",  "Hxsdagur",    "FrXggjadag.", "Leygardagur"},  // Faeroe Islands. fo. Max 12 (11), 3 special
+            {"Sunnudagr",  "MXnudagr",  "Tysdagr",     "Oxinsdagr",  "Xxrsdagr",    "Frjxdagr",    "Laugardagr"},   // Old Norse, non. Max 10, 4 special
 #endif
-            {"SXndag", "MXndag", "Tysdag", "Onsdag", "Torsdag", "Fredag", "Laurdag"},                // Nynorsk (Norwegian), nn 
-            {"zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"},        // Dutch, nl
+            {"SXndag",     "MXndag",    "Tysdag",      "Onsdag",     "Torsdag",     "Fredag",      "Laurdag"},      // Nynorsk (Norwegian), nn. Max 7, 2 special
+            {"zondag",     "maandag",   "dinsdag",     "woensdag",   "donderdag",   "vrijdag",     "zaterdag"},     // Dutch, nl. Max 9, 0 special
 #ifdef MORELANGUAGES
-            {"aHad",   "itnein", "talaata", "arba3aa", "khamis", "jum3a", "sabt"}};               // Lebanese (Levantine Arabic), ar
+            {"aHad",       "itnein",    "talaata",     "arba3aa",    "khamis",      "jum3a",       "sabt"}};        // Lebanese (Levantine Arabic), ar. Max 7, 0 special
 #else        
             };
 #endif

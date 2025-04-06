@@ -1,5 +1,7 @@
 // Define variables for Screen system - used in clock_options.h
 // numbers here must correspond to those of menuSystem()
+// value of noOfScreens must be >= no of defines below
+//
 // Don't touch these!
 
 // Clock faces of v1.0.0:
@@ -69,10 +71,14 @@
 #define ScreenSolarEclipse      46
 #define ScreenNextEvents        47
 
-// new in v2.3.0 ?
+// new in v2.3.0 
 #define ScreenProgress          48
 
+// new in v2.4.0
+#define ScreenLocalMonth        49
+#define ScreenFactorization     50
+
 // New in v1.3.0:
-#define ScreenDemoClock         49  // must be the last one
+#define ScreenDemoClock         51  // must be the last one
 
 

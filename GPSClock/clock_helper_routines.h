@@ -19,8 +19,10 @@ DecToBinary
 
 PrintFixedWidth
 LcdDate
+LcdDateString
 LcdUTCTimeLocator
 LcdShortDayDateTimeLocal
+LcdTimeLocalShortDayDate
 LcdSolarRiseSet
 
 ComputeEasterDate
@@ -65,8 +67,15 @@ readPersonEEPROM
 bubbleSort
 
 EquinoxSolstice
+calculateDayOfYear
 
-calculateDayOfYear(
+isSquare
+isCube
+isFactorial
+isPower2
+isFibonacci
+update_line
+print_factors
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 */
@@ -334,7 +343,7 @@ void UpdateMoonPosition() {
 
 //------------------------------------------------------------------
 
-byte AnalogButtonRead(byte button_number) {
+byte AnalogButtonRead() {
   // K3NG keyer code
   // button numbers start with 0
 
@@ -583,6 +592,39 @@ void LcdDate(int Day, int Month, int Year=0) // print date, either day-month or 
   
 }
 
+//------------------------------------------------------------------
+
+void LcdDateString(int Day, String Mnth, int Year=0) // print date, either day-month or day-month-year according to specified format
+{
+  if (dateTimeFormat[dateFormat].dateOrder == 'B')
+    {
+      if (Year !=0) 
+      { 
+        PrintFixedWidth(lcd, Year, 4); lcd.print(F(" "));
+      }
+      lcd.print(Mnth); lcd.print(F(" "));
+      PrintFixedWidth(lcd, Day, 2, '0');
+    }
+    else if (dateTimeFormat[dateFormat].dateOrder == 'M')
+    {
+     lcd.print(Mnth); lcd.print(F(" "));
+      PrintFixedWidth(lcd, Day, 2, '0'); 
+      if (Year !=0) 
+      {
+        lcd.print(F(" "));PrintFixedWidth(lcd, Year, 4);
+      }
+    }
+    else
+    {
+      PrintFixedWidth(lcd, Day, 2, '0'); lcd.print(F(" "));
+      lcd.print(Mnth); 
+      if (Year !=0) 
+      {
+        lcd.print(F(" "));PrintFixedWidth(lcd, Year, 4);
+      }
+    }
+  
+}
 
 //------------------------------------------------------------------
 
@@ -634,11 +676,101 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
       lcd.print(textBuffer);
     }
 
+    //------------------------------------------------------------------
+
+void LcdTimeLocalShortDayDate(int lineno = 0, int moveRight = 0) {  // unused as it didn't fit LocalSun 
+                                                                    // as sun set times are all in 24 hr system
+  // function that displays the following kind of info on lcd row "lineno"
+  //  "22:30:46   Wed 20.10" - date separator in fixed location, even if date is ' 9.8'
+  // get local time
+  localTime = now() + utcOffset * 60;
+
+  Minute = minute(localTime);
+  Seconds = second(localTime);
+
+
+    if (Twelve24Local > 12) Hour = hour(localTime);
+    else  {
+      Hour = hourFormat12(localTime);
+      if (oldMinute == -1 || 
+        ( (Hour==0 || Hour == 12) && Minute == 00 && Seconds == 0) ) {   // load am/pm symbol as seldom as possible into lcd
+        if (isAM(localTime)) {
+          memcpy_P(buffer, am, 8);                 // am symbol (clashes with Norse, Faroese char set)
+          lcd.createChar(AM_PM, buffer);
+          #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+            Serial.println(F("loaded AM character"));
+          #endif
+        }
+        else if (isPM(localTime)) {
+          memcpy_P(buffer, pm, 8);                 // pm symbol
+          lcd.createChar(AM_PM, buffer);
+          #ifdef FEATURE_SERIAL_LOAD_CHARACTERS
+            Serial.println(F("loaded PM character"));
+          #endif
+        }
+      }
+    }
+
+  
+  // local date
+  Day = day(localTime);
+  Month = month(localTime);
+  Year = year(localTime);
+    
+  lcd.setCursor(moveRight, lineno);
+  if (dayGPS != 0)
+  { 
+  //    lcd.setCursor(11 - moveLeft, lineno);
+        sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+        lcd.print(textBuffer);
+
+        lcd.setCursor(8 + moveRight, 0);
+        if (isAM(localTime)) {
+          lcd.print((char)AM_PM);
+        // lcd.print(F(" AM   "));
+        }
+        else if (isPM(localTime)) { 
+          lcd.print((char)AM_PM);
+        // lcd.print(F(" PM"));
+        }
+
+        lcd.setCursor(11,lineno);
+        nativeDayLong(localTime);
+        // 17.05.2023:
+        if     (strcmp(languages[languageNumber],"de ") == 0)  
+                sprintf(textBuffer,"%2.2s",today);  // 2 letters for day name in German
+        else if (strcmp(languages[languageNumber],"nl ") == 0) 
+                sprintf(textBuffer,"%2.2s.",today);  // 2 letters + dot Dutch 
+        else    sprintf(textBuffer,"%3.3s",today);  // else 3 letters
+        lcd.print(textBuffer);
+
+        lcd.setCursor(15, lineno);
+        if ((dateTimeFormat[dateFormat].dateOrder == 'M') | (dateTimeFormat[dateFormat].dateOrder == 'B'))
+        {
+// modified so month takes up a fixed space without a leading zero:
+//          lcd.print(static_cast<int>(Month)); lcd.print(dateTimeFormat[dateFormat].dateSep);
+            PrintFixedWidth(lcd, Month, 2,' '); lcd.print(dateTimeFormat[dateFormat].dateSep);
+            lcd.print(static_cast<int>(Day));
+        }
+        else
+        {
+// modified so day takes up a fixed space without a leading zero:
+//        lcd.print(static_cast<int>(Day)); lcd.print(dateTimeFormat[dateFormat].dateSep);
+          PrintFixedWidth(lcd, Day, 2,' '); lcd.print(dateTimeFormat[dateFormat].dateSep);
+          lcd.print(static_cast<int>(Month));
+        }
+      }
+ //     lcd.print(F("    ")); // in order to erase remnants of long string as the month changes
+   
+    }
+
+
 /////////////////////////////////////////////////////////////////////////////////////////
 
 void LcdSolarRiseSet(
   int lineno,                       // lcd line no 0, 1, 2, 3
-  char RiseSetDefinition = ' ',     // default - Actual, C - Civil, N - Nautical, A - Astronomical,  O - nOon info, Z - aZ, el info
+  char RiseSetDefinition = ' ',     // default - Actual, C - Civil, N - Nautical, A - Astronomical,  O - nOon info, Z - aZ, el info, 
+                                    // W - which azimiuth at actual sunrise/set
   int  ScreenMode = ScreenLocalSun  // One of ScreenLocalSun, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalSunAzEl
 )
 {
@@ -648,6 +780,8 @@ void LcdSolarRiseSet(
  
   double transit, sunrise, sunset;  // time in utc hours of events  
   int m, hr, mn;                    // time in hr, mn local time
+  tmElements_t tm_riseSet;
+  time_t riseSetTime;
   
   #ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function   
     // check June when sun hardly sets
@@ -687,7 +821,7 @@ void LcdSolarRiseSet(
     mn = m % 60;
     
     lcd.setCursor(0, lineno);
-    if (ScreenMode == ScreenLocalSunSimpler | ScreenMode == ScreenLocalSunAzEl) lcd.print(" "); // to line up rise time with date on line above
+    if (ScreenMode == ScreenLocalSunSimpler || ScreenMode == ScreenLocalSunAzEl) lcd.print(" "); // to line up rise time with date on line above
     
     if (RiseSetDefinition == ' ') // Actual
     {
@@ -702,12 +836,12 @@ void LcdSolarRiseSet(
     if (lineno==1) 
     {
         lcd.setCursor(0, lineno);
-        lcd.print(F("S "));
+        lcd.print(F("S "));         // S - for Sun or Solar
     }
 
-    if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
+    if (RiseSetDefinition == ' ' ||RiseSetDefinition == 'C'||RiseSetDefinition == 'N'||RiseSetDefinition == 'A')
     {
-      if (ScreenMode == ScreenLocalSunSimpler | ScreenMode == ScreenLocalSunAzEl) lcd.setCursor(4, lineno);
+      if (ScreenMode == ScreenLocalSunSimpler || ScreenMode == ScreenLocalSunAzEl) lcd.setCursor(4, lineno);
       else lcd.setCursor(3, lineno);
       
       PrintFixedWidth(lcd, hr, 2);
@@ -719,7 +853,7 @@ void LcdSolarRiseSet(
   // (2) Second: print sunset time
 
   lcd.setCursor(9, lineno);
-  if (ScreenMode == ScreenLocalSunSimpler| ScreenMode == ScreenLocalSunAzEl) lcd.print(F("  "));
+  if (ScreenMode == ScreenLocalSunSimpler || ScreenMode == ScreenLocalSunAzEl) lcd.print(F("  "));
   if (RiseSetDefinition == ' ')       lcd.write((byte)DOWN_ARROW);
   else if (RiseSetDefinition == 'C')  lcd.write(DASHED_DOWN_ARROW);
   else                                lcd.print(" ");
@@ -729,12 +863,13 @@ void LcdSolarRiseSet(
     hr = (m / 60) % 24;
     mn = m % 60;
 
-    if (RiseSetDefinition == ' ' |RiseSetDefinition == 'C'|RiseSetDefinition == 'N'|RiseSetDefinition == 'A')
+    if (RiseSetDefinition == ' ' ||RiseSetDefinition == 'C'||RiseSetDefinition == 'N'||RiseSetDefinition == 'A')
     {
       // improved format 18.06.2022
       PrintFixedWidth(lcd, hr, 2);
       lcd.print(dateTimeFormat[dateFormat].hourSep);
-      PrintFixedWidth(lcd, mn, 2, '0');    
+      PrintFixedWidth(lcd, mn, 2, '0'); 
+      lcd.print(" ");        // new 5.3.2025 (remove degree symbol) 
     }
   }
 
@@ -790,7 +925,7 @@ void LcdSolarRiseSet(
     mn = m % 60;
   }
  
-  if (ScreenMode == ScreenLocalSun | ScreenMode == ScreenLocalSunMoon)
+  if (ScreenMode == ScreenLocalSun || ScreenMode == ScreenLocalSunMoon)
   {
   // position rightmargin info here:
     lcd.setCursor(16, lineno);
@@ -802,7 +937,8 @@ void LcdSolarRiseSet(
     }
     else if (RiseSetDefinition == 'C')
     {
-      if (sunset >= 0) {
+      if (sunset >= 0) 
+      {
         if (hr < 10) lcd.setCursor(16, 2); // added 4.7.2016 to deal with summer far North
         lcd.print(hr, DEC);
         //          lcd.print(dateTimeFormat[dateFormat].hourSep);  
@@ -816,7 +952,7 @@ void LcdSolarRiseSet(
       PrintFixedWidth(lcd, (int)round(sun_elevation), 3);
       lcd.write(DEGREE);
     }  
-}      // if (ScreenMode == ...)
+  }      // if (ScreenMode == ...)
 
   if (RiseSetDefinition == 'O') // print sun's data at n_O_on
   {
@@ -829,8 +965,26 @@ void LcdSolarRiseSet(
     PrintFixedWidth(lcd, hr, 2);
     lcd.print(dateTimeFormat[dateFormat].hourSep); 
     PrintFixedWidth(lcd, mn, 2,'0');         
-    lcd.print(F("  "));       
+    lcd.print(F("  ")); 
   }
+
+  if (RiseSetDefinition == 'W') // Where is sun's azimuth at actual rise and set times 5.3.2025
+   {
+// Done:   calcSunriseSunset(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);  // time in hours
+// find utc time of sunrise/set (unix time)
+    tm_riseSet= {0, (uint8_t)mn, (uint8_t)sunrise, (uint8_t)weekday(), (uint8_t)day(), (uint8_t)month(), (uint8_t)(year()-1970) };
+    riseSetTime = makeTime(tm_riseSet);   
+    calcHorizontalCoordinates(riseSetTime, latitude, lon, sun_azimuth, sun_elevation);
+    lcd.setCursor(0, lineno);  
+    lcd.print(F("Az ")); lcd.write(UP_ARROW);
+    lcd.print(F("  "));PrintFixedWidth(lcd, (int)round(sun_azimuth), 3);lcd.write(DEGREE);lcd.print(" "); 
+    
+    tm_riseSet= {0, (uint8_t)mn, (uint8_t)sunset, (uint8_t)weekday(), (uint8_t)day(), (uint8_t)month(), (uint8_t)(year()-1970) };
+    riseSetTime = makeTime(tm_riseSet); 
+    calcHorizontalCoordinates(riseSetTime, latitude, lon, sun_azimuth, sun_elevation);
+    lcd.setCursor(11, lineno);lcd.write(DOWN_ARROW);
+    lcd.print(F("  "));PrintFixedWidth(lcd, (int)round(sun_azimuth), 3);lcd.write(DEGREE);lcd.print(" "); 
+   }  
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1068,7 +1222,8 @@ void MathDivide(int Term0,      // input number
 )
 {
   int factors[15];
-  int y, n, j, k;
+ //int y, n, j, k;
+  int n, j, k;
 
   #ifdef FEATURE_SERIAL_MATH
       Serial.print("*** MathDivide:               : ");Serial.println(Term0);
@@ -1343,14 +1498,13 @@ String readStringFromEEPROM(int addrOffset)
 ////////////////////////////////////////////////////////////
 void InitScreenSelect()
 {
-
 noOfStates = 0;
 
 while ((menuStruct[subsetMenu].order[noOfStates] >= 0) && (noOfStates <= lengthOfMenuIn))
     noOfStates = noOfStates + 1;  
 
   // initialize and unroll menu system order
-  for (iiii = 0; iiii < sizeof(menuOrder)/sizeof(menuOrder[0]); iiii += 1) menuOrder[iiii] = -1; // fix 5.10.2022
+  for (iiii = 0; iiii < int(sizeof(menuOrder)/sizeof(menuOrder[0])); iiii += 1) menuOrder[iiii] = -1; // fix 5.10.2022
   for (iiii = 0; iiii < noOfStates; iiii += 1) menuOrder[menuStruct[subsetMenu].order[iiii]] = iiii;
 }
 
@@ -1674,7 +1828,6 @@ case 6: // case 6: 1st day of week //////////////
   break;
  } // case 6: 1st day of week
 
-
  default:  
       lcd.clear();
       return;            // exit! 
@@ -1685,7 +1838,7 @@ case 6: // case 6: 1st day of week //////////////
 void RotarySetup()  //  May-June 2023
 {
   int menuNumber = 0; 
-  int maxMenuNumber = 5;  // for the 0-5 cases below
+  int maxMenuNumber = 6;  // for the 0-6 cases below
   int toggleInternRotary = 0;
 
   uint32_t startTime; // for time-out out of menu
@@ -1718,8 +1871,9 @@ void RotarySetup()  //  May-June 2023
         case 1: lcd.print(F("2. Backlight >       ")); break;
         case 2: lcd.print(F("3. Date format >     ")); break;
         case 3: lcd.print(F("4. Time zone >       ")); break;
-        case 4: lcd.print(F("5. Local language >  ")); break;
-        case 5: lcd.print(F("6. Secondary menu >  ")); break;
+        case 4: lcd.print(F("5. 12/24 hrs clock > ")); break;
+        case 5: lcd.print(F("6. Local language >  ")); break;
+        case 6: lcd.print(F("7. Secondary menu >  ")); break;
          }
         startTime = millis();  // reset counter if rotary is moved
         }
@@ -1966,7 +2120,44 @@ case 3: // 333333333 time zone /////////////////////////////////////////
 }  // case 3: time zone 
 
 
- case 4: // 4444444 local language for day names /////////////////////
+case 4: // case 4: 12/24 hrs local time //////////////
+{
+  Twelve24Local = EEPROM.read(EEPROM_OFFSET1 + 12);  
+  lcd.setCursor(0,1); PrintFixedWidth(lcd, Twelve24Local, 1);
+  lcd.print(F(" hrs local clock  "));
+  startTime = millis();
+  while (toggleInternRotary == 1)
+  { 
+   // During each loop, check the encoder to see if it has been changed.
+    volatile unsigned char rotaryResult = r.process();   
+    if (rotaryResult) {
+      if      (Twelve24Local <= 12) Twelve24Local = 24;
+      else if (Twelve24Local  > 12) Twelve24Local = 12;
+      lcd.setCursor(0,1); lcd.print(Twelve24Local); 
+      startTime = millis();  // reset counter if rotary is moved
+    }
+
+    if (millis() - startTime > menuTimeOut) // check for time-out and return
+        {
+          lcd.clear();
+          return;  // time-out
+        }
+
+    if (r.buttonPressedReleased(25)) {            // 25ms = debounce_delay
+        toggleInternRotary = toggleInternRotary + 1; // internal variable
+        lcd.clear();
+    }   
+  } // while
+  
+  EEPROMMyupdate(EEPROM_OFFSET1 + 12, Twelve24Local, 1);
+  //Progress();  // show relevant screen to remind operator what parameter was changed
+  //delay(1500);
+  
+  lcd.clear();
+  break;
+}  // case 4: 12/24 hrs local time
+
+ case 5: // 55555 local language for day names /////////////////////
  {
   languageNumber = EEPROM.read(EEPROM_OFFSET1+3); 
   startTime = millis();
@@ -2020,9 +2211,9 @@ case 3: // 333333333 time zone /////////////////////////////////////////
   lcd.clear();
   break;
   
- }  // case 4: local language 
+ }  // case 5: local language 
  
-case 5: // 55555555 Secondary menu //////////////
+case 6: // 666666 Secondary menu //////////////
  {
   int noOfMenuIn = 7;       // no of secondary menu items 7: 18.11.2024
   lcd.setCursor(0,1); lcd.print(F("a. GPS baudrate >    "));
@@ -2074,7 +2265,7 @@ case 5: // 55555555 Secondary menu //////////////
 
   //lcd.clear();
   break;
-} // case 5 // secondary menu
+} // case 6 // secondary menu
 
 
 default:  
@@ -2911,7 +3102,7 @@ void gapLessBar(unsigned nr, unsigned total, unsigned firstPos, unsigned lastPos
     // 2: upper and lower frame, after actual segment :::
      {  
 
-     for (int j = startPos ; j < lastPos; j++) // 8.10.2024:  
+     for (int j = startPos ; j < (int)lastPos; j++) // 8.10.2024:  
        {
          lcd.setCursor(j,line);lcd.write(empty);  // :::
        }
@@ -3299,5 +3490,142 @@ void loadCurvedFramedBarCharactersA() {  // Bar 5, ( xxxx )
     LCDchar6_7 = LCDFRAMEDBARS;
  }
 }
+
+int isSquare (int n) {    //only tested for n < 2459
+  if (n==0 || n==1) return 0;
+  int nsqrt = (int)sqrt(n);
+  if (nsqrt*nsqrt == n) return nsqrt;
+  else return 0;
+}
+
+int isCube (int n) {      //only tested for n < 2459
+  if (n==0 || n==1) return 0;
+  // special case for problem values, otherwise OK up to 14^3=2744
+  else if (n==64)   return 4;
+  else if (n==512)  return 8;
+  else if (n==2197) return 13;  // not a time
+
+  int ncuberoot = (int)pow(n,1.0/3.0);
+  if (ncuberoot*ncuberoot*ncuberoot == n) return ncuberoot;
+  else return 0;
+}
+
+int isFactorial (int n) {   //only good for n < 5959
+  if      (n==2)    return 2;
+  else if (n==6)    return 3;
+  else if (n==24)   return 4;
+  else if (n==120)  return 5;
+  else if (n==720)  return 6;
+  else if (n==5040) return 7;
+  else              return 0;
+}
+
+int isPower2 (int n) { // range for n: 8 ... 5959
+//  if (n==4)          return 2;
+  if (n==8)          return 3;
+  else if (n==16)    return 4;
+  else if (n==32)    return 5;
+  else if (n==64)    return 6;  // not a time, yes 06:4_
+  else if (n==128)   return 7;
+  else if (n==256)   return 8;
+  else if (n==512)   return 9;
+  else if (n==1024)  return 10;
+  else if (n==2048)  return 11;
+  else if (n==4096)  return 12; // not a time
+  else               return 0;
+}
+
+int isFibonacci (int n) // 17 first Fibonacci numbers
+{
+  if (n==2)          return 3;
+  else if (n==3)     return 4;
+  else if (n==5)     return 5;
+  else if (n==8)     return 6;
+  else if (n==13)    return 7;
+  else if (n==21)    return 8;
+  else if (n==34)    return 9;
+  else if (n==55)    return 10;
+  else if (n==89)    return 11;  // not a time
+  else if (n==144)   return 12;
+  else if (n==233)   return 13;
+  else if (n==377)   return 14;  // not a time
+  else if (n==610)   return 15;
+  else if (n==987)   return 16;  // not a time
+  else if (n==1597)  return 17;  // not a time
+  else if (n==2584)  return 18;  // not a time
+  else if (n==4181)  return 19;  // not a time
+  else               return 0;
+  }
+
+
+int isPerfect (int n) {   // Perfect numbers
+// Ex:   6 = 1*2*3   = 1+2+3
+//      28 = 1*2*2*7 = 1+2+4+7+14
+  if      (n==6)    return 1;
+  else if (n==28)   return 2;
+  else if (n==496)  return 3;
+  else if (n==8128) return 4;
+  else              return 0;
+}
+
+
+void update_line() { 
+  #ifdef FEATURE_FACTORIZATION
+    Serial.print("In: Row, col "); Serial.print(lineFactor); Serial.print(" ");Serial.println(cursorFactor);
+  #endif
+  if (cursorFactor > 15) {
+    lineFactor += 1;
+    cursorFactor = 0;
+    #ifdef FEATURE_FACTORIZATION
+      Serial.print("If: Row, col "); Serial.print(lineFactor); Serial.print(" ");Serial.println(cursorFactor);
+    #endif
+    lcd.setCursor(cursorFactor, lineFactor);
+  }
+}
+
+// modified from https://wokwi.com/projects/400199259002725377
+ bool print_factors(int number) {
+  bool prime=false;
+  if (number <= 2) 
+  {
+    if (number != 0) prime=true;
+    return prime;
+  }
+   int num = number;
+  
+   while (num > 0 && num % 2 == 0)  {  // essential to have num > 0 - otherwise sometimes eternal loop ...
+      lcd.print(2);
+      cursorFactor += 1;
+      update_line();
+      num /= 2;
+      if (num >= 2) 
+      { 
+       lcd.print((char)DOT);
+       cursorFactor += 1;
+       update_line();
+      }
+   }
+   for (int i = 3; i <= sqrt(num); i += 2){
+       while (num % i == 0){
+         lcd.print(i);
+         cursorFactor += 1;
+         update_line();
+
+         num /= i;
+         if (num % i == 0 || num > 2) 
+         {
+           lcd.print((char)DOT);
+           cursorFactor += 1;
+           update_line();
+         }
+       }
+    }
+    if (num > 2) {
+       if (num != number) { lcd.print(num); prime=0; }
+       else prime=1;
+    }
+    return prime;
+ }
+
 
  /// THE END ///

@@ -148,7 +148,7 @@ void format_angle(float angle, String format) {
 
   int d = 0;
   int m = 0;
-  int s = 0;
+  int s = 0;  
   float rest = 0;
   String sign = "";
 

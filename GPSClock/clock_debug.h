@@ -14,10 +14,13 @@
 //#define FEATURE_SERIAL_EEPROM  // debug EEPROM read
 //#define FEATURE_SERIAL_LOAD_CHARACTERS  // check loading of new custom characters to LCD
 //#define FEATURE_SERIAL_NEXTEVENTS  // debug NextEvent()
+//#define FEATURE_FACTORIZATION        // ScreenFactorization clock debug
 
-// LocalUTC(), WordClockNorwegian(), LcdSolarRiseSet(), ISOHebIslam():
+// In LocalUTC(), WordClockNorwegian(), LcdSolarRiseSet(), ISOHebIslam():
 //#define FEATURE_DATE_PER_SECOND   // for stepping date/hour/min (86400/3600/60 sec step) quickly and check calender function (local time only)
-#define SPEED_UP_FACTOR 60.0 //3600, 86400;  // muliplied by date and added to time (seconds)
+#define SPEED_UP_FACTOR 3600.0 //3600, 86400;  // multiplied by date and added to time (seconds)
+
+//#define STEP_FASTER  // for incrementing one minute per second in BigNumbers3(), 1 sec per 10 sec in LocalUTC(3) - factorization clock
 
 //#define FEATURE_DAY_PER_SECOND    // for stepping through day names quickly
 

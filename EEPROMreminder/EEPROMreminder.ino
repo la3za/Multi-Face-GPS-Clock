@@ -5,6 +5,8 @@
 // then reads it and prints it on serial port for verification
 //
 // Sverre Holm, 21.01.2024
+//              01.02.2024 
+//              20.02.2025 - added Grandpa, Grandma: more than 32767 days (89.7 years) old and more than 100 years old 
 //
 
 #include <EEPROM.h>
@@ -24,13 +26,21 @@ typedef struct
 
 // LENGTH_NAME-1 long field for name, then day, month, year
 
-person_type person[6] = 
-                   { {"Father   ", 18,  6, 1972}, 
+// Uncomment one of these blocks with definitions of person_type
+
+// person_type person[1] = {{"None     ",1 ,1 ,2000 }};
+// byte lengthData = 0;  // means that nothing will be written
+
+person_type person[8] = 
+                   { {"Grandpa  ", 29,  1, 1924},
+                     {"Grandma  ", 14,  7, 1929},
+                     {"Father   ", 18,  6, 1972}, 
                      {"Mother   ",  7,  7, 1970},
-                     {"Son      ", 25,  2, 1993},
-                     {"Son      ",  9, 10, 2000},                  
-                     {"Daughter ", 26,  7, 2003},  
-                     {"Daughter ", 18, 12, 2005}}; 
+                     {"Son1     ", 25,  2, 1993},
+                     {"Son2     ",  9, 10, 2000},                  
+                     {"Daughter1", 26,  7, 2003},  
+                     {"Daughter2", 18, 12, 2005}}; 
+byte lengthData = sizeof(person)/sizeof(person[0]);
 
 // person_type person[8] = 
 //                    { {"Paul     ", 18,  6, 1942},  // Beatles
@@ -41,9 +51,7 @@ person_type person[6] =
 //                      {"Keith    ", 18, 12, 1943},
 //                      {"Ron      ",  1,  6, 1947},
 //                      {"Charlie  ",  2,  6, 1941} }; // 24.8.2021 
-
-
-
+//byte lengthData = sizeof(person)/sizeof(person[0]);
 
 
 void writeStringToEEPROM(int addrOffset, const String &strToWrite)
@@ -55,6 +63,7 @@ void writeStringToEEPROM(int addrOffset, const String &strToWrite)
     EEPROM.write(addrOffset + 1 + i, strToWrite[i]);
   }
 }
+//////////////////////////////////////////////////////////
 String readStringFromEEPROM(int addrOffset)
 {
   int newStrLen = EEPROM.read(addrOffset);
@@ -63,7 +72,7 @@ String readStringFromEEPROM(int addrOffset)
   {
     data[i] = EEPROM.read(addrOffset + 1 + i);
   }
-  data[newStrLen] = '\ 0'; // !!! NOTE !!! Remove the space between the slash "/" and "0" (I've added a space because otherwise there is a display bug)
+  data[newStrLen] = '\0'; // !!! NOTE !!! Remove the space between the slash "/" and "0" (I've added a space because otherwise there is a display bug)
   return String(data);
 }
 
@@ -74,18 +83,17 @@ int readIntFromEEPROM(int address)
 {
   return (EEPROM.read(address) << 8) + EEPROM.read(address + 1);
 }
-
+/////////////////////////////////////////////////////////////////////
 void updateIntIntoEEPROM(int address, int number)
 // modified from writeIntIntoEEPROM from https://roboticsbackend.com/arduino-store-int-into-eeprom/
 { 
   EEPROM.update(address, number >> 8);
   EEPROM.update(address + 1, number & 0xFF);
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void writePersonEEPROM()
 {
-  byte lengthData = sizeof(person)/sizeof(person[0]);
   EEPROM.write(EEPROM_OFFSET2, lengthData);               // position 0, write length of struct 
   
   for (int i=0; i<lengthData; ++i)
@@ -104,7 +112,9 @@ void readPersonEEPROM()
 {
   byte lengthData;
   lengthData = EEPROM.read(EEPROM_OFFSET2);      // position 0,  length of struct 
+  Serial.println("EEPROM read");
   Serial.print("Number of records: ");Serial.println(lengthData);
+  Serial.println("#; name     : day-month-year; EEPROM address");
   for (int i=0; i<lengthData; ++i)
   {
     addrOffset = EEPROM_OFFSET2 + 1 + i*20;
@@ -115,7 +125,9 @@ void readPersonEEPROM()
     int Yr = readIntFromEEPROM(addrOffset + 16); // positions 16, 17
       person[i].Year = Yr;
 
-   Serial.print(i); Serial.print(", "); Serial.print(addrOffset); Serial.print(": "); Serial.print(person[i].Name); Serial.print(": ");Serial.print(person[i].Day);Serial.print("-");Serial.print(person[i].Month);Serial.print("-");Serial.println(person[i].Year);
+   Serial.print(i); Serial.print("; "); Serial.print(person[i].Name); Serial.print(": ");
+   Serial.print(person[i].Day);Serial.print("-");Serial.print(person[i].Month);Serial.print("-");Serial.print(person[i].Year);
+   Serial.print(";      "); Serial.println(addrOffset);
   }  
 }
 
