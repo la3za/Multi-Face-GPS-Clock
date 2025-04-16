@@ -1,5 +1,5 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.4.0   06.04.2025";
+const char codeVersion[] = "v2.4.1   12.04.2025";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
 // const char codeVersion[] = "v2.4.0   "__DATE__;
@@ -61,12 +61,15 @@ const char codeVersion[] = "v2.4.0   06.04.2025";
 
 /*
  Revisions:
+2.4.1    12-04.2025
+                - No zero-padding of hour with 12-hour (AM/PM) format (on/off by uncommenting LEADING_ZERO in clock_options.h)
+
  2.4.0   06.04.2025:
                 - Choice between 12/24 hrs display for local time in:
                     LocalUTC(), Binary(), MengenLehrUhr(), LinearUhr(), Morse(), Roman(), 
                     WordClockEnglish(), WordClockNorwegian(), BigNumbers3(), BigNumbers2() 
                 - New screen showing date with letters for month, ScreenLocalMonth = LocalUTC(3) (idea of Ross, VA1KAY)
-                    local time, date in format 03 Apr 2025, UTC, no of satellites    
+                    local time, date in format "03 Apr 2025", "Apr 03 2025", or "2025 Apr 03", UTC, no of satellites    
                 - New ScreenFactorization = LocalUTC(4): analyzes MM:S, i.e. every 10 seconds, for number properties:
                     Prime number or finds prime factors, square, cube, powers of 2, factorial, perfect, and Fibonacci number
                 - ScreenLocalSunSimpler also shows azimuth at sun rise/set: use LocalSun(3) instead of LocalSun(2) (idea of John, AA7US)
@@ -1230,7 +1233,12 @@ loadNativeCharacters(languageNumber);
   }
 
   lcd.setCursor(0, 0);  // top line *********
-  sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds);
+  #ifdef LEADING_ZERO
+    sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); 
+  #else 
+    if (Twelve24Local > 12) sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+    else sprintf(textBuffer, "%2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
+  #endif
   lcd.print(textBuffer);
   lcd.print(F("      "));
 
@@ -4441,8 +4449,12 @@ void BigNumbers3(byte showUTC) {
     Year = year(localTime);
   }
 
-  imax = Hour / 10;
-  draw_digit(imax, 0, lineno);  // draw 10's hour digit
+  imax = Hour / 10; 
+  #ifdef LEADING_ZERO
+    draw_digit(imax, 0, lineno);  // draw 10's hour digit
+  #else // only show leading 0 for 24 hour clock
+    if (showUTC == 1 || Twelve24Local > 12 || imax != 0) draw_digit(imax, 0, lineno);
+  #endif 
 
   imax = Hour % 10;
   draw_digit(imax, 4, lineno);  // draw hour digit
@@ -4524,9 +4536,13 @@ void BigNumbers2(byte showUTC) {
     Year = year(localTime);
   }
 
-  imax = Hour / 10;
-  // draw 10's hour digit
-  doNumber2(imax, lineno, start);
+  imax = Hour / 10; // draw 10's hour digit
+  
+  #ifdef LEADING_ZERO
+    doNumber2(imax, lineno, start);
+  #else // only show leading 0 for 24 hour clock
+    if (showUTC == 1 || Twelve24Local > 12 || imax != 0)  doNumber2(imax, lineno, start);
+  #endif  
 
   imax = Hour % 10;
   // draw hour digit

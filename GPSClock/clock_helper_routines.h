@@ -688,7 +688,6 @@ void LcdTimeLocalShortDayDate(int lineno = 0, int moveRight = 0) {  // unused as
   Minute = minute(localTime);
   Seconds = second(localTime);
 
-
     if (Twelve24Local > 12) Hour = hour(localTime);
     else  {
       Hour = hourFormat12(localTime);
@@ -721,7 +720,12 @@ void LcdTimeLocalShortDayDate(int lineno = 0, int moveRight = 0) {  // unused as
   if (dayGPS != 0)
   { 
   //    lcd.setCursor(11 - moveLeft, lineno);
-        sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+  #ifdef LEADING_ZERO
+     sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+  #else   
+        if (Twelve24Local > 12) sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+        else sprintf(textBuffer, "%2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
+  #endif 
         lcd.print(textBuffer);
 
         lcd.setCursor(8 + moveRight, 0);

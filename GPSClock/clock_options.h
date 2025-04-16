@@ -1,18 +1,20 @@
 // *** User options *** 
 // The following #defines should normally all be off: 
 //
-//#define GNSS  // = Global navigation satellite system (GNSS) = GPS + GLONASS + Beidou + Galileo. Not just GPS - Affects GPSInfo()
+#define GNSS  // = Global navigation satellite system (GNSS) = GPS + GLONASS + Beidou + Galileo. Not just GPS - Affects GPSInfo()
 
-// #define NEXTVERSION   // next version experimental feature (if there are any ...)
+//#define LEADING_ZERO  // show leading zero with 12 hour (AM/PM) clock? default commented out
+
+//#define NEXTVERSION    // next version experimental feature (if there are any ...)
 //#define TESTSCREENS    // extra screen set for testing recent functions. No need to use it for a normal user
+//#define EXP_TIDE_SIDEREAL  // Turn on/off experimental (unfinished) option
 
-//#define MORELANGUAGES // More than the default set of languages
+//#define MORELANGUAGES  // More than the default set of languages (special letter may clash with AM/PM sign)
 
 //#define UTC_ENGLISH_DAY_NAME  // use English for day name for UTC display. Only affects ScreenUTCLocator. Default: local language 
 
 //#define OLD_LCD_LIBRARY   // old LiquidCrystal_I2C - shouldn't be any need to use it
-
-//#define EXP_TIDE_SIDEREAL  // Turn on/off experimental (unfinished) options - 
+ 
 
 #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE // can be set in clock_hardware.h
    #define MORELANGUAGES  // More than the default set of languages
@@ -66,9 +68,8 @@ Menu_type menuStruct[] =
       -1}, 
   {"Fav 1    ", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon,  
-      ScreenPlanetsInner, ScreenPlanetsOuter, ScreenISOHebIslam, ScreenNextEvents, ScreenEquinoxes, 
-      ScreenSolarEclipse, ScreenLunarEclipse, ScreenEasterDates, ScreenTimeZones, ScreenUTCPosition, 
-      ScreenLocalUTC, 
+      ScreenPlanetsInner, ScreenPlanetsOuter, ScreenISOHebIslam, ScreenNextEvents, ScreenEasterDates, 
+      ScreenTimeZones, ScreenUTCPosition, ScreenLocalUTC, 
       // clocks:
       ScreenRoman, ScreenWordClock, ScreenChemical, ScreenCodeStatus, 
       // radio amateur
@@ -81,7 +82,8 @@ Menu_type menuStruct[] =
       -1}, // Must end with negative number in order to enable counting of number of entries},
   {"Fav 2    ", 
       ScreenLocalUTCWeek, ScreenLocalSunSimpler, ScreenLocalMoon, ScreenPlanetsInner, ScreenPlanetsOuter, 
-      ScreenISOHebIslam, ScreenNextEvents, ScreenProgress, ScreenDemoClock,
+      ScreenISOHebIslam, ScreenNextEvents, ScreenProgress, ScreenLocalMonth, ScreenFactorization,
+      ScreenDemoClock,
       -1}, 
   {"Calendar ", 
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLunarEclipse, ScreenEasterDates, ScreenISOHebIslam,   
@@ -98,7 +100,7 @@ Menu_type menuStruct[] =
       ScreenHexOctalClock,  ScreenMathClockAdd, ScreenMathClockSubtract, ScreenMathClockMultiply, ScreenMathClockDivide, 
       ScreenInternalTime, ScreenCodeStatus, ScreenRoman, ScreenMorse, ScreenWordClock, 
       ScreenChemical, ScreenBigNumbers2, ScreenBigNumbers2UTC, ScreenBigNumbers3, ScreenBigNumbers3UTC, 
-      ScreenProgress, ScreenDemoClock, 
+      ScreenProgress, ScreenLocalMonth, ScreenFactorization, ScreenDemoClock, 
       -1},
   {"Astro    ",
       ScreenLocalUTCWeek, ScreenUTCLocator, ScreenLocalSunSimpler, ScreenLocalSunMoon, ScreenLocalMoon, 
@@ -199,7 +201,7 @@ int userTimeZones[4] = {16, 17, 3, 7};  // user selectable - point to time zone 
 
 // ************ 2. Minor parameters for some of the displays
 
-char MATH_CLOCK_MULTIPLY = 'x'; // '*', 'x', (char)165 = centered dot.  Multiplication sign
+char MATH_CLOCK_MULTIPLY = (char)DOT; //'x'; // '*', 'x', (char)DOT = centered dot.  Multiplication sign
 char MATH_CLOCK_DIVIDE   = ':'; // '/', ':'.                            Division sign
 
 const float OPTION_DAYS_WITHOUT_MOON_ARROW = 2.0;  // at full and at new moon
