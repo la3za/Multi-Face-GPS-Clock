@@ -128,11 +128,19 @@ const byte y_accent[8]   PROGMEM = {B00010, B00100, B10001, B10001, B01111, B000
 const byte i_accent[8]   PROGMEM = {B00100, B01000, B01100, B00100, B00100, B00100, B01110, B00000}; // Faroese Fríggjadagur
 //const byte Cedila[8]     PROGMEM = {B00000, B01110, B10000, B10001, B01110, B00100, B01100, B00000}; // for Portugese
 
-//const byte am[8]         PROGMEM = {B01100, B10010, B11110, B10010, B00000, B11011, B10101, B10001};  // AM for 12 hr clock in a single one character
-//const byte pm[8]         PROGMEM = {B11100, B10010, B11100, B10000, B00000, B11011, B10101, B10001};  // PM for 12 hr clock in a single character
+// AM/PM with centered A and P, as well as M:
+const byte am[8]         PROGMEM = {B01110, B10001, B11111, B10001, B00000, B11011, B10101, B10001}; // AM for 12 hr clock in a single character
+const byte pm[8]         PROGMEM = {B11110, B10001, B11110, B10000, B00000, B11011, B10101, B10001}; // PM for 12 hr clock in a single character
 
-const byte am[8]         PROGMEM = {B00110, B01001, B01111, B01001, B00000, B11011, B10101, B10001};  // AM for 12 hr clock in a single one character
-const byte pm[8]         PROGMEM = {B01110, B01001, B01110, B01000, B00000, B11011, B10101, B10001};  // PM for 12 hr clock in a single character
+// AM/PM with right-adjusted A and P:
+//const byte am[8]         PROGMEM = {B00110, B01001, B01111, B01001, B00000, B11011, B10101, B10001};  
+//const byte pm[8]         PROGMEM = {B01110, B01001, B01110, B01000, B00000, B11011, B10101, B10001}; 
+// AM/PM with left-adjusted A and P:
+//const byte am[8]         PROGMEM = {B01100, B10010, B11110, B10010, B00000, B11011, B10101, B10001};  
+//const byte pm[8]         PROGMEM = {B11100, B10010, B11100, B10000, B00000, B11011, B10101, B10001};  
+
+
+
 ///////////////////////////////////////////////
 
 void loadNativeCharacters(int8_t languageNumber)

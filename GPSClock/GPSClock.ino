@@ -1,5 +1,5 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.4.1   12.04.2025";
+const char codeVersion[] = "v2.4.2   10.05.2025";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
 // const char codeVersion[] = "v2.4.0   "__DATE__;
@@ -61,8 +61,16 @@ const char codeVersion[] = "v2.4.1   12.04.2025";
 
 /*
  Revisions:
-2.4.1    12-04.2025
-                - No zero-padding of hour with 12-hour (AM/PM) format (on/off by uncommenting LEADING_ZERO in clock_options.h)
+2.4.2    10.05.2025
+                - No leading zero in date if printed as " 5 May 2025" (was "05 May 2025")
+                - Default shows info about GNSS = GPS + GLONASS + Beidou + Galileo, not just GPS, in GPSInfo(). #define GNSS in clock_options.h must be uncommented
+                - More symmetric AM and PM symbols  
+                - Changed order in Chemical display: now Period is first followed by Group
+                - Fixed error: Blanking out of "1" or "2" for 10's of hour when no leading zero in Bignumbers3 and BigNumbers2
+                
+2.4.1    12.04.2025
+                - No leading zero with 12-hour (AM/PM) format (turn on leading zero by uncommenting variable LEADING_ZERO in clock_options.h)
+                     Default is to follow convention of https://en.wikipedia.org/wiki/24-hour_clock
 
  2.4.0   06.04.2025:
                 - Choice between 12/24 hrs display for local time in:
@@ -307,7 +315,11 @@ One routine per clock face, i.e. one per menu item:
             ChemicalElements
             BigNumbers3
             BigNumbers2
-            Reminder    
+            Reminder  
+            Equinoxes
+            SolarEclipse
+            NextEvents
+            Progress
 
 */
 
@@ -327,14 +339,13 @@ One routine per clock face, i.e. one per menu item:
 #define ALL_ON 255   // in LCD character set
 #define DOT 165      // dot for date deliminator, Morse code, and for big letter clock
 
-#define EEPROM_OFFSET1 0    // first address for setup info in EEPROM, adresses used: EEPROM_OFFSET1 ... EEPROM_OFFSET1+11
+#define EEPROM_OFFSET1 0    // first address for setup info in EEPROM, adresses used: EEPROM_OFFSET1 ... EEPROM_OFFSET1 + 12
 #define EEPROM_OFFSET2 100  // first address for birthday info for Reminder()
 
 #define noOfScreens 52  // must be large enough to hold all possible screens in menu!!
 #define NUMBER_OF_TIME_ZONES 20  // no of time zones defined in clock_timezone.h
 
 #define RAD (PI / 180.0)
-//#define SMALL_FLOAT (1e-12)
 
 #include "clock_defines.h"
 #include "clock_debug.h"  // debugging options via serial port
@@ -443,7 +454,7 @@ int dispState;            // depends on rotary, decides which screen to display
 int demoDispState;        // decides what to display in Demo Mode
 int previousDemoDispState = 1000; // remember old Demo screen, in order not to repeat same screen again in random mode
 int demoDuration = 0;     // counter for time between Demo screens
-unsigned int elapsedTime;          // milliseconds in function routine (only used in ISOHebIslam()) in order get time between demo screens right
+unsigned int elapsedTime; // milliseconds in function routine (only used in ISOHebIslam()) in order get time between demo screens right
 
 char today[15];           // for storing string with day name 
 char todayFormatted[15];  // for storing string with day name up to 12 characters long
@@ -565,8 +576,8 @@ int totalSats = 0;
 #endif
 
 // keep tabs on column, row for LCD
-int cursorFactor;
-int lineFactor;
+byte cursorFactor;
+byte lineFactor;
 
 #include "clock_language.h"         // user customable functions and character sets for multiple local languages, was "clock_custom_routines.h"
 #include "clock_helper_routines.h"  // library of functions
@@ -4452,8 +4463,13 @@ void BigNumbers3(byte showUTC) {
   imax = Hour / 10; 
   #ifdef LEADING_ZERO
     draw_digit(imax, 0, lineno);  // draw 10's hour digit
-  #else // only show leading 0 for 24 hour clock
+  #else // only show leading 0 for UTC clock else only for 24 hour clock
     if (showUTC == 1 || Twelve24Local > 12 || imax != 0) draw_digit(imax, 0, lineno);
+    else // blank out the 1 which was is in the 10's of hour position
+       {
+          lcd.setCursor(0, lineno);   lcd.print(F("   "));  // New 10.05.2025: blank out first digit
+          lcd.setCursor(0, lineno+1); lcd.print(F("   "));
+       }
   #endif 
 
   imax = Hour % 10;
@@ -4542,6 +4558,12 @@ void BigNumbers2(byte showUTC) {
     doNumber2(imax, lineno, start);
   #else // only show leading 0 for 24 hour clock
     if (showUTC == 1 || Twelve24Local > 12 || imax != 0)  doNumber2(imax, lineno, start);
+    else // blank out the 1 which was is in the 10's of hour position
+    {
+      lcd.setCursor(start, lineno);   lcd.print(F("  "));  // New 10.05.2025: blank out first digit
+      lcd.setCursor(start, lineno+1); lcd.print(F("  "));
+      lcd.setCursor(start, lineno+2); lcd.print(F("  "));
+    }
   #endif  
 
   imax = Hour % 10;
@@ -5186,7 +5208,7 @@ if (minuteGPS != oldMinute) {  // only update once per minute in order to avoid 
 // Progress bars
 
 // day of week
-    lcd.setCursor(0,2);lcd.print("Wk");    
+    lcd.setCursor(0,2);lcd.print(F("Wk"));    
 // week number 
     lcd.setCursor(3, 2); 
     GregorianDate a(month(localTime), day(localTime), year(localTime));
@@ -5207,7 +5229,7 @@ if (minuteGPS != oldMinute) {  // only update once per minute in order to avoid 
 
 // day of year
     int doy = calculateDayOfYear(day(localTime), month(localTime), year(localTime));
-    lcd.setCursor(0,3);lcd.print("Yr");
+    lcd.setCursor(0,3);lcd.print(F("Yr"));
     //gapLessBar(doy, 365, 2, 15, 3);      //  yearly progress
     framedProgressBar(doy, 365, 2, 15, 3);
     lcd.setCursor(17,3);

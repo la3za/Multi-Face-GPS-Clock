@@ -1,9 +1,11 @@
 // *** User options *** 
-// The following #defines should normally all be off: 
+
 //
 #define GNSS  // = Global navigation satellite system (GNSS) = GPS + GLONASS + Beidou + Galileo. Not just GPS - Affects GPSInfo()
 
-//#define LEADING_ZERO  // show leading zero with 12 hour (AM/PM) clock? default commented out
+
+// The following #defines should normally all be commented out:
+//#define LEADING_ZERO  // show leading zero on both 12 hour (AM/PM) and 24 hour clocks? default commented out
 
 //#define NEXTVERSION    // next version experimental feature (if there are any ...)
 //#define TESTSCREENS    // extra screen set for testing recent functions. No need to use it for a normal user

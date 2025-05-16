@@ -596,7 +596,7 @@ void LcdDate(int Day, int Month, int Year=0) // print date, either day-month or 
 
 void LcdDateString(int Day, String Mnth, int Year=0) // print date, either day-month or day-month-year according to specified format
 {
-  if (dateTimeFormat[dateFormat].dateOrder == 'B')
+  if (dateTimeFormat[dateFormat].dateOrder == 'B')   // year month day
     {
       if (Year !=0) 
       { 
@@ -605,7 +605,7 @@ void LcdDateString(int Day, String Mnth, int Year=0) // print date, either day-m
       lcd.print(Mnth); lcd.print(F(" "));
       PrintFixedWidth(lcd, Day, 2, '0');
     }
-    else if (dateTimeFormat[dateFormat].dateOrder == 'M')
+    else if (dateTimeFormat[dateFormat].dateOrder == 'M')  // month day year 
     {
      lcd.print(Mnth); lcd.print(F(" "));
       PrintFixedWidth(lcd, Day, 2, '0'); 
@@ -614,9 +614,9 @@ void LcdDateString(int Day, String Mnth, int Year=0) // print date, either day-m
         lcd.print(F(" "));PrintFixedWidth(lcd, Year, 4);
       }
     }
-    else
+    else                                                  // day month year  
     {
-      PrintFixedWidth(lcd, Day, 2, '0'); lcd.print(F(" "));
+      PrintFixedWidth(lcd, Day, 2, ' '); lcd.print(F(" "));
       lcd.print(Mnth); 
       if (Year !=0) 
       {
@@ -672,7 +672,11 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
       }
       lcd.print(F("    ")); // in order to erase remnants of long string as the month changes
       lcd.setCursor(11 - moveLeft, lineno);
-      sprintf(textBuffer, " %02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+      #ifdef LEADING_ZERO
+         sprintf(textBuffer, " %02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+      #else  // no leading zero
+         sprintf(textBuffer, " %2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+      #endif
       lcd.print(textBuffer);
     }
 
@@ -723,8 +727,9 @@ void LcdTimeLocalShortDayDate(int lineno = 0, int moveRight = 0) {  // unused as
   #ifdef LEADING_ZERO
      sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
   #else   
-        if (Twelve24Local > 12) sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
-        else sprintf(textBuffer, "%2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
+  //      if (Twelve24Local > 12) sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+  //      else 
+     sprintf(textBuffer, "%2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
   #endif 
         lcd.print(textBuffer);
 
@@ -1455,13 +1460,13 @@ int group = 0, period = 0;
       }
       else if (ElementNo <= 56)
       {
-        lcd.print(F("Gr ")); PrintFixedWidth(lcd, group, 2); lcd.print(" ");
         lcd.print(F("Per ")); lcd.print(period); lcd.print(" ");
+        lcd.print(F("Gr ")); PrintFixedWidth(lcd, group, 2); lcd.print(" ");
       }
       else
       {
-        lcd.print(F("Gr  -")); lcd.print(" ");  // no group for Lanthanides
         lcd.print(F("Per 6")); lcd.print(" ");
+        lcd.print(F("Gr  -")); lcd.print(" ");  // no group for Lanthanides
       }
       
 }
