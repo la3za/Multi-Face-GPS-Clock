@@ -5,7 +5,8 @@
 
 
 // The following #defines should normally all be commented out:
-//#define LEADING_ZERO  // show leading zero on both 12 hour (AM/PM) and 24 hour clocks? default commented out
+//#define ROMANIV // use 'IV' for 4 rather than 'IIII' for Roman clock face, see https://www.horando.de/en/blogs/uhren-technik/roemische-vier-auf-uhren
+//#define LEADING_ZERO  // show leading zero on 12 hour (AM/PM) as is always done on 24 hour clocks. Fefault commented out
 
 //#define NEXTVERSION    // next version experimental feature (if there are any ...)
 //#define TESTSCREENS    // extra screen set for testing recent functions. No need to use it for a normal user

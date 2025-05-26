@@ -672,11 +672,12 @@ void LcdShortDayDateTimeLocal(int lineno = 0, int moveLeft = 0) {
       }
       lcd.print(F("    ")); // in order to erase remnants of long string as the month changes
       lcd.setCursor(11 - moveLeft, lineno);
-      #ifdef LEADING_ZERO
+      // #ifdef LEADING_ZERO
          sprintf(textBuffer, " %02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
-      #else  // no leading zero
-         sprintf(textBuffer, " %2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
-      #endif
+      // #else  // no leading zero
+      //   if (Twelve24Local > 12) sprintf(textBuffer, " %02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+      //   else sprintf(textBuffer, " %2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
+      // #endif
       lcd.print(textBuffer);
     }
 
@@ -727,9 +728,8 @@ void LcdTimeLocalShortDayDate(int lineno = 0, int moveRight = 0) {  // unused as
   #ifdef LEADING_ZERO
      sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
   #else   
-  //      if (Twelve24Local > 12) sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
-  //      else 
-     sprintf(textBuffer, "%2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
+      if (Twelve24Local > 12) sprintf(textBuffer, "%02d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // corrected 18.10.2021
+      else sprintf(textBuffer, "%2d%c%02d%c%02d", Hour, dateTimeFormat[dateFormat].hourSep, Minute, dateTimeFormat[dateFormat].minSep, Seconds); // no zero-padding of hour
   #endif 
         lcd.print(textBuffer);
 

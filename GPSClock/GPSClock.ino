@@ -1,5 +1,5 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.4.2   10.05.2025";
+const char codeVersion[] = "v2.4.3   25.05.2025";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
 // const char codeVersion[] = "v2.4.0   "__DATE__;
@@ -60,15 +60,21 @@ const char codeVersion[] = "v2.4.2   10.05.2025";
 */
 
 /*
- Revisions:
-2.4.2    10.05.2025
+Revisions:
+ 2.4.3 	 23.05.2025
+                - Use 'IIII' for 4 rather than 'IV' for Roman clock face, see https://www.horando.de/en/blogs/uhren-technik/roemische-vier-auf-uhren
+                  Set ROMANIV if 'IV' is preferred instead
+				        - Fix: Too often leading zeros suppressed in LcdShortDayDateTimeLocal() [ and LcdTimeLocalShortDayDate()] fixed
+				          Now only suppressed zero when displayed with AM/PM symbol, in LocalSun(), LocalSunAzEl(), LocalSunMoon(), LocalMoon(), Progress()
+ 
+ 2.4.2    10.05.2025
                 - No leading zero in date if printed as " 5 May 2025" (was "05 May 2025")
                 - Default shows info about GNSS = GPS + GLONASS + Beidou + Galileo, not just GPS, in GPSInfo(). #define GNSS in clock_options.h must be uncommented
                 - More symmetric AM and PM symbols  
                 - Changed order in Chemical display: now Period is first followed by Group
                 - Fixed error: Blanking out of "1" or "2" for 10's of hour when no leading zero in Bignumbers3 and BigNumbers2
                 
-2.4.1    12.04.2025
+ 2.4.1    12.04.2025
                 - No leading zero with 12-hour (AM/PM) format (turn on leading zero by uncommenting variable LEADING_ZERO in clock_options.h)
                      Default is to follow convention of https://en.wikipedia.org/wiki/24-hour_clock
 
@@ -3507,7 +3513,11 @@ Argument List: none
 Return value: Displays on LCD
 *****/
 
-const char RomanOnes[10][6] PROGMEM = { { "     " }, { "I    " }, { "II   " }, { "III  " }, { "IV   " }, { "V    " }, { "VI   " }, { "VII  " }, { "VIII " }, { "IX   " } };  // left justified
+#ifdef ROMANIV
+  const char RomanOnes[10][6] PROGMEM = { { "     " }, { "I    " }, { "II   " }, { "III  " }, { "IV   " }, { "V    " }, { "VI   " }, { "VII  " }, { "VIII " }, { "IX   " } };  // left justified
+#else  // default
+  const char RomanOnes[10][6] PROGMEM = { { "     " }, { "I    " }, { "II   " }, { "III  " }, { "IIII " }, { "V    " }, { "VI   " }, { "VII  " }, { "VIII " }, { "IX   " } };  // left justified
+#endif
 const char RomanTens[6][4] PROGMEM = { { "" }, { "X" }, { "XX" }, { "XXX" }, { "XL" }, { "L" } };
 
 void Roman() {
