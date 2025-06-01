@@ -75,6 +75,18 @@ The breadboard of Michael, DK7UX, with GPS from QRPLabs QLG1 or QLG2. It shows h
 
 <img src="Builds/DK7UX.jpg" width="50%">
 
+Here's the clock made by Stef, DM5TU. Note the support for the German language in the clock:
+
+<img src="Builds/DM5TU/photo-5.jpg" width="50%">
+
+<img src="Builds/DM5TU/photo-4.jpg" width="50%">
+
+<img src="Builds/DM5TU/photo-2.jpg" width="50%">
+
+<img src="Builds/DM5TU/photo-1.jpg" width="50%">
+
+It is built in a [Bahar enclosure 150 x 70 z 100 mm] (https://bahar-enclosure.com/products/bda-40004-w100-150-x-70-x-100-mm), also found on [AliExpress] (https://de.aliexpress.com/item/1005006813663747.html?gps-id=pcFullPieceDiscountItemList&scm=1007.24625.271276.0&scm_id=1007.24625.271276.0&scm-url=1007.24625.271276.0&pvid=dd13dbc5-070c-4c98-bf19-d16a37ea5364&_t=gps-id%3ApcFullPieceDiscountItemList%2Cscm-url%3A1007.24625.271276.0%2Cpvid%3Add13dbc5-070c-4c98-bf19-d16a37ea5364%2Ctpp_buckets%3A668%232846%238115%232000&pdp_ext_f=%7B%22order%22%3A%2237%22%2C%22eval%22%3A%221%22%2C%22sceneId%22%3A%2214625%22%7D&pdp_npi=4%40dis%21EUR%2113.29%2112.79%21%21%2114.74%2114.18%21%402103956b17487939551564870e284e%2112000038391338091%21rec%21DE%21%21ABXZ&spm=a2g0o.store_pc_home.fullPieceDiscountItemList_2008863407519.1005006813663747&gatewayAdapt=glo2deu)
+
 Please get in touch if you want to display your implementation here!
 
 
