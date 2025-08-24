@@ -1,5 +1,5 @@
 // Set version and date manually for code status display
-const char codeVersion[] = "v2.4.3   25.05.2025";
+const char codeVersion[] = "v2.4.4   22.08.2025";
 
 // or set date automatically to compilation date (US format) - nice to use during development - while version number is set manually
 // const char codeVersion[] = "v2.4.0   "__DATE__;
@@ -61,6 +61,14 @@ const char codeVersion[] = "v2.4.3   25.05.2025";
 
 /*
 Revisions:
+ 2.4.4   21.08.2025
+                - Check if there is a need for correction of QRPLabs QLG2 GPS Module which has a 1024 week rollover problem
+                ---  All occurences of yearGPS, monthGPS, dayGPS replaced by year(), month(), day() in GPSClock.ino; clock_helper.h, clock_z_equatio.h
+                - Solar Eclipse display in NextEvents() now checks for year > entries in dateEvent solarEclipse[]
+                - Progress() also has bar for time of day losely based on beat time (Swatch Internet Time) - decimal time, https://en.wikipedia.org/wiki/Swatch_Internet_Time
+                - Cold start values for EEPROM/flash parameters, i.e values used if inital values are out of range or undefined, now in clock_options.h
+                - Variable GNSS replaced by GPSONLY, normally undefined
+
  2.4.3 	 23.05.2025
                 - Use 'IIII' for 4 rather than 'IV' for Roman clock face, see https://www.horando.de/en/blogs/uhren-technik/roemische-vier-auf-uhren
                   Set ROMANIV if 'IV' is preferred instead
@@ -69,7 +77,7 @@ Revisions:
  
  2.4.2    10.05.2025
                 - No leading zero in date if printed as " 5 May 2025" (was "05 May 2025")
-                - Default shows info about GNSS = GPS + GLONASS + Beidou + Galileo, not just GPS, in GPSInfo(). #define GNSS in clock_options.h must be uncommented
+                - Default shows info about GNSS = GPS + GLONASS + Beidou + Galileo, not just GPS, in GPSInfo(). Variable GPSONLY in clock_options.h must commented out
                 - More symmetric AM and PM symbols  
                 - Changed order in Chemical display: now Period is first followed by Group
                 - Fixed error: Blanking out of "1" or "2" for 10's of hour when no leading zero in Bignumbers3 and BigNumbers2
@@ -497,24 +505,24 @@ TinyGPSPlus gps;  // The TinyGPS++ object
 #include "clock_z_lunarCycle.h"
 
 // Initial values for primary menu parameters - stored in EEPROM
-int8_t subsetMenu = 0;      // variable for choosing subset of possible clock faces
-byte backlightVal = 10;     // (0...255) initial backlight value
-int8_t dateFormat = 0;      // variable for choosing date/time format
-int8_t languageNumber = 0;  // variable for choosing language for local time day names
-int8_t presentLanguageNumber = 0; // remembering the present language for detecting need for change
-int8_t timeZoneNumber = 0;  // variable for choosing time zone
+byte backlightVal = COLDSTART_backlightVal;     		// (0...255) initial backlight value
+int8_t subsetMenu = COLDSTART_subsetMenu;      		// variable for choosing subset of possible clock faces
+int8_t dateFormat = COLDSTART_dateFormat;      		// variable for choosing date/time format
+int8_t languageNumber = COLDSTART_languageNumber;  	// variable for choosing language for local time day names
+int8_t timeZoneNumber = COLDSTART_timeZoneNumber;  	// variable for choosing time zone
 
 // Initial values for secondary menu parameter - stored in EEPROM
-int8_t baudRateNumber = 1;     // points to entry in array of possible baudrates
-int8_t demoStepType = 0;       // step type in demo (increase +, decrease -, random)
-int8_t dwellTimeDemo = 10;     // no of seconds per screen as DemoClock cycles through all screen
-int8_t secondsClockHelp = 6;   // no of seconds per minute of normal clock display for fancy clocks
-int8_t mathSecondPeriod = 10;  // 1...6 per minute, i.e. 10-60 seconds in AlbertClock app
-int8_t firstDayWeek     = 2;   // 1 for Sunday, 2 for Monday, ... 
-int8_t Twelve24Local    = 24;  // 24 or 12 for hrs for local time
-boolean using_PPS = false;     // toggle use of PPS pulse from GPS for interrupt and more accurate timeing
+int8_t baudRateNumber = COLDSTART_baudRateNumber;     // points to entry in array of possible baudrates
+int8_t secondsClockHelp = COLDSTART_secondsClockHelp; // no of seconds per minute of normal clock display for fancy clocks
+int8_t dwellTimeDemo = COLDSTART_dwellTimeDemo;     	// no of seconds per screen as DemoClock cycles through all screen
+int8_t mathSecondPeriod = COLDSTART_mathSecondPeriod; // 10-60 seconds (i.e. 1...6 times per minute) in AlbertClock app
+boolean using_PPS = COLDSTART_using_PPS;     			// toggle use of PPS pulse from GPS for interrupt and more accurate timeing
+int8_t demoStepType = COLDSTART_demoStepType;       	// step type in demo (increase +, decrease -, random)
+int8_t firstDayWeek     = COLDSTART_firstDayWeek;   	// 1 for Sunday, 2 for Monday, ... 
+int8_t Twelve24Local    = COLDSTART_Twelve24Local;  	// 24 or 12 for hrs for local time
 
-char demoStepTypeText[][7] = {"+", "-", "random"}; // hard-coded index range 0..2 for demoStepType here and there in code
+int8_t presentLanguageNumber = COLDSTART_languageNumber; // remembering the present language for detecting need for change
+char demoStepTypeText[][7] = {"+", "-", "random"};     // hard-coded index range 0..2 for demoStepType here and there in code
 
 #ifdef STEP_FASTER
 //  2:56 = 10560; 07:29 = 26940; 10:24 = 37440
@@ -558,7 +566,7 @@ TinyGPSCustom azimuth[4];
 TinyGPSCustom snr[4];
 
 
-#ifdef GNSS // new 2.4.2025:
+#ifndef GPSONLY // new 2.4.2025:
 TinyGPSCustom GLsatsInView(gps, "GLGSV", 3); // Glonass
 TinyGPSCustom GBsatsInView(gps, "GBGSV", 3); // BeiDou
 TinyGPSCustom GAsatsInView(gps, "GAGSV", 3); // Galileo
@@ -640,6 +648,11 @@ void syncTimeGPS() {
                              
     // set the Time to the latest GPS reading
     setTime(hourGPS, minuteGPS, secondGPS, dayGPS, monthGPS, yearGPS);  // Versions from 17.04.2020+: Arduino time = UTC
+    
+// 21.08.2025: Check if there is a need for correction of QLG2 GPS Module which has a 1024 week rollover problem starting on 17 August 2025
+   if (now() < 1755381600)     // correct if GPS gives a date before 17.8.2025
+        adjustTime(619315200);  // add 1024 weeks (in seconds)
+
     weekdayGPS = weekday();
     if (using_PPS) adjustTime(1);  // if using interrupt adjust forward 1 second (only integer seconds)
 
@@ -872,7 +885,7 @@ void ScreenSelect(int disp, int DemoMode)  // menu System - called from inside l
   else if (disp == menuOrder[ScreenOctal])              HexOctalClock(1);     // Octal clock
   else if (disp == menuOrder[ScreenHexOctalClock])      HexOctalClock(3);     // 3-in-1: Hex-Octal-Binary clock
 
-  else if (disp == menuOrder[ScreenEasterDates])        EasterDates(yearGPS); // Gregorian and Julian Easter Sunday
+  else if (disp == menuOrder[ScreenEasterDates])        EasterDates(year()); // Gregorian and Julian Easter Sunday.  20.8.2025:  was (yearGPS)
 
   else if (disp == menuOrder[ScreenLocalSunSimpler])    LocalSun(3);          // was (2); local time, sun x 3 - simpler layout
   else if (disp == menuOrder[ScreenLocalSunAzEl])       LocalSunAzEl();       // local time, sun az, el
@@ -937,7 +950,7 @@ void readEEPROM() {
   subsetMenu = EEPROM.read(EEPROM_OFFSET1 + 1);
   if ((subsetMenu < 0) || (subsetMenu >= noOfMenuIn))  // if EEPROM stores invalid value
   {
-    subsetMenu = 0;                                 //  set to default value on very first startup
+    subsetMenu = COLDSTART_subsetMenu;                    //  set to cold start value on very first startup
     EEPROMMyupdate(EEPROM_OFFSET1 + 1, subsetMenu, 1);  // make sure EEPROM has a valid value
   }
 
@@ -945,7 +958,7 @@ void readEEPROM() {
   dateFormat = EEPROM.read(EEPROM_OFFSET1 + 2);        //
   if ((dateFormat < 0) || (dateFormat >= noOfMenuIn))  // if EEPROM stores invalid value
   {
-    dateFormat = 0;                                 //  set to default value on very first startup
+    dateFormat = COLDSTART_dateFormat;                    //  set to cold start value on very first startup
     EEPROMMyupdate(EEPROM_OFFSET1 + 2, dateFormat, 1);  // make sure EEPROM has a valid value
   }
 
@@ -953,60 +966,60 @@ void readEEPROM() {
   languageNumber = EEPROM.read(EEPROM_OFFSET1 + 3);               //
   if ((languageNumber < 0) || (languageNumber >= numLanguages))  // if EEPROM stores invalid value
   {
-    languageNumber = 0;                                // set to default value (0 = English) on very first startup
+    languageNumber = COLDSTART_languageNumber;                // set to cold start value (0 = English) on very first startup
     EEPROMMyupdate(EEPROM_OFFSET1 + 3, languageNumber, 1);  // make sure EEPROM has a valid value
   }
 
   timeZoneNumber = EEPROM.read(EEPROM_OFFSET1 + 4);
   if ((timeZoneNumber < 0) || (timeZoneNumber > NUMBER_OF_TIME_ZONES - 1)) {
-    timeZoneNumber = 0;
+    timeZoneNumber = COLDSTART_timeZoneNumber;
     EEPROMMyupdate(EEPROM_OFFSET1 + 4, timeZoneNumber, 1);
   }
 
   baudRateNumber = EEPROM.read(EEPROM_OFFSET1 + 5);
   if ((baudRateNumber < 0) || (baudRateNumber > int(sizeof(gpsBaud1) / sizeof(gpsBaud1[0])))) {
-    baudRateNumber = 1;
+    baudRateNumber = COLDSTART_baudRateNumber;
     EEPROMMyupdate(EEPROM_OFFSET1 + 5, baudRateNumber, 1);
   } 
 
   secondsClockHelp = EEPROM.read(EEPROM_OFFSET1 + 6);
   if (secondsClockHelp < 0 || secondsClockHelp > 60) {
-    secondsClockHelp = 12;
+    secondsClockHelp = COLDSTART_secondsClockHelp;
     EEPROMMyupdate(EEPROM_OFFSET1 + 6, secondsClockHelp, 1);
   }
 
   dwellTimeDemo = EEPROM.read(EEPROM_OFFSET1 + 7);
   if (dwellTimeDemo < 4 || dwellTimeDemo > 60) {
-    dwellTimeDemo = 8;
+    dwellTimeDemo = COLDSTART_dwellTimeDemo;
     EEPROMMyupdate(EEPROM_OFFSET1 + 7, dwellTimeDemo, 1);
   }
   
   mathSecondPeriod = EEPROM.read(EEPROM_OFFSET1 + 8);
   if (mathSecondPeriod < 4 || mathSecondPeriod > 60) {
-    mathSecondPeriod = 10;
+    mathSecondPeriod = COLDSTART_mathSecondPeriod;
     EEPROMMyupdate(EEPROM_OFFSET1 + 8, mathSecondPeriod, 1);
   }
 
   using_PPS = EEPROM.read(EEPROM_OFFSET1 + 9);
   if ((using_PPS !=false) && (using_PPS != true)) {  // 2.4.2025: & -> &&
-    using_PPS = false;
+    using_PPS = COLDSTART_using_PPS;
     EEPROMMyupdate(EEPROM_OFFSET1 + 9, using_PPS, 1);
   }
 
   demoStepType = EEPROM.read(EEPROM_OFFSET1 + 10);
   if (demoStepType < 0 || demoStepType > 2) {
-    demoStepType = 0;
+    demoStepType = COLDSTART_demoStepType;
     EEPROMMyupdate(EEPROM_OFFSET1 + 10, demoStepType, 1);
   }
 
   firstDayWeek = EEPROM.read(EEPROM_OFFSET1 + 11);  
   if (firstDayWeek < 1 || firstDayWeek > 7) {
-    firstDayWeek = 2;   // EU, ISO Monday
+    firstDayWeek = COLDSTART_firstDayWeek; 
     EEPROMMyupdate(EEPROM_OFFSET1 + 11, firstDayWeek, 1);
   }
   Twelve24Local = EEPROM.read(EEPROM_OFFSET1 + 12);  // new 30.03.2025
   if (Twelve24Local != 12 && Twelve24Local != 24) {
-    Twelve24Local = 24;   // default is 24 hrs clock for local time
+    Twelve24Local = COLDSTART_Twelve24Local; 
     EEPROMMyupdate(EEPROM_OFFSET1 + 12, Twelve24Local, 1);
   }
   #ifdef FEATURE_SERIAL_EEPROM
@@ -1169,6 +1182,10 @@ void setup() {
   Serial.println(F("Factorization clock debug"));
 #endif
 
+#ifdef FEATURE_BEATS
+  Serial.begin(115200);
+  Serial.println(F("Swatch Internet Time debug"));
+#endif
 #ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function
   dateIteration = 0;
 #endif
@@ -1527,7 +1544,7 @@ void UTCLocator(  // UTC, locator, # satellites
     lcd.print(F("UTC"));
   
   lcd.setCursor(10, 1);
-  LcdDate(dayGPS, monthGPS, yearGPS);
+  LcdDate(day(), month(), year()); //  20.8.2025: LcdDate(dayGPS, monthGPS, yearGPS);
 
   if (gps.location.isValid()) {
 
@@ -3414,7 +3431,7 @@ void LunarEclipse() {
 
     // Good up to and including 2021, but misses the almost eclipse 18-19 July 2027
     // Test: try 2028 with 3 eclipses, see https://www.timeanddate.com/eclipse/list-lunar.html
-    yy = yearGPS;  //
+    yy = year(); //  20.8.2025:  yearGPS; 
 
 #ifdef FEATURE_SERIAL_LUNARECLIPSE
     Serial.print((int)yy);
@@ -4200,7 +4217,7 @@ void GPSInfo() {
   Serial.println(F("*** Enter GPSInfo"));
 #endif
 
-#ifndef GNSS  // valid for GPS only
+#ifdef GPSONLY  // valid for GPS only
 
   // GPSParse();
 
@@ -4212,7 +4229,7 @@ void GPSInfo() {
     int currentMessage = atoi(messageNumber.value());
 
     if (totalMessages == currentMessage) {
-#ifdef FEATURE_SERIAL_GPS
+    #ifdef FEATURE_SERIAL_GPS
       Serial.print(F("Sats in use = "));
       Serial.print(gps.satellites.value());
       Serial.print(F(" Nums = "));
@@ -4223,7 +4240,7 @@ void GPSInfo() {
           Serial.print(F(" "));
         }
       }
-#endif
+    #endif
 
       // #ifdef FEATURE_SERIAL_GPS
       //   Serial.print(F(" SNR = "));
@@ -4283,7 +4300,7 @@ void GPSInfo() {
     else if (hdop < 5) lcd.print(F(" Good     "));
     else               lcd.print(F(" No good  "));
 
-#ifdef FEATURE_SERIAL_GPS
+  #ifdef FEATURE_SERIAL_GPS
     Serial.println();
     Serial.print(F("TotalSats="));
     Serial.print(totalSats);
@@ -4299,7 +4316,7 @@ void GPSInfo() {
     Serial.print(F(" Status="));
     Serial.print(GPSposStatus.value());  // A-valid, V-invalid
     Serial.println();
-#endif
+  #endif
 
     for (int i = 0; i < MAX_SATELLITES; ++i)
       sats[i].active = false;
@@ -4409,7 +4426,7 @@ void GPSInfo() {
       
  }  // if (totalGPGSVMessages.isUpdated())
 
-#endif // GNSS - 2.4.2025
+#endif // GPSONLY - 2.4.2025
 
 #ifdef FEATURE_SERIAL_GPS
   Serial.println(F("*** Exit  GPSInfo"));
@@ -4882,6 +4899,7 @@ dateEvent solarEclipse[] = {  // don't enter number with 0 i front -> octal inte
   {2027,  206}, {2027,  802}, {2028, 126}, {2028, 722}, {2030, 601}, 
   {2030, 1125}, {2031, 1114}, {2033, 330}, {2034, 320}};
 // maximum number of solar eclipses (partial, annular, or total) is 5 per year.
+// format {2024, 408} means April 8, 2024
 
 void SolarEclipse() {
 
@@ -5100,7 +5118,7 @@ for (i = 0; i < noSolarEclipses; i++)  // find first year with solar eclipse
 }
 int smonth, sday;
 
-if (i <=noSolarEclipses)
+if (i < noSolarEclipses)  // <= --> < 21.08.0225
 {
   #ifdef FEATURE_SERIAL_NEXTEVENTS
     Serial.print("Solar "); Serial.print(i); Serial.print(" ");Serial.println(displayYear);
@@ -5110,6 +5128,11 @@ if (i <=noSolarEclipses)
   eventDate[3] = solarEclipse[i].monthDate + (solarEclipse[i].year - displayYear)*10000;
   smonth = solarEclipse[i].monthDate / 100;
   sday = solarEclipse[i].monthDate - 100 * smonth;
+}
+if (solarEclipse[i].year < displayYear) // check for valid date 21.08.2025
+{
+  smonth = 0;
+  sday   = 0;
 }
 
 // lcd.setCursor(0,0); lcd.print(F("Next event:"));
@@ -5174,7 +5197,9 @@ for (i = 0; i < lengthData; i++)
       if (eventDate[i] > 15000)      lcd.print("*");  // mark for 2+ years into future
       else if (eventDate[i] > 5000)  lcd.print("+");  // mark for next year 
       else                           lcd.print(" ");
-      lcd.setCursor(15,i);           LcdDate(sday, smonth);
+      lcd.setCursor(15,i); 
+      if (smonth*sday > 0)  LcdDate(sday, smonth);  // check for valid date 21.08.2025
+      else                  lcd.print(F("-- --"));  
       break;
     }
   }
@@ -5202,20 +5227,43 @@ void Progress()
       strcmp(languages[languageNumber],"ar ") == 0 ) 
   
       LcdShortDayDateTimeLocal(0, 0);  // if language does not require special characters, use it
-     //  LcdTimeLocalShortDayDate(0,0); // no room for AM/PM sign as special character
   else
     {
       languageNumberStored = languageNumber;
-      languageNumber = 0;     // temporary set to English as no room in LCD for special characters of other languages
+      languageNumber = 0;     // temporary set to English as no room in LCD memory for special characters of other languages
       LcdShortDayDateTimeLocal(0, 0);  // day, date, time
-      //LcdTimeLocalShortDayDate(0,0);
       languageNumber = languageNumberStored;  // recall original language number
     }
 
+// Beat Time or Swatch Internet Time https://en.wikipedia.org/wiki/Swatch_Internet_Time 
+// originally follows Swiss time without Daylight Saving, i.e. UTC+1, but here it may also follow local time
+// 24 hrs = 1000 units, starting at midnight. Each unit = 86.4 seconds = 1.44 minutes, 41.67 beats per hour
+
+  #ifdef BEAT_TIME_ORIGINAL // original definition UTC+1
+    int8_t UTCPlus1 = (hourGPS + 1)%24;
+    float beats = 3600.0*UTCPlus1 + 60.0*minuteGPS + secondGPS;
+  #else // follows local time (makes it more useful)
+    float beats = 3600.0*hour(localTime) + 60.0*minute(localTime) + second(localTime);
+  #endif
+
+  beats = beats/86.4;
+  lcd.setCursor(16,1); lcd.print("@"); PrintFixedWidth(lcd, (int)beats, 3, '0'); // rounding down, range 0...999, leading 0
+  
+
+  #ifdef FEATURE_BEATS
+    Serial.print("UTCPlus1 "); Serial.println(UTCPlus1); 
+    Serial.print("beats "); Serial.println(beats); 
+    Serial.println();
+  #endif
+
+
 if (minuteGPS != oldMinute) {  // only update once per minute in order to avoid blink
    loadCurvedFramedBarCharactersA();     // ( xxxx )
-  
+
 // Progress bars
+// time of day, based on beats
+   lcd.setCursor(0,1);lcd.print(F("Day"));  
+   framedProgressBar((int)beats, 1000, 4, 15, 1); 
 
 // day of week
     lcd.setCursor(0,2);lcd.print(F("Wk"));    

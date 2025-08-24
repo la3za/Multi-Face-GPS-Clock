@@ -15,6 +15,7 @@
 //#define FEATURE_SERIAL_LOAD_CHARACTERS  // check loading of new custom characters to LCD
 //#define FEATURE_SERIAL_NEXTEVENTS  // debug NextEvent()
 //#define FEATURE_FACTORIZATION        // ScreenFactorization clock debug
+//#define FEATURE_BEATS               // Debug Swatch Internet Time 
 
 // In LocalUTC(), WordClockNorwegian(), LcdSolarRiseSet(), ISOHebIslam():
 //#define FEATURE_DATE_PER_SECOND   // for stepping date/hour/min (86400/3600/60 sec step) quickly and check calender function (local time only)

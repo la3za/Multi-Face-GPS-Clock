@@ -1,12 +1,29 @@
 // *** User options *** 
 
-//
-#define GNSS  // = Global navigation satellite system (GNSS) = GPS + GLONASS + Beidou + Galileo. Not just GPS - Affects GPSInfo()
+
+
+// define cold start values for EEPROM/flash values, i.e values used if EEPROM/flash has values out of range or is undefined:
+#define COLDSTART_backlightVal     50     // (0...255) initial backlight value
+#define COLDSTART_subsetMenu        0     // which subset of possible clock faces, typ 0 ... 6, see def in menuStruct[]
+#define COLDSTART_dateFormat        0     // date/time format, 0.. 6, see def in dateTimeFormat[]
+#define COLDSTART_languageNumber    0     // 0: English for local time day names, typ. 0...9, see myDays[][][] 
+#define COLDSTART_timeZoneNumber    0     // 0: CET; 1: BST, 3 EST; 7: PST, 14: JST, 16: CHN, 19: EST; value 0...19
+#define COLDSTART_baudRateNumber    1     // points to entry in array of possible baudrates, see gpsBaud1[] in clock_hardware.h
+
+#define COLDSTART_secondsClockHelp 12     // no of seconds per minute of normal clock display for fancy clocks
+#define COLDSTART_dwellTimeDemo     8     // no of seconds per screen as DemoClock cycles through all screen
+#define COLDSTART_mathSecondPeriod 10     // 10-60 seconds (i.e. 1...6 times per minute) in AlbertClock app
+#define COLDSTART_using_PPS        false  // toggle use of PPS pulse from GPS for interrupt and more accurate timing
+#define COLDSTART_demoStepType      0     // step type in demo (0: increase +, 1: decrease -, 2: random)
+#define COLDSTART_firstDayWeek      2     // 1 for Sunday, 2 for Monday; range 1...7
+#define COLDSTART_Twelve24Local    24     // 24 hrs clock for local time, alternative 12
 
 
 // The following #defines should normally all be commented out:
+//#define BEAT_TIME_ORIGINAL // Beat time (Swatch Internet Time) in Progress() follows original definition and follows UTC+1. If undefined follows local time 
 //#define ROMANIV // use 'IV' for 4 rather than 'IIII' for Roman clock face, see https://www.horando.de/en/blogs/uhren-technik/roemische-vier-auf-uhren
-//#define LEADING_ZERO  // show leading zero on 12 hour (AM/PM) as is always done on 24 hour clocks. Fefault commented out
+//#define LEADING_ZERO  // show leading zero on 12 hour (AM/PM) clock, as is always done on 24 hour clocks. Default commented out
+//#define GPSONLY  // GPS Only or Global navigation satellite system (GNSS) = GPS + GLONASS + Beidou + Galileo. Affects GPSInfo()
 
 //#define NEXTVERSION    // next version experimental feature (if there are any ...)
 //#define TESTSCREENS    // extra screen set for testing recent functions. No need to use it for a normal user

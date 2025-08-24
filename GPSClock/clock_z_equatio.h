@@ -38,7 +38,8 @@ void doEoTCalc(double *tv) {
   double tv1,tv2,tv3;                // total time variation (mins)
   int tvm,tvs,nd;                    // EoT time mins and seconds, days from Jan 1.
 
-  nd = doNumDays(yearGPS, monthGPS, dayGPS);                          // days from Jan 1 (inc. leap year)
+// 22.08.2025: no longer yearGPS, monthGPS, dayGPS in call below
+  nd = doNumDays(year(), month(), day());                          // days from Jan 1 (inc. leap year)
 
   #ifdef FEATURE_SERIAL_EQUATIO
   Serial.print("Days from Jan 1: "); Serial.println(nd);

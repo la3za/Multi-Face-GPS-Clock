@@ -791,11 +791,19 @@ void LcdSolarRiseSet(
   int m, hr, mn;                    // time in hr, mn local time
   tmElements_t tm_riseSet;
   time_t riseSetTime;
+
+  int yr;
+  uint8_t mth, dy;
+
+  // 22.08.2025: yr, mnth, dy replaced yearGPS, monthGPS, dayGPS
+  yr = year();
+  mth = month();
+  dy = day();
   
   #ifdef FEATURE_DATE_PER_SECOND  // for stepping date quickly and check calender function   
     // check June when sun hardly sets
-    //monthGPS = 6;
-    dayGPS =  dateIteration;
+    //mth = 6;
+    dy =  dateIteration;
     dateIteration = dateIteration + 1;
   #endif
   // https://www.timeanddate.com/astronomy/different-types-twilight.html
@@ -803,25 +811,25 @@ void LcdSolarRiseSet(
   // "During astronomical twilight, most celestial objects can be observed in the sky. However, the atmosphere still scatters and 
   // refracts a small amount of sunlight, and that may make it difficult for astronomers to view the faintest objects."
   // Astronomisk tussmørke
-        calcAstronomicalDawnDusk(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);
+        calcAstronomicalDawnDusk(yr, mth, dy, latitude, lon, transit, sunrise, sunset);
         
   else if (RiseSetDefinition == 'N') // Nautical:     -12 deg
   // "nautical twilight, dates back to the time when sailors used the stars to navigate the seas. 
   // During this time, most stars can be easily seen with naked eyes, and the horizon is usually also visible in clear weather conditions."
   // Nautisk tussmørke
-        calcNauticalDawnDusk(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);
+        calcNauticalDawnDusk(yr, mth, dy, latitude, lon, transit, sunrise, sunset);
         
   else if (RiseSetDefinition == 'C') // Civil:        - 6 deg 
   // "enough natural sunlight during this period that artificial light may not be required to carry out outdoor activities."
   // Alminnelig tussmørke	
-        calcCivilDawnDusk(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);
+        calcCivilDawnDusk(yr, mth, dy, latitude, lon, transit, sunrise, sunset);
         
   else  
     //mySunrise.Actual();           // Actual          0 deg
-        calcSunriseSunset(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);  // time in hours
+        calcSunriseSunset(yr, mth, dy, latitude, lon, transit, sunrise, sunset);  // time in hours
 
   // (1) First: print sun rise time
-  //t = mySunrise.Rise(monthGPS, dayGPS); // Sun rise hour minute
+  //t = mySunrise.Rise(mth, dy,); // Sun rise hour minute
 
   if (sunrise >= 0) {             // if not satisfied, then e.g. for 'N' then sun never dips below 18 deg at night, as in mid summer in Oslo
   
@@ -979,7 +987,7 @@ void LcdSolarRiseSet(
 
   if (RiseSetDefinition == 'W') // Where is sun's azimuth at actual rise and set times 5.3.2025
    {
-// Done:   calcSunriseSunset(yearGPS, monthGPS, dayGPS, latitude, lon, transit, sunrise, sunset);  // time in hours
+// Done:   calcSunriseSunset(yr, mth, dy,, latitude, lon, transit, sunrise, sunset);  // time in hours
 // find utc time of sunrise/set (unix time)
     tm_riseSet= {0, (uint8_t)mn, (uint8_t)sunrise, (uint8_t)weekday(), (uint8_t)day(), (uint8_t)month(), (uint8_t)(year()-1970) };
     riseSetTime = makeTime(tm_riseSet);   
